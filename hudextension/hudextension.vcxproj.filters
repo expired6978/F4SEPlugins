@@ -1,0 +1,160 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="..\f4se\ScaleformAPI.cpp">
+      <Filter>scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\ScaleformCallbacks.cpp">
+      <Filter>scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\ScaleformLoader.cpp">
+      <Filter>scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\ScaleformMovie.cpp">
+      <Filter>scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\ScaleformState.cpp">
+      <Filter>scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\ScaleformTranslator.cpp">
+      <Filter>scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\ScaleformTypes.cpp">
+      <Filter>scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\ScaleformValue.cpp">
+      <Filter>scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameMenus.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameEvents.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameTypes.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameUtilities.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameAPI.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameReferences.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\NiObjects.cpp">
+      <Filter>netimmerse</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\NiTypes.cpp">
+      <Filter>netimmerse</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameObjects.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameForms.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameFormComponents.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameExtraData.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="HUDExtension.cpp" />
+    <ClCompile Include="..\f4se\GameData.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\f4se\ScaleformAPI.h">
+      <Filter>scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\ScaleformCallbacks.h">
+      <Filter>scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\ScaleformLoader.h">
+      <Filter>scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\ScaleformMovie.h">
+      <Filter>scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\ScaleformState.h">
+      <Filter>scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\ScaleformTranslator.h">
+      <Filter>scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\ScaleformTypes.h">
+      <Filter>scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\ScaleformValue.h">
+      <Filter>scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameMenus.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameEvents.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameTypes.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameUtilities.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameAPI.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameReferences.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\NiObjects.h">
+      <Filter>netimmerse</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\NiTypes.h">
+      <Filter>netimmerse</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameObjects.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameForms.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameFormComponents.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameExtraData.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="HUDExtension.h" />
+    <ClInclude Include="..\f4se\GameData.h">
+      <Filter>api</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="scaleform">
+      <UniqueIdentifier>{ad94678a-31e2-4979-b8b2-dd27b5dea4b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resources">
+      <UniqueIdentifier>{a4f07f14-48c8-4bcf-8c16-f1fb15526ea8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api">
+      <UniqueIdentifier>{99fb2a70-6ff0-4ee1-88a1-32819efcf128}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="netimmerse">
+      <UniqueIdentifier>{81d898f2-bd83-410d-bf93-4deb421b7561}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="hudextension.rc">
+      <Filter>resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="exports.def">
+      <Filter>resources</Filter>
+    </None>
+  </ItemGroup>
+</Project>
