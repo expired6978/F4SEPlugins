@@ -45,8 +45,6 @@ inline void RegisterString(GFxValue * dst,  GFxMovieRoot * view, const char * na
 	dst->SetMember(name, &fxValue);
 }
 
-#include <random>
-
 void F4EEScaleform_LoadPreset::Invoke(Args * args)
 {
 	ASSERT(args->numArgs >= 1);
@@ -56,19 +54,6 @@ void F4EEScaleform_LoadPreset::Invoke(Args * args)
 
 	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
 	if(characterCreation) {
-		/*Actor * actor = characterCreation->actor;
-		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
-
-		
-		std::random_device rd;
-		std::mt19937 e2(rd());
-		std::uniform_real_distribution<> dist(0xFF000000, 0xFFFFFFFF);
-
-		g_charGen.SetHairColorOverride(npc, dist(e2));
-		DumpClass(npc->headData->hairColor, 0x48/8);
-		npc->headData->hairColor = g_charGen.GetHairColorOverride(npc);
-		DumpClass(npc->headData->hairColor, 0x48/8);*/
-
 		characterCreation->unk516 = 1;
 		characterCreation->unk517 = 1;
 		characterCreation->dirty = 1;
@@ -133,7 +118,21 @@ void F4EEScaleform_GetBodySliders::Invoke(Args * args)
 			UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
 
 			args->movie->movieRoot->CreateArray(args->result);
-			g_bodyGen.ForEachSlider(gender, [args, actor, gender](const BodySliderPtr & slider) {
+
+			std::vector<BodySliderPtr> sliders;
+			g_bodyGen.ForEachSlider(gender, [&sliders](const BodySliderPtr & slider) {
+				sliders.push_back(slider);
+			});
+
+			std::sort(sliders.begin(), sliders.end(), [&](const BodySliderPtr & a, const BodySliderPtr & b)
+			{
+				if(a->sort == b->sort)
+					return std::string(a->name.c_str()) < std::string(b->name.c_str());
+				else
+					return a->sort < b->sort;
+			});
+
+			for(const BodySliderPtr & slider : sliders) {
 				GFxValue sliderInfo;
 				args->movie->movieRoot->CreateObject(&sliderInfo);
 				RegisterString(&sliderInfo, args->movie->movieRoot, "name", slider->name);
@@ -143,7 +142,7 @@ void F4EEScaleform_GetBodySliders::Invoke(Args * args)
 				RegisterNumber(&sliderInfo, "maximum", slider->maximum);
 				RegisterNumber(&sliderInfo, "interval", slider->interval);
 				args->result->PushBack(&sliderInfo);
-			});
+			}
 		}
 	}
 }

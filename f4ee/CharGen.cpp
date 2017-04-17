@@ -152,6 +152,13 @@ DWORD CharGen::SavePreset(const std::string & filePath)
 		root["Morphs"]["Regions"] = morphRegionData;
 	}
 
+	CharacterCreation::MorphIntensity * intensity = g_morphIntensityMap->Find(&npc);
+	if(intensity) {
+		root["Morphs"]["Intensity"] = intensity->morphIntensity;
+	} else {
+		root["Morphs"]["Intensity"] = 1.0f;
+	}
+
 	Json::Value tintData;
 
 	tArray<BGSCharacterTint::Entry*> * tints = npc->tints;
@@ -400,6 +407,30 @@ DWORD CharGen::LoadPreset(const std::string & filePath)
 	catch(const std::exception& e)
 	{
 		_ERROR(e.what());
+	}
+
+	if(actor != (*g_player)) // Don't apply morph intensity to the player.
+	{
+		try
+		{
+			float intensity = root["Morphs"].isMember("Intensity") ? root["Morphs"]["Intensity"].asFloat() : 1.0f;
+
+			if(CharacterCreation::MorphIntensity * found = g_morphIntensityMap->Find(&npc))
+			{
+				found->morphIntensity = intensity;
+			}
+			else
+			{
+				CharacterCreation::MorphIntensity mi;
+				mi.npc = npc;
+				mi.morphIntensity = intensity;
+				g_morphIntensityMap->Add(&mi);
+			}
+		}
+		catch(const std::exception& e)
+		{
+			_ERROR(e.what());
+		}
 	}
 	
 	try

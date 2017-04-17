@@ -25,6 +25,7 @@ extern BodyGen g_bodyGen;
 extern StringTable g_stringTable;
 extern bool g_bEnableBodygen;
 extern bool g_bUseTaskInterface;
+extern bool g_bParallelShapes;
 extern F4SETaskInterface * g_task;
 
 using namespace Serialization;
@@ -366,6 +367,7 @@ bool BodySlider::Parse(const Json::Value & entry)
 		minimum = entry["minimum"].asFloat();
 		maximum = entry["maximum"].asFloat();
 		interval = entry["interval"].asFloat();
+		sort = entry["sort"].asInt();
 	}
 	catch(const std::exception& e)
 	{
@@ -397,46 +399,34 @@ void BodyGen::GetMorphableShapes(NiAVObject * rootNode, std::vector<MorphableSha
 	});
 }
 
-F4EEBodyGenUpdateShape::F4EEBodyGenUpdateShape(TESForm * form, NiAVObject * object)
+F4EEBodyGenUpdate::F4EEBodyGenUpdate(TESForm * form)
 {
 	m_formId = form ? form->formID : 0;
-	m_object = object;
 }
 
-F4EEBodyGenUpdateShape::~F4EEBodyGenUpdateShape()
-{
-	m_object = nullptr;
-}
-
-void F4EEBodyGenUpdateShape::Run()
+void F4EEBodyGenUpdate::Run()
 {
 	TESForm * form = LookupFormByID(m_formId);
 	if(form) {
 		Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
 		if(actor) {
-			g_bodyGen.ApplyMorphsToShapes(actor, m_object);
+			CALL_MEMBER_FN(actor, QueueUpdate)(true, 0, false, 0x0C);
 		}
 	}
 }
 
+#include "f4se/BSGraphics.h"
+#include "Morpher.h"
+
 bool BodyGen::ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morphableShape)
 {
-	BSDynamicTriShape * trishape = morphableShape->object->GetAsBSDynamicTriShape();
-	if(!trishape) {
-		m_morphCacheLock.Lock();
-		_WARNING("%s - Dynamic shape conversion failure detected on %s (Cache Size: %d)", __FUNCTION__, morphableShape->object->m_name.c_str(), m_morphCache.size());
-		m_morphCacheLock.Release();
-	}
+	// Don't allow dynamic shapes
+	BSDynamicTriShape * dynamicShape = morphableShape->object->GetAsBSDynamicTriShape();
+	if(dynamicShape)
+		return false;
 
-	if(trishape)
-	{
-		bool created = false;
-		NiPointer<BSFaceGenBaseMorphExtraData> facegenData(DYNAMIC_CAST(trishape->GetExtraData("FOD"), NiExtraData, BSFaceGenBaseMorphExtraData));
-		if(!facegenData) {
-			facegenData = BSFaceGenBaseMorphExtraData::Create(trishape);
-			trishape->AddExtraData(facegenData);
-			created = true;
-		}
+	BSTriShape * geometry = morphableShape->object->GetAsBSTriShape();
+	if(geometry) {
 
 		// Lookup the TRI file from the parsed path
 		auto triMap = GetTrishapeMap(morphableShape->morphPath);
@@ -445,46 +435,11 @@ bool BodyGen::ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morpha
 		}
 
 		ShrinkMorphCache();
-			
+
 		// Lookup the particular morph set for this shape
 		auto morphMap = triMap->GetMorphData(morphableShape->shapeName);
 		if(!morphMap) {
 			return false;
-		}
-
-		NiPointer<BSFaceGenBaseMorphExtraData> offsetStorage;
-		if(created) {
-			offsetStorage = BSFaceGenBaseMorphExtraData::Create("MORPH_OFFSETS", trishape->numVertices);
-			trishape->AddExtraData(offsetStorage);
-		}
-		else
-		{
-			offsetStorage = DYNAMIC_CAST(trishape->GetExtraData("MORPH_OFFSETS"), NiExtraData, BSFaceGenBaseMorphExtraData);
-
-			float * dst = (float *)facegenData->vertexData;
-			float * src = (float *)offsetStorage->vertexData;
-			for(UInt32 i = 0; i < facegenData->vertexCount * sizeof(NiPoint3) / sizeof(float); i++) {
-				dst[i] = dst[i] - src[i];
-				src[i] = 0.0f;
-			}
-			/*UInt32 alignedFloats = (facegenData->vertexCount * sizeof(NiPoint3)) / sizeof(__m128);
-			UInt32 remainingFloats = (facegenData->vertexCount * sizeof(NiPoint3)) % sizeof(__m128);
-			float * dst = (float *)facegenData->vertexData;
-			float * src = (float *)offsetStorage->vertexData;
-			for(UInt32 i = 0; i < alignedFloats; ++i)
-			{
-				_mm_store_ps(dst, _mm_sub_ps(_mm_load_ps(dst), _mm_load_ps(src)));
-				_mm_store_ps(src, _mm_setzero_ps());
-				dst += sizeof(__m128) / sizeof(float);
-				src += sizeof(__m128) / sizeof(float);
-			}
-			for(UInt32 i = 0; i < remainingFloats - 1; ++i)
-			{
-				*dst = *dst - *src;
-				*src = 0;
-				dst++;
-				src++;
-			}*/
 		}
 
 		bool isFemale = false;
@@ -493,7 +448,36 @@ bool BodyGen::ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morpha
 			isFemale = CALL_MEMBER_FN(npc, GetSex)() == 1 ? true : false;
 
 		auto actorMorphs = GetMorphMap(actor, isFemale); // Get the actor's list of morphs
-		if(actorMorphs)
+		if(!actorMorphs) // There's nothing to morph, lets just use the base mesh
+			return false;
+
+		UInt64 vertexDesc = geometry->vertexDesc;
+		UInt32 vertexSize = geometry->GetVertexSize();
+		UInt32 blockSize = geometry->numVertices * vertexSize;
+
+		BSGeometryData * baseData = geometry->geometryData;
+		BSGeometryData * geomData = nullptr;
+		if(!baseData)
+			return false;
+
+		if(!(vertexDesc & BSGeometry::kFlag_Vertex)) // What kind of dumbass mesh doesn't have verts
+			return false;
+
+		// Create the cloned copy since we don't have a MORPH_DATA
+		geomData = CALL_MEMBER_FN(g_renderManager, CreateBSGeometryData)(&blockSize, baseData->vertexData, geometry->vertexDesc, baseData->triangleData);
+		if(!geomData)
+			return false;
+
+		// Copy from the base data to the newly created block
+		memcpy(geomData->vertexData->vertexBlock, baseData->vertexData->vertexBlock, geometry->numVertices * vertexSize);
+
+		// We don't want to delete the original copy, but we'll release because we are forking
+		if(baseData->refCount > 1)
+			InterlockedDecrement(&baseData->refCount);
+
+		geometry->geometryData = geomData;
+
+		MorphApplicator morpher(geometry, [&](std::vector<Morpher::Vector3> & verts)
 		{
 			SimpleLocker locker(&m_morphLock);
 			for(auto & actorMorph : *actorMorphs)
@@ -506,48 +490,9 @@ bool BodyGen::ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morpha
 				if(!morph)
 					continue;
 
-				morph->ApplyMorph(facegenData->vertexCount, facegenData->vertexData, effectiveValue);
-				morph->ApplyMorph(offsetStorage->vertexCount, offsetStorage->vertexData, effectiveValue);
+				morph->ApplyMorph(geometry->numVertices, (NiPoint3*)&verts.at(0), effectiveValue);
 			}
-		}
-
-		/*UInt64 vertexDesc = m_descriptorMap[morphableShape->morphPath][morphableShape->shapeName];
-		UInt32 vertexSize = ((vertexDesc << 2) & 0x3C) - 0x08; // size of vertex block without x,y,z,bitx
-		UInt8 * vertexBlock = trishape->geometryData->vertexData->vertexBlock;
-		for(UInt32 i = 0; i < trishape->numVertices; i++)
-		{
-			UInt8 * vBegin = vertexBlock;
-			if((vertexDesc & BSGeometry::kFlag_UVs) == BSGeometry::kFlag_UVs) {
-				vBegin += 4;
-			}
-			if((vertexDesc & BSGeometry::kFlag_Normals) == BSGeometry::kFlag_Normals) {
-				*(UInt16*)vBegin = 0;	// N1
-				vBegin += 2;
-				*(UInt16*)vBegin = 0;	// N2
-				vBegin += 2;
-				*(UInt16*)vBegin = 0;	// N3
-				vBegin += 2;
-				if((vertexDesc & BSGeometry::kFlag_Tangents) == BSGeometry::kFlag_Tangents) {
-					*vBegin = 0; // BitY
-					vBegin++;
-				}
-			}
-			if((vertexDesc & BSGeometry::kFlag_Tangents) == BSGeometry::kFlag_Tangents) {
-				*vBegin = 0; // TX
-				vBegin++;
-				*vBegin = 0; // TY
-				vBegin++;
-				*vBegin = 0; // TZ
-				vBegin++;
-				*vBegin = 0; // BitZ
-				vBegin++;
-			}
-
-			vertexBlock += vertexSize;
-		}*/
-
-		CALL_MEMBER_FN((*g_faceGenManager), ApplyDynamicData)(trishape);
-		return true;
+		});
 	}
 
 	return false;
@@ -561,9 +506,19 @@ bool BodyGen::ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNode)
 	std::vector<MorphableShapePtr> shapes;
 	GetMorphableShapes(slotNode, shapes);
 
-	for(auto & shape : shapes)
+	if(g_bParallelShapes)
 	{
-		ApplyMorphsToShape(actor, shape);
+		concurrency::parallel_for_each(begin(shapes), end(shapes), [&](const MorphableShapePtr & shape)
+		{
+			ApplyMorphsToShape(actor, shape);
+		}, concurrency::static_partitioner());
+	}
+	else
+	{
+		for(auto & shape : shapes)
+		{
+			ApplyMorphsToShape(actor, shape);
+		}
 	}
 
 	return true;
@@ -574,23 +529,8 @@ bool BodyGen::UpdateMorphs(Actor * actor)
 	if(!actor)
 			return false;
 
-	auto equipData = actor->equipData;
-	if(equipData)
-	{
-		for(UInt32 i = 0; i < ActorEquipData::kMaxSlots; ++i)
-		{
-			NiPointer<NiAVObject> slotNode(equipData->slots[i].node);
-			if(slotNode)
-			{
-				if(g_bUseTaskInterface) {
-					if(g_task)
-						g_task->AddTask(new F4EEBodyGenUpdateShape(actor, slotNode));
-				} else {
-					ApplyMorphsToShapes(actor, slotNode);
-				}
-			}
-		}
-	}
+	if(g_task)
+		g_task->AddTask(new F4EEBodyGenUpdate(actor));
 
 	return true;
 }
@@ -784,69 +724,6 @@ float BodyGen::GetMorph(Actor * actor, bool isFemale, const BSFixedString & morp
 		return it->second->GetMorph(morph, keyword);
 
 	return 0.0f;
-}
-
-bool BodyGen::SetModelAsDynamic(TESModel * model)
-{
-	std::string modelPath = model->GetModelName();
-	if(modelPath.size() > 0) {
-		std::string fullPath = modelPath;
-		std::transform(fullPath.begin(), fullPath.end(), fullPath.begin(), ::tolower);
-					
-		fullPath = std::regex_replace(fullPath, std::regex("/+|\\\\+"), "\\"); // Replace multiple slashes or forward slashes with one backslash
-		fullPath = std::regex_replace(fullPath, std::regex("^\\\\+"), ""); // Remove all backslashes from the front
-		fullPath = std::regex_replace(fullPath, std::regex(".*?data\\\\"), ""); // Remove everything before and including the data path root
-		fullPath = std::regex_replace(fullPath, std::regex("^(?!^meshes\\\\)"), "meshes\\"); // Add meshes root path if not existing}
-
-		std::string::size_type nPos = fullPath.find_last_of(".");
-		if(nPos != std::string::npos) {
-			fullPath.erase(nPos, std::string::npos);
-		} else {
-			_WARNING("%s - Mesh path found with no extension: %s", __FUNCTION__, fullPath.c_str());
-		}
-		
-		fullPath.append(".tri");
-
-		BSResourceNiBinaryStream fileStream(fullPath.c_str());
-		if(fileStream.IsValid()) {
-			model->flags |= TESModel::kFlag_Dynamic;
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void BodyGen::SetupDynamicMeshes()
-{
-	std::atomic<int> total;
-	std::chrono::time_point<std::chrono::system_clock> start, end;
-
-	start = std::chrono::system_clock::now();
-	concurrency::parallel_for(UInt32(0), (*g_dataHandler)->arrARMA.count, [&](const UInt32 & i)
-	//for(int i = 0; i < (*g_dataHandler)->arrARMA.count; i++)
-	{
-		TESObjectARMA * arma;
-		(*g_dataHandler)->arrARMA.GetNthItem(i, arma);
-
-		for(UInt32 j = 0; j < 2; ++j)
-		{
-			BGSModelMaterialSwap * models[3];
-			models[0] = &arma->swap50[j];
-			models[1] = &arma->swapD0[j];
-			models[2] = &arma->swap150[j];
-
-			for(UInt32 k = 0; k < 3; ++k)
-			{
-				if(SetModelAsDynamic(models[k]))
-					total++;
-			}
-		}
-	});
-	//}
-	end = std::chrono::system_clock::now();
-	std::chrono::duration<double> elapsed_seconds = end-start;
-	_DMESSAGE("Completed dynamic mesh conversion of %d meshes in %f seconds", total, elapsed_seconds.count());
 }
 
 float UserValues::GetValue(BGSKeyword * keyword)

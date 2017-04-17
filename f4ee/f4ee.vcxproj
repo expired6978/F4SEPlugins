@@ -118,6 +118,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\f4se\BSGeometry.cpp" />
+    <ClCompile Include="..\f4se\BSGraphics.cpp" />
     <ClCompile Include="..\f4se\BSModelDB.cpp" />
     <ClCompile Include="..\f4se\BSSkin.cpp" />
     <ClCompile Include="..\f4se\GameAPI.cpp" />
@@ -144,8 +145,8 @@
     <ClCompile Include="..\f4se\PapyrusArgs.cpp" />
     <ClCompile Include="..\f4se\PapyrusInterfaces.cpp" />
     <ClCompile Include="..\f4se\PapyrusNativeFunctions.cpp" />
-    <ClCompile Include="..\f4se\PapyrusObjectReference.cpp" />
     <ClCompile Include="..\f4se\PapyrusStruct.cpp" />
+    <ClCompile Include="..\f4se\PapyrusUtilities.cpp" />
     <ClCompile Include="..\f4se\PapyrusValue.cpp" />
     <ClCompile Include="..\f4se\PapyrusVM.cpp" />
     <ClCompile Include="..\f4se\ScaleformAPI.cpp" />
@@ -160,6 +161,7 @@
     <ClCompile Include="CharGen.cpp" />
     <ClCompile Include="CharGenTint.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Morpher.cpp" />
     <ClCompile Include="PapyrusBodyGen.cpp" />
     <ClCompile Include="ScaleformNatives.cpp" />
     <ClCompile Include="StringTable.cpp" />
@@ -167,6 +169,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\f4se\BSGeometry.h" />
+    <ClInclude Include="..\f4se\BSGraphics.h" />
     <ClInclude Include="..\f4se\BSModelDB.h" />
     <ClInclude Include="..\f4se\BSSkin.h" />
     <ClInclude Include="..\f4se\GameAPI.h" />
@@ -193,8 +196,8 @@
     <ClInclude Include="..\f4se\PapyrusArgs.h" />
     <ClInclude Include="..\f4se\PapyrusInterfaces.h" />
     <ClInclude Include="..\f4se\PapyrusNativeFunctions.h" />
-    <ClInclude Include="..\f4se\PapyrusObjectReference.h" />
     <ClInclude Include="..\f4se\PapyrusStruct.h" />
+    <ClInclude Include="..\f4se\PapyrusUtilities.h" />
     <ClInclude Include="..\f4se\PapyrusValue.h" />
     <ClInclude Include="..\f4se\PapyrusVM.h" />
     <ClInclude Include="..\f4se\ScaleformAPI.h" />
@@ -208,9 +211,13 @@
     <ClInclude Include="BodyGen.h" />
     <ClInclude Include="CharGen.h" />
     <ClInclude Include="CharGenTint.h" />
+    <ClInclude Include="half.hpp" />
+    <ClInclude Include="kd_matcher.hpp" />
+    <ClInclude Include="Morpher.h" />
     <ClInclude Include="PapyrusBodyGen.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ScaleformNatives.h" />
+    <ClInclude Include="shape.hpp" />
     <ClInclude Include="StringTable.h" />
     <ClInclude Include="Utilities.h" />
   </ItemGroup>

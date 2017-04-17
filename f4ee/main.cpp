@@ -24,8 +24,6 @@
 
 #include "common/ICriticalSection.h"
 
-
-
 #include "f4se/NiMaterials.h"
 
 CharGen g_charGen;
@@ -47,8 +45,7 @@ UInt32 g_f4seVersion;
 
 bool g_bExportRace = false;
 bool g_bEnableBodygen = false;
-bool g_bUseTaskInterface = true;
-bool g_bUseTaskInterfaceOnEquip = true;
+bool g_bParallelShapes = false;
 bool g_bEnableTintExtensions = true;
 bool g_bIgnoreTintPalettes = false;
 bool g_bIgnoreTintTextures = false;
@@ -229,7 +226,6 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 				}
 				if(g_bEnableBodygen) {
 					g_bodyGen.LoadBodyGenSliderMods();
-					g_bodyGen.SetupDynamicMeshes();
 				}
 				if(g_bExtendedLUTs) {
 					g_charGen.LoadHairColorMods();
@@ -431,15 +427,11 @@ UInt32 InstallArmorAddon_Hook(void * unk1, UInt32 unk2, TESForm * form, NiAVObje
 {
 	UInt32 ret = InstallArmorAddon_Original(unk1, unk2, form);
 
-	if(g_bUseTaskInterface && g_bUseTaskInterfaceOnEquip) {
-		if(g_task)
-			g_task->AddTask(new F4EEBodyGenUpdateShape(form, object));
-	} else {
-		Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
-		if(actor) {
-			g_bodyGen.ApplyMorphsToShapes(actor, object);
-		}
+	Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
+	if(actor) {
+		g_bodyGen.ApplyMorphsToShapes(actor, object);
 	}
+
 	return ret;
 }
 
@@ -482,8 +474,7 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 	{
 		g_bodyGen.SetCacheLimit(uMaxCache);
 	}
-	F4EEGetConfigValue("BodyGen", "bUseTaskInterface", &g_bUseTaskInterface);
-	F4EEGetConfigValue("BodyGen", "bUseTaskInterfaceOnEquip", &g_bUseTaskInterfaceOnEquip);
+	F4EEGetConfigValue("BodyGen", "bParallelShapes", &g_bParallelShapes);
 
 	F4EEGetConfigValue("CharGen", "bEnableTintExtensions", &g_bEnableTintExtensions);
 	F4EEGetConfigValue("CharGen", "bUnlockHeadParts", &g_bUnlockHeadParts);

@@ -31,6 +31,9 @@
     <Filter Include="f4se\papyrus\functions">
       <UniqueIdentifier>{d8db1eb4-9604-4a37-a235-4acf6561fc10}</UniqueIdentifier>
     </Filter>
+    <Filter Include="utils">
+      <UniqueIdentifier>{ecfe6d48-4232-4286-904f-21d8d879ebb6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />
@@ -157,9 +160,6 @@
     <ClCompile Include="..\f4se\PapyrusNativeFunctions.cpp">
       <Filter>f4se\papyrus\vm</Filter>
     </ClCompile>
-    <ClCompile Include="..\f4se\PapyrusObjectReference.cpp">
-      <Filter>f4se\papyrus\vm</Filter>
-    </ClCompile>
     <ClCompile Include="..\f4se\PapyrusStruct.cpp">
       <Filter>f4se\papyrus\vm</Filter>
     </ClCompile>
@@ -186,6 +186,15 @@
     </ClCompile>
     <ClCompile Include="Utilities.cpp">
       <Filter>BodyGen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\PapyrusUtilities.cpp">
+      <Filter>f4se\papyrus\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\BSGraphics.cpp">
+      <Filter>f4se\netimmerse</Filter>
+    </ClCompile>
+    <ClCompile Include="Morpher.cpp">
+      <Filter>utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -298,9 +307,6 @@
     <ClInclude Include="..\f4se\PapyrusNativeFunctions.h">
       <Filter>f4se\papyrus\vm</Filter>
     </ClInclude>
-    <ClInclude Include="..\f4se\PapyrusObjectReference.h">
-      <Filter>f4se\papyrus\vm</Filter>
-    </ClInclude>
     <ClInclude Include="..\f4se\PapyrusStruct.h">
       <Filter>f4se\papyrus\vm</Filter>
     </ClInclude>
@@ -327,6 +333,24 @@
     </ClInclude>
     <ClInclude Include="Utilities.h">
       <Filter>BodyGen</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\PapyrusUtilities.h">
+      <Filter>f4se\papyrus\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\BSGraphics.h">
+      <Filter>f4se\netimmerse</Filter>
+    </ClInclude>
+    <ClInclude Include="kd_matcher.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="shape.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="half.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Morpher.h">
+      <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

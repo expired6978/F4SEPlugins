@@ -153,6 +153,7 @@ public:
 	BSFixedString	morph;
 	BSFixedString	name;
 	UInt8			gender;
+	UInt32			sort;
 	float			minimum;
 	float			maximum;
 	float			interval;
@@ -170,16 +171,15 @@ public:
 };
 typedef std::shared_ptr<MorphableShape> MorphableShapePtr;
 
-class F4EEBodyGenUpdateShape : public ITaskDelegate
+class F4EEBodyGenUpdate : public ITaskDelegate
 {
 public:
-	F4EEBodyGenUpdateShape(TESForm * form, NiAVObject * object);
-	virtual ~F4EEBodyGenUpdateShape();
+	F4EEBodyGenUpdate(TESForm * form);
+	virtual ~F4EEBodyGenUpdate() { };
 	virtual void Run() override;
 
 protected:
 	UInt32					m_formId;
-	NiPointer<NiAVObject>	m_object;
 };
 
 class BodyGen
@@ -221,8 +221,6 @@ public:
 	virtual bool ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNode);
 	virtual bool ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morphableShape);
 	virtual bool UpdateMorphs(Actor * actor);
-	virtual void SetupDynamicMeshes();
-	virtual bool SetModelAsDynamic(TESModel * model);
 
 	virtual void ProcessModel(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject * root);
 
