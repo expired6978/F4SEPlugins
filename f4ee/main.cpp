@@ -9,8 +9,9 @@
 #include "f4se/ScaleformCallbacks.h"
 #include "f4se/BSGraphics.h"
 
-#include "CharGen.h"
-#include "BodyGen.h"
+#include "CharGenInterface.h"
+#include "BodyMorphInterface.h"
+#include "BodyGenInterface.h"
 
 #include "PapyrusBodyGen.h"
 #include "ScaleformNatives.h"
@@ -26,8 +27,9 @@
 
 #include "f4se/NiMaterials.h"
 
-CharGen g_charGen;
-BodyGen g_bodyGen;
+CharGenInterface g_charGenInterface;
+BodyGenInterface g_bodyGenInterface;
+BodyMorphInterface g_bodyMorphInterface;
 StringTable g_stringTable;
 
 IDebugLog	gLog;
@@ -45,6 +47,7 @@ UInt32 g_f4seVersion;
 
 bool g_bExportRace = false;
 bool g_bEnableBodygen = false;
+bool g_bEnableBodyMorphs = false;
 bool g_bParallelShapes = false;
 bool g_bEnableTintExtensions = true;
 bool g_bIgnoreTintPalettes = false;
@@ -179,39 +182,20 @@ bool F4EEGetConfigValue(const char * section, const char * key, bool * dataOut)
 	return res;
 }
 
-
-class F4EEModelProcessor : public BSModelDB::TESProcessor
-{
-public:
-	F4EEModelProcessor(BSModelDB::TESProcessor * oldProcessor) : m_oldProcessor(oldProcessor) { }
-
-	virtual void Process(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject ** root, UInt32 * typeOut)
-	{
-		NiAVObject * object = root ? *root : nullptr;
-		if(object)
-		{
-			object->IncRef();
-			g_bodyGen.ProcessModel(modelData, modelName, object);
-			g_charGen.ProcessModel(modelData, modelName, object);
-			object->DecRef();
-		}
-
-		if(m_oldProcessor)
-			m_oldProcessor->Process(modelData, modelName, root, typeOut);
-	}
-
-	BSModelDB::TESProcessor * m_oldProcessor;
-};
-
-
 void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 {
 	switch(msg->type)
 	{
+	case F4SEMessagingInterface::kMessage_PreLoadGame:
+		g_bodyMorphInterface.SetLoading(true);
+		break;
 	case F4SEMessagingInterface::kMessage_GameLoaded:
 		{
 			if(g_bEnableModelPreprocessor)
-				(*g_TESProcessor) = new F4EEModelProcessor(*g_TESProcessor);
+				g_bodyMorphInterface.SetModelProcessor();
+
+			if(g_bEnableBodygen)
+				GetEventDispatcher<TESObjectLoadedEvent>()->AddEventSink(&g_bodyMorphInterface);
 		}
 		break;
 	case F4SEMessagingInterface::kMessage_GameDataReady:
@@ -222,24 +206,27 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 			if(isReady)
 			{
 				if(g_bEnableTintExtensions) {
-					g_charGen.LoadTintTemplateMods();
+					g_charGenInterface.LoadTintTemplateMods();
+				}
+				if(g_bEnableBodyMorphs) {
+					g_bodyMorphInterface.LoadBodyGenSliderMods();
 				}
 				if(g_bEnableBodygen) {
-					g_bodyGen.LoadBodyGenSliderMods();
+					g_bodyGenInterface.LoadBodyGenMods();
 				}
 				if(g_bExtendedLUTs) {
-					g_charGen.LoadHairColorMods();
+					g_charGenInterface.LoadHairColorMods();
 				}
 				if(g_bUnlockHeadParts) {
-					g_charGen.UnlockHeadParts();
+					g_charGenInterface.UnlockHeadParts();
 				}
 				if(g_bUnlockTints) {
-					g_charGen.UnlockTints();
+					g_charGenInterface.UnlockTints();
 				}
 			}
-			else if(g_bEnableBodygen)
+			else if(g_bEnableBodyMorphs)
 			{
-				g_bodyGen.ClearBodyGenSliders();
+				g_bodyMorphInterface.ClearBodyGenSliders();
 			}
 
 			s_loadLock.Leave();
@@ -250,14 +237,14 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 
 void F4EESerialization_Revert(const F4SESerializationInterface * intfc)
 {
-	g_bodyGen.Revert();
+	g_bodyMorphInterface.Revert();
 }
 
 
 void F4EESerialization_Save(const F4SESerializationInterface * intfc)
 {
 	g_stringTable.Save(intfc, StringTable::kSerializationVersion);
-	g_bodyGen.Save(intfc, BodyGen::kSerializationVersion);
+	g_bodyMorphInterface.Save(intfc, BodyMorphInterface::kSerializationVersion);
 }
 
 void F4EESerialization_Load(const F4SESerializationInterface * intfc)
@@ -266,20 +253,22 @@ void F4EESerialization_Load(const F4SESerializationInterface * intfc)
 	bool error = false;
 
 	std::unordered_map<UInt32, StringTableItem> stringTable;
-
 	while (intfc->GetNextRecordInfo(&type, &version, &length))
 	{
 		switch (type)
 		{
 			case 'STTB':	g_stringTable.Load(intfc, version, stringTable);		break;
-			case 'MRPH':	g_bodyGen.Load(intfc, true, version, stringTable);		break;	// Female Morphs
-			case 'MRPM':	g_bodyGen.Load(intfc, false, version, stringTable);		break;	// Male Morphs
+			case 'MRPH':	g_bodyMorphInterface.Load(intfc, true, version, stringTable);		break;	// Female Morphs
+			case 'MRPM':	g_bodyMorphInterface.Load(intfc, false, version, stringTable);		break;	// Male Morphs
 			default:
 				_MESSAGE("unhandled type %08X (%.4s)", type, &type);
 				error = true;
 				break;
 		}
 	}
+
+	g_bodyMorphInterface.SetLoading(false);
+	g_bodyMorphInterface.ResolvePendingMorphs();
 }
 
 extern "C"
@@ -413,14 +402,14 @@ void ApplyMaterialProperties_Hook(NiAVObject * node, BGSColorForm * colorForm, B
 	if(shaderMaterial)
 		shaderMaterial->fLookupScale = colorForm->color.remappingIndex;
 
-	g_charGen.ProcessHairColor(node, colorForm, shaderMaterial);
+	g_charGenInterface.ProcessHairColor(node, colorForm, shaderMaterial);
 	
 	ApplyMaterialProperties(node);
 }
 
 const char * GetHairTexturePath_Hook(TESNPC * npc)
 {
-	return g_charGen.ProcessEyebrowPath(npc);
+	return g_charGenInterface.ProcessEyebrowPath(npc);
 }
 
 UInt32 InstallArmorAddon_Hook(void * unk1, UInt32 unk2, TESForm * form, NiAVObject * object)
@@ -429,7 +418,7 @@ UInt32 InstallArmorAddon_Hook(void * unk1, UInt32 unk2, TESForm * form, NiAVObje
 
 	Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
 	if(actor) {
-		g_bodyGen.ApplyMorphsToShapes(actor, object);
+		g_bodyMorphInterface.ApplyMorphsToShapes(actor, object);
 	}
 
 	return ret;
@@ -468,13 +457,15 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 
 	F4EEGetConfigValue("Global", "bEnableModelPreprocessor", &g_bEnableModelPreprocessor);
 
-	F4EEGetConfigValue("BodyGen", "bEnable", &g_bEnableBodygen);
+	F4EEGetConfigValue("BodyMorph", "bEnable", &g_bEnableBodyMorphs);
+	F4EEGetConfigValue("BodyMorph", "bEnableBodyGen", &g_bEnableBodygen);
+
 	UInt64 uMaxCache;
-	if(F4EEGetConfigValue("BodyGen", "uMaxCache", &uMaxCache))
+	if(F4EEGetConfigValue("BodyMorph", "uMaxCache", &uMaxCache))
 	{
-		g_bodyGen.SetCacheLimit(uMaxCache);
+		g_bodyMorphInterface.SetCacheLimit(uMaxCache);
 	}
-	F4EEGetConfigValue("BodyGen", "bParallelShapes", &g_bParallelShapes);
+	F4EEGetConfigValue("BodyMorph", "bParallelShapes", &g_bParallelShapes);
 
 	F4EEGetConfigValue("CharGen", "bEnableTintExtensions", &g_bEnableTintExtensions);
 	F4EEGetConfigValue("CharGen", "bUnlockHeadParts", &g_bUnlockHeadParts);
@@ -517,7 +508,7 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 	}
 	
 	// hook Armor Attachment
-	if(g_bEnableBodygen)
+	if(g_bEnableBodyMorphs)
 	{
 		struct InstallArmorAddon_Code : Xbyak::CodeGenerator {
 			InstallArmorAddon_Code(void * buf, UInt64 funcAddr) : Xbyak::CodeGenerator(4096, buf)

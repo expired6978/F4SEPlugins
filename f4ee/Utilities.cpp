@@ -5,46 +5,7 @@
 #include "f4se/GameForms.h"
 #include "f4se/GameData.h"
 
-template <>
-bool Serialization::WriteData<BSFixedString>(const F4SESerializationInterface * intfc, const BSFixedString * str)
-{
-	UInt16 len = strlen(str->c_str());
-	if (len > SHRT_MAX)
-		return false;
-	if (! intfc->WriteRecordData(&len, sizeof(len)))
-		return false;
-	if (len == 0)
-		return true;
-	if (! intfc->WriteRecordData(str->c_str(), len))
-		return false;
-	return true;
-}
-
-template <>
-bool Serialization::ReadData<BSFixedString>(const F4SESerializationInterface * intfc, BSFixedString * str)
-{
-	UInt16 len = 0;
-
-	if (! intfc->ReadRecordData(&len, sizeof(len)))
-		return false;
-	if(len == 0)
-		return true;
-	if (len > SHRT_MAX)
-		return false;
-
-	char * buf = new char[len + 1];
-	buf[0] = 0;
-
-	if (! intfc->ReadRecordData(buf, len)) {
-		delete [] buf;
-		return false;
-	}
-	buf[len] = 0;
-
-	*str = BSFixedString(buf);
-	delete [] buf;
-	return true;
-}
+#include <cctype>
 
 template <>
 bool Serialization::WriteData<F4EEFixedString>(const F4SESerializationInterface * intfc, const F4EEFixedString * str)
@@ -87,44 +48,18 @@ bool Serialization::ReadData<F4EEFixedString>(const F4SESerializationInterface *
 	return true;
 }
 
-template <>
-bool Serialization::WriteData<std::string>(const F4SESerializationInterface * intfc, const std::string * str)
+bool BSReadLine(BSResourceNiBinaryStream* fin, std::string* str)
 {
-	UInt16 len = str->length();
-	if (len > SHRT_MAX)
-		return false;
-	if (! intfc->WriteRecordData(&len, sizeof(len)))
-		return false;
-	if (len == 0)
+	char buf[1024];
+	UInt32 ret = 0;
+
+	ret = fin->ReadLine((char*)buf, 1024, '\n');
+	if (ret > 0) {
+		buf[ret - 1] = '\0';
+		*str = buf;
 		return true;
-	if (! intfc->WriteRecordData(str->data(), len))
-		return false;
-	return true;
-}
-
-template <>
-bool Serialization::ReadData<std::string>(const F4SESerializationInterface * intfc, std::string * str)
-{
-	UInt16 len = 0;
-	if (! intfc->ReadRecordData(&len, sizeof(len)))
-		return false;
-	if (len == 0)
-		return true;
-	if (len > SHRT_MAX)
-		return false;
-
-	char * buf = new char[len + 1];
-	buf[0] = 0;
-
-	if (! intfc->ReadRecordData(buf, len)) {
-		delete [] buf;
-		return false;
 	}
-	buf[len] = 0;
-
-	*str = std::string(buf);
-	delete [] buf;
-	return true;
+	return false;
 }
 
 void BSReadAll(BSResourceNiBinaryStream* fin, std::string* str)
@@ -202,4 +137,40 @@ TESRace * GetRaceByName(const std::string & raceName)
 	}
 
 	return nullptr;
+}
+
+std::string &std::ltrim(std::string &s) {
+	s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+	return s;
+}
+
+// trim from end
+std::string &std::rtrim(std::string &s) {
+	s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+	return s;
+}
+
+// trim from both ends
+std::string &std::trim(std::string &s) {
+	return std::ltrim(std::rtrim(s));
+}
+
+std::vector<std::string> std::explode(const std::string& str, const char& ch) {
+	std::string next;
+	std::vector<std::string> result;
+
+	for (std::string::const_iterator it = str.begin(); it != str.end(); it++) {
+		if (*it == ch) {
+			if (!next.empty()) {
+				result.push_back(next);
+				next.clear();
+			}
+		}
+		else {
+			next += *it;
+		}
+	}
+	if (!next.empty())
+		result.push_back(next);
+	return result;
 }

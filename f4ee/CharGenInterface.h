@@ -19,10 +19,10 @@ class TESRace;
 class BSLightingShaderMaterialBase;
 struct ModInfo;
 
-class CharGen
+class CharGenInterface
 {
 public:
-	CharGen() { }
+	CharGenInterface() { }
 
 	virtual DWORD SavePreset(const std::string & filePath);
 	virtual DWORD LoadPreset(const std::string & filePath);
@@ -41,7 +41,6 @@ public:
 	virtual void UnlockHeadParts();
 	virtual void UnlockTints();
 
-	virtual void ProcessModel(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject * root);
 	virtual void ProcessHairColor(NiAVObject * node, BGSColorForm * colorForm, BSLightingShaderMaterialBase * shaderMaterial);
 	virtual const char * ProcessEyebrowPath(TESNPC * npc);
 	/*virtual TESNPC::HeadData * ProcessHeadData(TESNPC * npc);

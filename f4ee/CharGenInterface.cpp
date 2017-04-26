@@ -1,4 +1,4 @@
-#include "CharGen.h"
+#include "CharGenInterface.h"
 #include "f4se/GameAPI.h"
 #include "f4se/GameCustomization.h"
 #include "f4se/GameReferences.h"
@@ -24,14 +24,14 @@
 #include <regex>
 
 #include "CharGenTint.h"
-#include "BodyGen.h"
+#include "BodyMorphInterface.h"
 #include "Utilities.h"
 
 extern bool g_bExportRace;
 extern std::string g_strExportRace;
 extern UInt32 g_uExportIdMin;
 extern UInt32 g_uExportIdMax;
-extern BodyGen g_bodyGen;
+extern BodyMorphInterface g_bodyMorphInterface;
 
 extern bool g_bIgnoreTintPalettes;
 extern bool g_bIgnoreTintTextures;
@@ -41,7 +41,7 @@ extern const std::string & GetRuntimeDirectory(void);
 
 static const char * HairGradientPalette = "actors\\character\\hair\\haircolor_lgrad_d.dds";
 
-DWORD CharGen::SavePreset(const std::string & filePath)
+DWORD CharGenInterface::SavePreset(const std::string & filePath)
 {
 	DataHandler * dataHandler = (*g_dataHandler);
 	if(!dataHandler)
@@ -199,10 +199,10 @@ DWORD CharGen::SavePreset(const std::string & filePath)
 	}
 
 	Json::Value morphData;
-	auto morphMap = g_bodyGen.GetMorphMap(actor, gender == 1 ? true : false);
+	auto morphMap = g_bodyMorphInterface.GetMorphMap(actor, gender == 1 ? true : false);
 	if(morphMap) {
 		for(auto & morph : *morphMap) {
-			UInt64 emptyHandle = g_bodyGen.GetHandleFromObject<BGSKeyword>(nullptr);
+			UInt64 emptyHandle = g_bodyMorphInterface.GetHandleFromObject<BGSKeyword>(nullptr);
 			auto it = morph.second->find(emptyHandle);
 			if(it != morph.second->end()) {
 				morphData[morph.first->c_str()] = it->second;
@@ -219,7 +219,7 @@ DWORD CharGen::SavePreset(const std::string & filePath)
 	return ERROR_SUCCESS;
 }
 
-DWORD CharGen::LoadPreset(const std::string & filePath)
+DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 {
 	Json::Reader reader;
 	Json::Value root;
@@ -530,13 +530,13 @@ DWORD CharGen::LoadPreset(const std::string & filePath)
 		Json::Value morphData = root["BodyMorphs"];
 		auto members = morphData.getMemberNames();
 		if(members.size() > 0 || (root.isMember("BodyMorphs") && morphData.isNull())) {
-			g_bodyGen.RemoveMorphsByKeyword(actor, gender == 1 ? true : false, nullptr);
+			g_bodyMorphInterface.RemoveMorphsByKeyword(actor, gender == 1 ? true : false, nullptr);
 		}
 
 		for(auto key : members)
 		{
 			float value = morphData[key].asFloat();
-			g_bodyGen.SetMorph(actor, gender == 1 ? true : false, key.c_str(), nullptr, value);
+			g_bodyMorphInterface.SetMorph(actor, gender == 1 ? true : false, key.c_str(), nullptr, value);
 		}
 	}
 	catch(const std::exception& e)
@@ -550,7 +550,7 @@ DWORD CharGen::LoadPreset(const std::string & filePath)
 	return ERROR_SUCCESS;
 }
 
-void CharGen::LoadHairColorMods()
+void CharGenInterface::LoadHairColorMods()
 {
 	// Load all hair color mods
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
@@ -562,7 +562,7 @@ void CharGen::LoadHairColorMods()
 	}
 }
 
-void CharGen::LoadTintTemplateMods()
+void CharGenInterface::LoadTintTemplateMods()
 {
 	// Load all categories first
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
@@ -595,7 +595,7 @@ void CharGen::LoadTintTemplateMods()
 	}
 }
 
-bool CharGen::LoadTintCategories(const std::string & filePath)
+bool CharGenInterface::LoadTintCategories(const std::string & filePath)
 {
 	BSResourceNiBinaryStream binaryStream(filePath.c_str());
 	if(binaryStream.IsValid())
@@ -658,7 +658,7 @@ bool CharGen::LoadTintCategories(const std::string & filePath)
 	return true;
 }
 
-bool CharGen::LoadTintTemplates(const std::string & filePath)
+bool CharGenInterface::LoadTintTemplates(const std::string & filePath)
 {
 	BSResourceNiBinaryStream binaryStream(filePath.c_str());
 	if(binaryStream.IsValid())
@@ -734,7 +734,7 @@ bool CharGen::LoadTintTemplates(const std::string & filePath)
 }
 
 
-bool CharGen::SaveTintCategories(const TESRace * race, const std::string & filePath)
+bool CharGenInterface::SaveTintCategories(const TESRace * race, const std::string & filePath)
 {
 	IFileStream		currentFile;
 	IFileStream::MakeAllDirs(filePath.c_str());
@@ -771,7 +771,7 @@ bool CharGen::SaveTintCategories(const TESRace * race, const std::string & fileP
 			tints->GetNthItem(i, category);
 
 			// Correct broken categories
-			if(category->type == 0 && category->category != BSFixedString("SkinTints") && category->category != BSFixedString("FaceRegions") && category->category != BSFixedString("Brows")) {
+			if(category->type == 0 && category->category == "SkinTints" && category->category != "FaceRegions" && category->category != "Brows") {
 				lastIndex++;
 				category->type = lastIndex;
 			}
@@ -794,7 +794,7 @@ bool CharGen::SaveTintCategories(const TESRace * race, const std::string & fileP
 	return true;
 }
 
-bool CharGen::SaveTintTemplates(const TESRace * race, const std::string & filePath)
+bool CharGenInterface::SaveTintTemplates(const TESRace * race, const std::string & filePath)
 {
 	IFileStream		currentFile;
 	IFileStream::MakeAllDirs(filePath.c_str());
@@ -941,7 +941,7 @@ bool CharGen::SaveTintTemplates(const TESRace * race, const std::string & filePa
 	return true;
 }
 
-Actor * CharGen::GetCurrentActor()
+Actor * CharGenInterface::GetCurrentActor()
 {
 	if(!g_characterCreation)
 		return nullptr;
@@ -954,7 +954,7 @@ Actor * CharGen::GetCurrentActor()
 }
 
 
-void CharGen::UnlockHeadParts()
+void CharGenInterface::UnlockHeadParts()
 {
 	std::atomic<int> total;
 	std::chrono::time_point<std::chrono::system_clock> start, end;
@@ -975,7 +975,7 @@ void CharGen::UnlockHeadParts()
 	_DMESSAGE("Completed head part unlock of %d parts in %f seconds", total, elapsed_seconds.count());
 }
 
-void CharGen::UnlockTints()
+void CharGenInterface::UnlockTints()
 {
 	std::atomic<int> total;
 	std::chrono::time_point<std::chrono::system_clock> start, end;
@@ -1011,12 +1011,7 @@ void CharGen::UnlockTints()
 	_DMESSAGE("Completed tint unlock of %d tints in %f seconds", total, elapsed_seconds.count());
 }
 
-void CharGen::ProcessModel(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject * root)
-{
-
-}
-
-void CharGen::ProcessHairColor(NiAVObject * node, BGSColorForm * colorForm, BSLightingShaderMaterialBase * shaderMaterial)
+void CharGenInterface::ProcessHairColor(NiAVObject * node, BGSColorForm * colorForm, BSLightingShaderMaterialBase * shaderMaterial)
 {
 	VisitObjects(node, [&](NiAVObject* object)
 	{
@@ -1091,7 +1086,7 @@ void CharGen::ProcessHairColor(NiAVObject * node, BGSColorForm * colorForm, BSLi
 	});
 }
 
-const char * CharGen::ProcessEyebrowPath(TESNPC * npc)
+const char * CharGenInterface::ProcessEyebrowPath(TESNPC * npc)
 {
 	auto hairTexturePath = npc->race.race->hairColorLUT.str.c_str();
 
@@ -1121,7 +1116,7 @@ const char * CharGen::ProcessEyebrowPath(TESNPC * npc)
 
 #include <unordered_set>
 
-bool CharGen::LoadHairColorData(const std::string & filePath, ModInfo * modInfo)
+bool CharGenInterface::LoadHairColorData(const std::string & filePath, ModInfo * modInfo)
 {
 	BSResourceNiBinaryStream binaryStream(filePath.c_str());
 	if(binaryStream.IsValid())
@@ -1268,7 +1263,7 @@ bool CharGen::LoadHairColorData(const std::string & filePath, ModInfo * modInfo)
 	return true;
 }
 
-bool CharGen::IsLUTUsed(const F4EEFixedString & str)
+bool CharGenInterface::IsLUTUsed(const F4EEFixedString & str)
 {
 	auto it = m_LUTs.find(str);
 	if(it != m_LUTs.end())
@@ -1279,7 +1274,7 @@ bool CharGen::IsLUTUsed(const F4EEFixedString & str)
 	return false;
 }
 
-bool CharGen::GetLUTFromColor(BGSColorForm * color, F4EEFixedString & str)
+bool CharGenInterface::GetLUTFromColor(BGSColorForm * color, F4EEFixedString & str)
 {
 	auto it = m_LUTMap.find(color);
 	if(it != m_LUTMap.end())

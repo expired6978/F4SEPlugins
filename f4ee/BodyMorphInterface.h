@@ -2,6 +2,7 @@
 
 #include "f4se/BSModelDB.h"
 #include "f4se/GameTypes.h"
+#include "f4se/GameEvents.h"
 
 #include "f4se/NiTypes.h"
 #include "f4se/NiExtraData.h"
@@ -10,6 +11,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <ctime>
 #include <map>
 #include <functional>
@@ -18,6 +20,7 @@
 
 #include "StringTable.h"
 #include "f4se/PapyrusVM.h"
+#include "f4se/PapyrusUtilities.h"
 #include "f4se/GameThreads.h"
 
 #include "common/ICriticalSection.h"
@@ -182,10 +185,14 @@ protected:
 	UInt32					m_formId;
 };
 
-class BodyGen
+class BodyMorphInterface : public BSModelDB::TESProcessor,
+				public BSTEventSink<TESObjectLoadedEvent>
 {
 public:
-	BodyGen() : m_totalMemory(0), m_memoryLimit(0x80000000LL) { } // 2GB
+	BodyMorphInterface() : m_totalMemory(0), m_memoryLimit(0x80000000LL), m_loading(false), m_oldProcessor(nullptr) { } // 2GB
+
+	virtual void Process(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject ** root, UInt32 * typeOut);
+	virtual	EventResult	ReceiveEvent(TESObjectLoadedEvent * evn, void * dispatcher);
 
 	enum
 	{
@@ -222,39 +229,28 @@ public:
 	virtual bool ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morphableShape);
 	virtual bool UpdateMorphs(Actor * actor);
 
-	virtual void ProcessModel(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject * root);
-
 	void ShrinkMorphCache();
 	void SetCacheLimit(UInt64 limit);
-
-	/*void SetDescriptor(const BSFixedString & tri, const BSFixedString & shape, UInt64 vDesc)
-	{
-		m_descriptorMap[tri][shape] = vDesc;
-	}*/
+	void SetModelProcessor();
+	void SetLoading(bool loading) { m_loading = loading; };
+	void ResolvePendingMorphs();
 
 	template<typename T>
 	UInt64 GetHandleFromObject(T * src)
 	{
-		VirtualMachine		* vm =	(*g_gameVM)->m_virtualMachine;
-		IObjectHandlePolicy	* policy =		vm->GetHandlePolicy();
-
-		return policy->Create(T::kTypeID, (T*)src);
+		return PapyrusVM::GetHandleFromObject((T*)src, T::kTypeID);
 	}
 
 	template<typename T>
 	T * GetObjectFromHandle(UInt64 handle)
 	{
-		VirtualMachine		* vm =	(*g_gameVM)->m_virtualMachine;
-		IObjectHandlePolicy	* policy =		vm->GetHandlePolicy();
-
-		if(handle == policy->GetInvalidHandle()) {
-			return NULL;
-		}
-
-		return (T*)policy->Resolve(T::kTypeID, handle);
+		return (T*)PapyrusVM::GetObjectFromHandle(handle, T::kTypeID);
 	}
 
 private:
+	bool												m_loading;			// True when the game is loading, false when the game has loaded
+	std::unordered_set<UInt64>							m_loadingBodyGen;	// Stores the pending actors while loading (Populated while loading, erased during load, remaining actors get new morphs, cleared after)
+
 	SimpleLock											m_morphLock;
 	std::unordered_map<UInt64, MorphValueMapPtr>		m_morphMap[2];
 
@@ -263,9 +259,9 @@ private:
 	UInt64												m_totalMemory;
 	UInt64												m_memoryLimit;
 
-	//std::unordered_map<BSFixedString, std::unordered_map<BSFixedString, UInt64>> m_descriptorMap;
+	std::unordered_map<F4EEFixedString, BodySliderPtr>	m_sliderMap[2];
 
-	std::map<F4EEFixedString, BodySliderPtr>				m_sliderMap[2];
+	ICriticalSection									m_bodyGenLock;
 
-	ICriticalSection	m_bodyGenLock;
+	BSModelDB::TESProcessor								* m_oldProcessor;
 };

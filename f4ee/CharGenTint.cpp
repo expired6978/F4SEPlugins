@@ -4,7 +4,7 @@
 #include "f4se/GameData.h"
 #include "f4se/GameRTTI.h"
 
-#include "CharGen.h"
+#include "CharGenInterface.h"
 #include "Utilities.h"
 
 #include <set>

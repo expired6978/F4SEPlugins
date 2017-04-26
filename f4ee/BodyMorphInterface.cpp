@@ -1,4 +1,5 @@
-#include "BodyGen.h"
+#include "BodyMorphInterface.h"
+#include "BodyGenInterface.h"
 
 #include "f4se/GameData.h"
 #include "f4se/GameStreams.h"
@@ -21,9 +22,10 @@
 #include <atomic>
 #include <chrono>
 
-extern BodyGen g_bodyGen;
+extern BodyGenInterface g_bodyGenInterface;
+extern BodyMorphInterface g_bodyMorphInterface;
 extern StringTable g_stringTable;
-extern bool g_bEnableBodygen;
+extern bool g_bEnableBodyMorphs;
 extern bool g_bUseTaskInterface;
 extern bool g_bParallelShapes;
 extern F4SETaskInterface * g_task;
@@ -98,7 +100,7 @@ BodyMorphMapPtr TriShapeMap::GetMorphData(const F4EEFixedString & name)
 	return nullptr;
 }
 
-TriShapeMapPtr BodyGen::GetTrishapeMap(const char * relativePath)
+TriShapeMapPtr BodyMorphInterface::GetTrishapeMap(const char * relativePath)
 {
 	BSFixedString filePath(relativePath);
 	if(relativePath == "")
@@ -276,7 +278,7 @@ TriShapeMapPtr BodyGen::GetTrishapeMap(const char * relativePath)
 	return nullptr;
 }
 
-void BodyGen::ShrinkMorphCache()
+void BodyMorphInterface::ShrinkMorphCache()
 {
 	m_morphCacheLock.Lock();
 	while (m_totalMemory > m_memoryLimit && m_morphCache.size() > 0)
@@ -296,12 +298,12 @@ void BodyGen::ShrinkMorphCache()
 	m_morphCacheLock.Release();
 }
 
-void BodyGen::SetCacheLimit(UInt64 limit)
+void BodyMorphInterface::SetCacheLimit(UInt64 limit)
 {
 	m_memoryLimit = limit;
 }
 
-void BodyGen::LoadBodyGenSliderMods()
+void BodyMorphInterface::LoadBodyGenSliderMods()
 {
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
 	{
@@ -311,7 +313,7 @@ void BodyGen::LoadBodyGenSliderMods()
 	}
 }
 
-bool BodyGen::LoadBodyGenSliders(const std::string & filePath)
+bool BodyMorphInterface::LoadBodyGenSliders(const std::string & filePath)
 {
 	BSResourceNiBinaryStream binaryStream(filePath.c_str());
 	if(binaryStream.IsValid())
@@ -340,13 +342,13 @@ bool BodyGen::LoadBodyGenSliders(const std::string & filePath)
 	return true;
 }
 
-void BodyGen::ClearBodyGenSliders()
+void BodyMorphInterface::ClearBodyGenSliders()
 {
 	m_sliderMap[0].clear();
 	m_sliderMap[1].clear();
 }
 
-void BodyGen::ForEachSlider(UInt8 gender, std::function<void(const BodySliderPtr & slider)> func)
+void BodyMorphInterface::ForEachSlider(UInt8 gender, std::function<void(const BodySliderPtr & slider)> func)
 {
 	if(gender == 0 || gender == 1)
 	{
@@ -378,7 +380,7 @@ bool BodySlider::Parse(const Json::Value & entry)
 	return true;
 }
 
-void BodyGen::GetMorphableShapes(NiAVObject * rootNode, std::vector<MorphableShapePtr> & shapes)
+void BodyMorphInterface::GetMorphableShapes(NiAVObject * rootNode, std::vector<MorphableShapePtr> & shapes)
 {
 	VisitObjects(rootNode, [&](NiAVObject * node)
 	{
@@ -418,7 +420,7 @@ void F4EEBodyGenUpdate::Run()
 #include "f4se/BSGraphics.h"
 #include "Morpher.h"
 
-bool BodyGen::ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morphableShape)
+bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morphableShape)
 {
 	// Don't allow dynamic shapes
 	BSDynamicTriShape * dynamicShape = morphableShape->object->GetAsBSDynamicTriShape();
@@ -463,7 +465,7 @@ bool BodyGen::ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morpha
 		if(!(vertexDesc & BSGeometry::kFlag_Vertex)) // What kind of dumbass mesh doesn't have verts
 			return false;
 
-		// Create the cloned copy since we don't have a MORPH_DATA
+		// Create the cloned copy
 		geomData = CALL_MEMBER_FN(g_renderManager, CreateBSGeometryData)(&blockSize, baseData->vertexData, geometry->vertexDesc, baseData->triangleData);
 		if(!geomData)
 			return false;
@@ -471,8 +473,8 @@ bool BodyGen::ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morpha
 		// Copy from the base data to the newly created block
 		memcpy(geomData->vertexData->vertexBlock, baseData->vertexData->vertexBlock, geometry->numVertices * vertexSize);
 
-		// We don't want to delete the original copy, but we'll release because we are forking
-		if(baseData->refCount > 1)
+		// We don't want to delete the original copy, but we'll release because we are forking (Don't know what the other ref is for?)
+		if(baseData->refCount > 2)
 			InterlockedDecrement(&baseData->refCount);
 
 		geometry->geometryData = geomData;
@@ -498,7 +500,7 @@ bool BodyGen::ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morpha
 	return false;
 }
 
-bool BodyGen::ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNode)
+bool BodyMorphInterface::ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNode)
 {
 	if(!actor || !slotNode)
 		return false;
@@ -524,7 +526,7 @@ bool BodyGen::ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNode)
 	return true;
 }
 
-bool BodyGen::UpdateMorphs(Actor * actor)
+bool BodyMorphInterface::UpdateMorphs(Actor * actor)
 {
 	if(!actor)
 			return false;
@@ -546,44 +548,7 @@ BSFixedString PrefixMeshPath(const char * relativePath)
 	return BSFixedString(targetPath.c_str());
 }
 
-void BodyGen::ProcessModel(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject * object)
-{
-	NiExtraData * bodyMorphs = object->GetExtraData("BODYTRI");
-	if(bodyMorphs)
-	{
-		NiStringExtraData * stringData = DYNAMIC_CAST(bodyMorphs, NiExtraData, NiStringExtraData);
-		if(stringData)
-		{
-			stringData->IncRef();
-			auto triPath = PrefixMeshPath(stringData->m_string);
-			stringData->DecRef();
-
-			auto trishapeMap = g_bodyGen.GetTrishapeMap(triPath);
-			if(trishapeMap)
-			{
-				for(auto & shape : *trishapeMap)
-				{
-					BSFixedString str(shape.first);
-					NiAVObject * child = object->GetObjectByName(&str);
-					if(child) {
-						child->IncRef();
-						BSTriShape * childShape = child->GetAsBSTriShape();
-						if(childShape) {
-							NiPointer<NiExtraData> morphFile = NiStringExtraData::Create("MORPH_FILE", triPath);
-							NiPointer<NiExtraData> morphShape = NiStringExtraData::Create("MORPH_SHAPE", shape.first);
-							childShape->AddExtraData(morphFile);
-							childShape->AddExtraData(morphShape);
-						}
-						child->DecRef();
-					}
-				}
-			}
-			g_bodyGen.ShrinkMorphCache();
-		}
-	}
-}
-
-MorphValueMapPtr BodyGen::GetMorphMap(Actor * actor, bool isFemale)
+MorphValueMapPtr BodyMorphInterface::GetMorphMap(Actor * actor, bool isFemale)
 {
 	SimpleLocker locker(&m_morphLock);
 
@@ -596,7 +561,7 @@ MorphValueMapPtr BodyGen::GetMorphMap(Actor * actor, bool isFemale)
 	return nullptr;
 }
 
-void BodyGen::SetMorph(Actor * actor, bool isFemale, const BSFixedString & morph, BGSKeyword * keyword, float value)
+void BodyMorphInterface::SetMorph(Actor * actor, bool isFemale, const BSFixedString & morph, BGSKeyword * keyword, float value)
 {
 	if(!actor)
 		return;
@@ -617,7 +582,7 @@ void BodyGen::SetMorph(Actor * actor, bool isFemale, const BSFixedString & morph
 	morphMap->SetMorph(morph, keyword, value);
 }
 
-void BodyGen::GetKeywords(Actor * actor, bool isFemale, const BSFixedString & morph, std::vector<BGSKeyword*> & keywords)
+void BodyMorphInterface::GetKeywords(Actor * actor, bool isFemale, const BSFixedString & morph, std::vector<BGSKeyword*> & keywords)
 {
 	if(!actor)
 		return;
@@ -632,7 +597,7 @@ void BodyGen::GetKeywords(Actor * actor, bool isFemale, const BSFixedString & mo
 	}
 }
 
-void BodyGen::GetMorphs(Actor * actor, bool isFemale, std::vector<BSFixedString> & morphs)
+void BodyMorphInterface::GetMorphs(Actor * actor, bool isFemale, std::vector<BSFixedString> & morphs)
 {
 	if(!actor)
 		return;
@@ -649,7 +614,7 @@ void BodyGen::GetMorphs(Actor * actor, bool isFemale, std::vector<BSFixedString>
 	}
 }
 
-void BodyGen::RemoveMorphsByName(Actor * actor, bool isFemale, const BSFixedString & morph)
+void BodyMorphInterface::RemoveMorphsByName(Actor * actor, bool isFemale, const BSFixedString & morph)
 {
 	if(!actor)
 		return;
@@ -664,7 +629,7 @@ void BodyGen::RemoveMorphsByName(Actor * actor, bool isFemale, const BSFixedStri
 	}
 }
 
-void BodyGen::RemoveMorphsByKeyword(Actor * actor, bool isFemale, BGSKeyword * keyword)
+void BodyMorphInterface::RemoveMorphsByKeyword(Actor * actor, bool isFemale, BGSKeyword * keyword)
 {
 	if(!actor)
 		return;
@@ -679,7 +644,7 @@ void BodyGen::RemoveMorphsByKeyword(Actor * actor, bool isFemale, BGSKeyword * k
 	}	
 }
 
-void BodyGen::ClearMorphs(Actor * actor, bool isFemale)
+void BodyMorphInterface::ClearMorphs(Actor * actor, bool isFemale)
 {
 	if(!actor)
 		return;
@@ -692,7 +657,7 @@ void BodyGen::ClearMorphs(Actor * actor, bool isFemale)
 	}
 }
 
-void BodyGen::CloneMorphs(Actor * source, Actor * target)
+void BodyMorphInterface::CloneMorphs(Actor * source, Actor * target)
 {
 	if(!source || !target)
 		return;
@@ -712,7 +677,7 @@ void BodyGen::CloneMorphs(Actor * source, Actor * target)
 	}
 }
 
-float BodyGen::GetMorph(Actor * actor, bool isFemale, const BSFixedString & morph, BGSKeyword * keyword)
+float BodyMorphInterface::GetMorph(Actor * actor, bool isFemale, const BSFixedString & morph, BGSKeyword * keyword)
 {
 	SimpleLocker locker(&m_morphLock);
 
@@ -730,7 +695,7 @@ float UserValues::GetValue(BGSKeyword * keyword)
 {
 	SimpleLocker locker(&m_morphLock);
 
-	UInt64 handle = g_bodyGen.GetHandleFromObject(keyword);
+	UInt64 handle = g_bodyMorphInterface.GetHandleFromObject(keyword);
 	auto it = find(handle);
 	if(it != end()) {
 		return it->second;
@@ -743,7 +708,7 @@ void UserValues::SetValue(BGSKeyword * keyword, float value)
 {
 	SimpleLocker locker(&m_morphLock);
 
-	UInt64 handle = g_bodyGen.GetHandleFromObject(keyword);
+	UInt64 handle = g_bodyMorphInterface.GetHandleFromObject(keyword);
 
 	// Erase the value if it isn't present at all
 	if(value == 0.0f) {
@@ -759,7 +724,7 @@ void UserValues::SetValue(BGSKeyword * keyword, float value)
 void UserValues::RemoveKeyword(BGSKeyword * keyword)
 {
 	SimpleLocker locker(&m_morphLock);
-	UInt64 handle = g_bodyGen.GetHandleFromObject(keyword);
+	UInt64 handle = g_bodyMorphInterface.GetHandleFromObject(keyword);
 	auto it = find(handle);
 	if(it != end()) {
 		erase(it);
@@ -813,7 +778,7 @@ void MorphValueMap::GetKeywords(const BSFixedString & morph, std::vector<BGSKeyw
 	auto it = find(g_stringTable.GetString(morph));
 	if(it != end()) {
 		for(auto & kwds : *it->second) {
-			BGSKeyword * keyword = g_bodyGen.GetObjectFromHandle<BGSKeyword>(kwds.first);
+			BGSKeyword * keyword = g_bodyMorphInterface.GetObjectFromHandle<BGSKeyword>(kwds.first);
 			keywords.push_back(keyword);
 		}
 	}
@@ -838,7 +803,7 @@ void MorphValueMap::RemoveMorphsByKeyword(BGSKeyword * keyword)
 	}
 }
 
-void BodyGen::Save(const F4SESerializationInterface * intfc, UInt32 kVersion)
+void BodyMorphInterface::Save(const F4SESerializationInterface * intfc, UInt32 kVersion)
 {
 	SimpleLocker locker(&m_morphLock);
 
@@ -994,7 +959,7 @@ bool MorphValueMap::Load(const F4SESerializationInterface * intfc, UInt32 kVersi
 	return true;
 }
 
-bool BodyGen::Load(const F4SESerializationInterface * intfc, bool isFemale, UInt32 kVersion, const std::unordered_map<UInt32, StringTableItem> & stringTable)
+bool BodyMorphInterface::Load(const F4SESerializationInterface * intfc, bool isFemale, UInt32 kVersion, const std::unordered_map<UInt32, StringTableItem> & stringTable)
 {
 	UInt64 handle;
 	// Key
@@ -1013,7 +978,7 @@ bool BodyGen::Load(const F4SESerializationInterface * intfc, bool isFemale, UInt
 
 	// Only place the data into the map if bodygen is enabled
 	// this allows it to be parsed first, then discarded next save
-	if(g_bEnableBodygen)
+	if(g_bEnableBodyMorphs)
 	{
 		UInt64 newHandle = 0;
 
@@ -1031,6 +996,7 @@ bool BodyGen::Load(const F4SESerializationInterface * intfc, bool isFemale, UInt
 
 		Actor * actor = GetObjectFromHandle<Actor>(newHandle);
 		if(actor) {
+			m_loadingBodyGen.erase((isFemale ? 1LL << 32 : 0) | actor->formID);
 			UpdateMorphs(actor);
 		}
 	}
@@ -1038,9 +1004,119 @@ bool BodyGen::Load(const F4SESerializationInterface * intfc, bool isFemale, UInt
 	return true;
 }
 
-void BodyGen::Revert()
+void BodyMorphInterface::Revert()
 {
 	SimpleLocker	locker(&m_morphLock);
 	m_morphMap[0].clear();
 	m_morphMap[1].clear();
+}
+
+void BodyMorphInterface::SetModelProcessor()
+{
+	m_oldProcessor = (*g_TESProcessor);
+	(*g_TESProcessor) = this;
+}
+
+void BodyMorphInterface::Process(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject ** root, UInt32 * typeOut)
+{
+	NiAVObject * object = root ? *root : nullptr;
+	if(object)
+	{
+		object->IncRef();
+		NiExtraData * bodyMorphs = object->GetExtraData("BODYTRI");
+		if(bodyMorphs)
+		{
+			NiStringExtraData * stringData = DYNAMIC_CAST(bodyMorphs, NiExtraData, NiStringExtraData);
+			if(stringData)
+			{
+				stringData->IncRef();
+				auto triPath = PrefixMeshPath(stringData->m_string);
+				stringData->DecRef();
+
+				auto trishapeMap = GetTrishapeMap(triPath);
+				if(trishapeMap)
+				{
+					for(auto & shape : *trishapeMap)
+					{
+						BSFixedString str(shape.first);
+						NiAVObject * child = object->GetObjectByName(&str);
+						if(child) {
+							child->IncRef();
+							BSTriShape * childShape = child->GetAsBSTriShape();
+							if(childShape) {
+								NiPointer<NiExtraData> morphFile = NiStringExtraData::Create("MORPH_FILE", triPath);
+								NiPointer<NiExtraData> morphShape = NiStringExtraData::Create("MORPH_SHAPE", shape.first);
+								childShape->AddExtraData(morphFile);
+								childShape->AddExtraData(morphShape);
+							}
+							child->DecRef();
+						}
+					}
+				}
+
+				ShrinkMorphCache();
+			}
+		}
+
+		object->DecRef();
+	}
+
+	if(m_oldProcessor)
+		m_oldProcessor->Process(modelData, modelName, root, typeOut);
+}
+
+EventResult	BodyMorphInterface::ReceiveEvent(TESObjectLoadedEvent * evn, void * dispatcher)
+{
+	if(evn->loaded)
+	{
+		// We need to collect pending loads because these will fire before the load game event
+		TESForm * form = LookupFormByID(evn->formId);
+		if(form && form->formType == Actor::kTypeID)
+		{
+			Actor * actor = static_cast<Actor*>(form);
+			TESNPC * npc = static_cast<TESNPC *>(actor->baseForm);
+			UInt64 gender = CALL_MEMBER_FN(npc, GetSex)();
+			bool isFemale = gender == 1 ? true : false;
+
+			if(m_loading)
+			{
+				m_loadingBodyGen.insert((gender << 32) | form->formID);
+			}
+			else
+			{
+				// We've loaded the game, we can just generate and apply morphs if we don't already have any
+				// and we meet the outlined criteria for generation
+				// Generate morph list
+				auto morphMap = GetMorphMap(actor, isFemale);
+				if(!morphMap)
+				{
+					g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale);
+				}
+			}
+		}
+	}
+
+	return kEvent_Continue;
+};
+
+void BodyMorphInterface::ResolvePendingMorphs()
+{
+	for(auto & uid : m_loadingBodyGen)
+	{
+		UInt8 gender = uid >> 32;
+		UInt32 formID = uid & 0xFFFFFFFF;
+		bool isFemale = gender == 1 ? true : false;
+
+		TESForm * form = LookupFormByID(formID);
+		if(form && form->formType == Actor::kTypeID)
+		{
+			Actor * actor = static_cast<Actor*>(form);
+			auto morphMap = GetMorphMap(actor, isFemale);
+			if(!morphMap)
+			{
+				g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale);
+			}
+		}
+	}
+	m_loadingBodyGen.clear();
 }

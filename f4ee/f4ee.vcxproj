@@ -157,8 +157,9 @@
     <ClCompile Include="..\f4se\ScaleformTranslator.cpp" />
     <ClCompile Include="..\f4se\ScaleformTypes.cpp" />
     <ClCompile Include="..\f4se\ScaleformValue.cpp" />
-    <ClCompile Include="BodyGen.cpp" />
-    <ClCompile Include="CharGen.cpp" />
+    <ClCompile Include="BodyGenInterface.cpp" />
+    <ClCompile Include="BodyMorphInterface.cpp" />
+    <ClCompile Include="CharGenInterface.cpp" />
     <ClCompile Include="CharGenTint.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Morpher.cpp" />
@@ -208,8 +209,9 @@
     <ClInclude Include="..\f4se\ScaleformTranslator.h" />
     <ClInclude Include="..\f4se\ScaleformTypes.h" />
     <ClInclude Include="..\f4se\ScaleformValue.h" />
-    <ClInclude Include="BodyGen.h" />
-    <ClInclude Include="CharGen.h" />
+    <ClInclude Include="BodyGenInterface.h" />
+    <ClInclude Include="BodyMorphInterface.h" />
+    <ClInclude Include="CharGenInterface.h" />
     <ClInclude Include="CharGenTint.h" />
     <ClInclude Include="half.hpp" />
     <ClInclude Include="kd_matcher.hpp" />

@@ -8,14 +8,14 @@
 #include "f4se/GameInput.h"
 #include "f4se/GameRTTI.h"
 
-#include "CharGen.h"
-#include "BodyGen.h"
+#include "CharGenInterface.h"
+#include "BodyMorphInterface.h"
 
 #include <set>
 extern std::set<UInt32> g_presetNPCs;
-extern CharGen g_charGen;
-extern BodyGen g_bodyGen;
-extern bool g_bEnableBodygen;
+extern CharGenInterface g_charGenInterface;
+extern BodyMorphInterface g_bodyMorphInterface;
+extern bool g_bEnableBodyMorphs;
 
 inline void RegisterNumber(GFxValue * dst, const char * name, double value)
 {
@@ -50,7 +50,7 @@ void F4EEScaleform_LoadPreset::Invoke(Args * args)
 	ASSERT(args->numArgs >= 1);
 	ASSERT(args->args[0].GetType() == GFxValue::kType_String);
 
-	args->result->SetInt(g_charGen.LoadPreset(args->args[0].GetString()));
+	args->result->SetInt(g_charGenInterface.LoadPreset(args->args[0].GetString()));
 
 	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
 	if(characterCreation) {
@@ -58,8 +58,8 @@ void F4EEScaleform_LoadPreset::Invoke(Args * args)
 		characterCreation->unk517 = 1;
 		characterCreation->dirty = 1;
 
-		if(g_bEnableBodygen) {
-			g_bodyGen.UpdateMorphs(characterCreation->actor);
+		if(g_bEnableBodyMorphs) {
+			g_bodyMorphInterface.UpdateMorphs(characterCreation->actor);
 		}
 	}
 
@@ -89,7 +89,7 @@ void F4EEScaleform_SavePreset::Invoke(Args * args)
 	ASSERT(args->numArgs >= 1);
 	ASSERT(args->args[0].GetType() == GFxValue::kType_String);
 
-	args->result->SetInt(g_charGen.SavePreset(args->args[0].GetString()));
+	args->result->SetInt(g_charGenInterface.SavePreset(args->args[0].GetString()));
 }
 
 void F4EEScaleform_ReadPreset::Invoke(Args * args)
@@ -120,7 +120,7 @@ void F4EEScaleform_GetBodySliders::Invoke(Args * args)
 			args->movie->movieRoot->CreateArray(args->result);
 
 			std::vector<BodySliderPtr> sliders;
-			g_bodyGen.ForEachSlider(gender, [&sliders](const BodySliderPtr & slider) {
+			g_bodyMorphInterface.ForEachSlider(gender, [&sliders](const BodySliderPtr & slider) {
 				sliders.push_back(slider);
 			});
 
@@ -137,7 +137,7 @@ void F4EEScaleform_GetBodySliders::Invoke(Args * args)
 				args->movie->movieRoot->CreateObject(&sliderInfo);
 				RegisterString(&sliderInfo, args->movie->movieRoot, "name", slider->name);
 				RegisterString(&sliderInfo, args->movie->movieRoot, "morph", slider->morph);
-				RegisterNumber(&sliderInfo, "value", g_bodyGen.GetMorph(actor, gender == 1 ? true : false, slider->morph, nullptr));
+				RegisterNumber(&sliderInfo, "value", g_bodyMorphInterface.GetMorph(actor, gender == 1 ? true : false, slider->morph, nullptr));
 				RegisterNumber(&sliderInfo, "minimum", slider->minimum);
 				RegisterNumber(&sliderInfo, "maximum", slider->maximum);
 				RegisterNumber(&sliderInfo, "interval", slider->interval);
@@ -159,7 +159,7 @@ void F4EEScaleform_SetBodyMorph::Invoke(Args * args)
 		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
 		if(npc) {
 			UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
-			g_bodyGen.SetMorph(actor, gender == 1 ? true : false, args->args[0].GetString(), nullptr, args->args[1].GetNumber());
+			g_bodyMorphInterface.SetMorph(actor, gender == 1 ? true : false, args->args[0].GetString(), nullptr, args->args[1].GetNumber());
 		}
 		
 	}
@@ -177,8 +177,8 @@ void F4EEScaleform_CloneBodyMorphs::Invoke(Args * args)
 		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
 
 		if(actor != (*g_player) && ((bVerify && (npc == (*g_customizationDummy1) || npc == (*g_customizationDummy2))) || !bVerify)) {
-			g_bodyGen.CloneMorphs(actor, (*g_player));
-			g_bodyGen.UpdateMorphs(*g_player);
+			g_bodyMorphInterface.CloneMorphs(actor, (*g_player));
+			g_bodyMorphInterface.UpdateMorphs(*g_player);
 		}
 	}
 }
@@ -187,7 +187,7 @@ void F4EEScaleform_UpdateBodyMorphs::Invoke(Args * args)
 {
 	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
 	if(characterCreation) {
-		g_bodyGen.UpdateMorphs(characterCreation->actor);
+		g_bodyMorphInterface.UpdateMorphs(characterCreation->actor);
 	}
 }
 

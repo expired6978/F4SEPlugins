@@ -91,9 +91,6 @@
     <ClCompile Include="..\f4se\GameUtilities.cpp">
       <Filter>f4se\api</Filter>
     </ClCompile>
-    <ClCompile Include="CharGen.cpp">
-      <Filter>CharGen</Filter>
-    </ClCompile>
     <ClCompile Include="..\f4se\GameReferences.cpp">
       <Filter>f4se\api</Filter>
     </ClCompile>
@@ -154,9 +151,6 @@
     <ClCompile Include="..\f4se\BSSkin.cpp">
       <Filter>f4se\netimmerse</Filter>
     </ClCompile>
-    <ClCompile Include="BodyGen.cpp">
-      <Filter>BodyGen</Filter>
-    </ClCompile>
     <ClCompile Include="..\f4se\PapyrusNativeFunctions.cpp">
       <Filter>f4se\papyrus\vm</Filter>
     </ClCompile>
@@ -195,6 +189,15 @@
     </ClCompile>
     <ClCompile Include="Morpher.cpp">
       <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="BodyMorphInterface.cpp">
+      <Filter>BodyGen</Filter>
+    </ClCompile>
+    <ClCompile Include="CharGenInterface.cpp">
+      <Filter>CharGen</Filter>
+    </ClCompile>
+    <ClCompile Include="BodyGenInterface.cpp">
+      <Filter>BodyGen</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -237,9 +240,6 @@
     </ClInclude>
     <ClInclude Include="..\f4se\GameUtilities.h">
       <Filter>f4se\api</Filter>
-    </ClInclude>
-    <ClInclude Include="CharGen.h">
-      <Filter>CharGen</Filter>
     </ClInclude>
     <ClInclude Include="..\f4se\GameReferences.h">
       <Filter>f4se\api</Filter>
@@ -301,9 +301,6 @@
     <ClInclude Include="..\f4se\BSSkin.h">
       <Filter>f4se\netimmerse</Filter>
     </ClInclude>
-    <ClInclude Include="BodyGen.h">
-      <Filter>BodyGen</Filter>
-    </ClInclude>
     <ClInclude Include="..\f4se\PapyrusNativeFunctions.h">
       <Filter>f4se\papyrus\vm</Filter>
     </ClInclude>
@@ -351,6 +348,15 @@
     </ClInclude>
     <ClInclude Include="Morpher.h">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="BodyMorphInterface.h">
+      <Filter>BodyGen</Filter>
+    </ClInclude>
+    <ClInclude Include="CharGenInterface.h">
+      <Filter>CharGen</Filter>
+    </ClInclude>
+    <ClInclude Include="BodyGenInterface.h">
+      <Filter>BodyGen</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
