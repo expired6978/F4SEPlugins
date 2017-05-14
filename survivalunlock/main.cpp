@@ -3,14 +3,28 @@
 #include "f4se_common/SafeWrite.h"
 
 #include "f4se/GameData.h"
+#include "f4se/GameSettings.h"
+#include "f4se/GameReferences.h"
+
+#include "f4se/PapyrusEvents.h"
+
+#include "f4se_common/Relocation.h"
+#include "f4se_common/BranchTrampoline.h"
+#include "f4se_common/SafeWrite.h"
+#include "xbyak/xbyak.h"
 
 #include <shlobj.h>
+#include <ctime>
 #include <string>
 
 #include "Pattern.h"
 
 IDebugLog	gLog;
 PluginHandle	g_pluginHandle = kPluginHandle_Invalid;
+F4SEMessagingInterface		* g_messaging = nullptr;
+UInt32 g_runtimeVersion = 0;
+
+bool g_aprilFirst = false;
 
 const std::string & F4SUGetRuntimeDirectory(void)
 {
@@ -128,6 +142,55 @@ bool F4SUGetConfigValue(const char * section, const char * key, bool * dataOut)
 	return res;
 }
 
+void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
+{
+	switch(msg->type)
+	{
+	case F4SEMessagingInterface::kMessage_GameDataReady:
+		{
+			bool isReady = reinterpret_cast<bool>(msg->data);
+			if(isReady)
+			{
+				if(g_runtimeVersion == RUNTIME_VERSION_1_9_4 && g_aprilFirst)
+				{
+					// Extend the reload time
+					Setting * setting = GetGameSetting("fPlayerDeathReloadTime");
+					if(setting) {
+						setting->data.f32 = 1.5;
+					}
+				}
+			}
+		}
+		break;
+	}
+}
+
+typedef void (* _PlayerKilled)(Actor * pc, Actor * killer);
+_PlayerKilled PlayerKilled_Original = nullptr;
+
+void PlayerKilled_Hook(Actor * pc, Actor * killer)
+{
+	PlayerKilled_Original(pc, killer);
+
+	if(g_runtimeVersion == RUNTIME_VERSION_1_9_4 && g_aprilFirst) // All the code following this is version dependent
+	{
+		BSFixedString fileName("survival.bik");
+		bool bInterruptible = false;
+		bool bMuteAudio = false;
+		bool bMuteMusic = false;
+		bool bLetterBox = false;
+		bool bIsNewGameBink = false;
+		CallGlobalFunctionNoWait6<BSFixedString, bool, bool, bool, bool, bool>("Game", "PlayBink", fileName, bInterruptible, bMuteAudio, bMuteMusic, bLetterBox, bIsNewGameBink);
+
+		bool abFadingOut = true;
+		bool abBlackFade = true;
+		float afSecsBeforeFade = 0;
+		float afFadeDuration = 3.0;
+		bool abStayFaded = true;
+		CallGlobalFunctionNoWait5<bool, bool, float, float, bool>("Game", "FadeOutGame", abFadingOut, abBlackFade, afSecsBeforeFade, afFadeDuration, abStayFaded);
+	}
+}
+
 extern "C"
 {
 
@@ -144,9 +207,18 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 	// store plugin handle so we can identify ourselves later
 	g_pluginHandle = f4se->GetPluginHandle();
 
+	g_runtimeVersion = f4se->runtimeVersion;
+
 	if(f4se->isEditor)
 	{
 		_FATALERROR("loaded in editor, marking as incompatible");
+		return false;
+	}
+
+	g_messaging = (F4SEMessagingInterface *)f4se->QueryInterface(kInterface_Messaging);
+	if(!g_messaging)
+	{
+		_FATALERROR("couldn't get messaging interface");
 		return false;
 	}
 
@@ -164,15 +236,35 @@ bool F4SEPlugin_Load(const F4SEInterface * f4se)
 	uintptr_t * godMode = nullptr;
 	uintptr_t * immortalMode = nullptr;
 	uintptr_t * console = nullptr;
+	uintptr_t * playerDeath = nullptr;
+	uintptr_t * fastTravel = nullptr;
 
 	bool allowSaving = true;
 	bool returnSurvival = true;
 	bool allowGodMode = true;
 	bool allowConsole = true;
+	bool allowFastTravel = true;
+
+	bool ignoreAprilFirst = false;
+	bool aprilFirst = false;
+	F4SUGetConfigValue("Features", "bAllowFastTravel", &allowFastTravel);
 	F4SUGetConfigValue("Features", "bAllowSaving", &allowSaving);
 	F4SUGetConfigValue("Features", "bAllowReturnToSurvival", &returnSurvival);
 	F4SUGetConfigValue("Features", "bAllowGodMode", &allowGodMode);
 	F4SUGetConfigValue("Features", "bAllowConsole", &allowConsole);
+	F4SUGetConfigValue("Features", "bApril1st", &aprilFirst);
+	F4SUGetConfigValue("Features", "bIgnoreApril1st", &ignoreAprilFirst);
+
+	if(!ignoreAprilFirst)
+	{
+		time_t rawtime = time(NULL);
+		struct tm timeinfo;
+		localtime_s(&timeinfo, &rawtime);
+		if((timeinfo.tm_mon == 3 && timeinfo.tm_mday == 1) || aprilFirst)
+		{
+			g_aprilFirst = true;
+		}
+	}
 
 	if(f4se->runtimeVersion >= RUNTIME_VERSION_1_8_7)
 	{
@@ -203,6 +295,17 @@ bool F4SEPlugin_Load(const F4SEInterface * f4se)
 			if(!console)
 				_MESSAGE("Failed to find pattern for console");
 		}
+		if(allowFastTravel) {
+			fastTravel = Utility::pattern( "83 F8 06 0F 85 ? ? ? ? 83 FB FF").count( 1 ).get( 0 ).get<uintptr_t>();
+			if(!fastTravel)
+				_MESSAGE("Failed to find pattern for fast travel");
+		}
+		
+		playerDeath = Utility::pattern( "48 89 6C 24 ? 48 89 74 24 ? 57 48 83 EC 50 48 8B F2 33 D2" ).count( 1 ).get( 0 ).get<uintptr_t>();
+		if(!playerDeath)
+			_MESSAGE("Failed to find pattern for player death");
+
+		
 	}
 	
 	if(pauseSave && quickSave)
@@ -211,6 +314,12 @@ bool F4SEPlugin_Load(const F4SEInterface * f4se)
 		SafeWrite8(((uintptr_t)quickSave) + 2, 0x07);	// Changes cmp 6 to cmp 7
 
 		_MESSAGE("Enabled saving in Survival difficulty");
+	}
+	if(fastTravel)
+	{
+		SafeWrite8(((uintptr_t)fastTravel) + 2, 0x07);	// Changes cmp 6 to cmp 7
+
+		_MESSAGE("Enabled fast travel in Survival difficulty");
 	}
 	if(retSurvival)
 	{
@@ -230,6 +339,47 @@ bool F4SEPlugin_Load(const F4SEInterface * f4se)
 		SafeWrite8(((uintptr_t)console) + 2, 0x07);	// Changes cmp 6 to cmp 7
 		_MESSAGE("Enabled console in Survival difficulty");
 	}
+
+	
+	if(!g_branchTrampoline.Create(1024 * 64))
+	{
+		_ERROR("couldn't create branch trampoline. this is fatal. skipping remainder of init process.");
+		return false;
+	}
+
+	if(!g_localTrampoline.Create(1024 * 64, nullptr))
+	{
+		_ERROR("couldn't create codegen buffer. this is fatal. skipping remainder of init process.");
+		return false;
+	}
+
+	if(g_aprilFirst) // Hook player death code to play bik
+	{
+		struct PlayerKilled_Code : Xbyak::CodeGenerator {
+			PlayerKilled_Code(void * buf, uintptr_t playerDeath) : Xbyak::CodeGenerator(4096, buf)
+			{
+				Xbyak::Label retnLabel;
+
+				mov(ptr[rsp+0x18], rbp);
+
+				jmp(ptr [rip + retnLabel]);
+
+				L(retnLabel);
+				dq(playerDeath + 5);
+			}
+		};
+
+		void * codeBuf = g_localTrampoline.StartAlloc();
+		PlayerKilled_Code code(codeBuf, (uintptr_t)playerDeath);
+		g_localTrampoline.EndAlloc(code.getCurr());
+
+		PlayerKilled_Original = (_PlayerKilled)codeBuf;
+
+		g_branchTrampoline.Write5Branch((uintptr_t)playerDeath, (uintptr_t)PlayerKilled_Hook);
+	}
+
+	if(g_messaging)
+		g_messaging->RegisterListener(g_pluginHandle, "F4SE", F4SEMessageHandler);
 
 	return true;
 }

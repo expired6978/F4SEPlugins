@@ -91,14 +91,50 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\f4se\GameAPI.cpp" />
+    <ClCompile Include="..\f4se\GameExtraData.cpp" />
+    <ClCompile Include="..\f4se\GameForms.cpp" />
+    <ClCompile Include="..\f4se\GameObjects.cpp" />
+    <ClCompile Include="..\f4se\GameReferences.cpp" />
+    <ClCompile Include="..\f4se\GameSettings.cpp" />
+    <ClCompile Include="..\f4se\GameTypes.cpp" />
+    <ClCompile Include="..\f4se\GameUtilities.cpp" />
+    <ClCompile Include="..\f4se\PapyrusArgs.cpp" />
+    <ClCompile Include="..\f4se\PapyrusEvents.cpp" />
+    <ClCompile Include="..\f4se\PapyrusInterfaces.cpp" />
+    <ClCompile Include="..\f4se\PapyrusNativeFunctions.cpp" />
+    <ClCompile Include="..\f4se\PapyrusStruct.cpp" />
+    <ClCompile Include="..\f4se\PapyrusUtilities.cpp" />
+    <ClCompile Include="..\f4se\PapyrusValue.cpp" />
+    <ClCompile Include="..\f4se\PapyrusVM.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Pattern.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\f4se\GameAPI.h" />
+    <ClInclude Include="..\f4se\GameExtraData.h" />
+    <ClInclude Include="..\f4se\GameForms.h" />
+    <ClInclude Include="..\f4se\GameObjects.h" />
+    <ClInclude Include="..\f4se\GameReferences.h" />
+    <ClInclude Include="..\f4se\GameSettings.h" />
+    <ClInclude Include="..\f4se\GameTypes.h" />
+    <ClInclude Include="..\f4se\GameUtilities.h" />
+    <ClInclude Include="..\f4se\PapyrusArgs.h" />
+    <ClInclude Include="..\f4se\PapyrusEvents.h" />
+    <ClInclude Include="..\f4se\PapyrusInterfaces.h" />
+    <ClInclude Include="..\f4se\PapyrusNativeFunctions.h" />
+    <ClInclude Include="..\f4se\PapyrusStruct.h" />
+    <ClInclude Include="..\f4se\PapyrusUtilities.h" />
+    <ClInclude Include="..\f4se\PapyrusValue.h" />
+    <ClInclude Include="..\f4se\PapyrusVM.h" />
     <ClInclude Include="Pattern.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\f4se\PapyrusEventsDef.inl" />
+    <None Include="..\f4se\PapyrusEventsDef_Base.inl" />
+    <None Include="..\f4se\PapyrusNativeFunctionDef.inl" />
+    <None Include="..\f4se\PapyrusNativeFunctionDef_Base.inl" />
     <None Include="exports.def" />
   </ItemGroup>
   <ItemGroup>

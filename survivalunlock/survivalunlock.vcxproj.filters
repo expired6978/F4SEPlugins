@@ -1,0 +1,136 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Pattern.cpp" />
+    <ClCompile Include="..\f4se\GameSettings.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameForms.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameObjects.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameReferences.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameAPI.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameTypes.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\PapyrusNativeFunctions.cpp">
+      <Filter>papyrus\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\PapyrusStruct.cpp">
+      <Filter>papyrus\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\PapyrusUtilities.cpp">
+      <Filter>papyrus\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\PapyrusValue.cpp">
+      <Filter>papyrus\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\PapyrusVM.cpp">
+      <Filter>papyrus\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\PapyrusArgs.cpp">
+      <Filter>papyrus\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\PapyrusEvents.cpp">
+      <Filter>papyrus\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\PapyrusInterfaces.cpp">
+      <Filter>papyrus\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameExtraData.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameUtilities.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Pattern.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="..\f4se\GameSettings.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameForms.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameObjects.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameReferences.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameAPI.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameTypes.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\PapyrusNativeFunctions.h">
+      <Filter>papyrus\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\PapyrusStruct.h">
+      <Filter>papyrus\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\PapyrusUtilities.h">
+      <Filter>papyrus\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\PapyrusValue.h">
+      <Filter>papyrus\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\PapyrusVM.h">
+      <Filter>papyrus\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\PapyrusArgs.h">
+      <Filter>papyrus\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\PapyrusEvents.h">
+      <Filter>papyrus\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\PapyrusInterfaces.h">
+      <Filter>papyrus\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameExtraData.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameUtilities.h">
+      <Filter>api</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="survivalunlock.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="exports.def" />
+    <None Include="..\f4se\PapyrusNativeFunctionDef.inl">
+      <Filter>papyrus\vm</Filter>
+    </None>
+    <None Include="..\f4se\PapyrusNativeFunctionDef_Base.inl">
+      <Filter>papyrus\vm</Filter>
+    </None>
+    <None Include="..\f4se\PapyrusEventsDef.inl">
+      <Filter>papyrus\vm</Filter>
+    </None>
+    <None Include="..\f4se\PapyrusEventsDef_Base.inl">
+      <Filter>papyrus\vm</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="api">
+      <UniqueIdentifier>{eea5b997-2644-4510-9d46-835d17c5c491}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="papyrus">
+      <UniqueIdentifier>{81322318-3005-4463-a2cb-fba48ddea818}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="papyrus\vm">
+      <UniqueIdentifier>{8ee55804-4002-4fed-8151-1328bd872127}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
