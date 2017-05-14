@@ -55,7 +55,7 @@ namespace papyrusBodyGen
 
 	void UpdateMorphs(StaticFunctionTag*, Actor * actor)
 	{
-		g_bodyMorphInterface.UpdateMorphs(actor);
+		g_bodyMorphInterface.UpdateMorphs(actor, true, true);
 	}
 };
 

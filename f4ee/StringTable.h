@@ -9,6 +9,7 @@
 
 struct F4SESerializationInterface;
 
+// Class is similar to BSFixedString, it is meant to not interfere with base game string caching when loading data early on
 class F4EEFixedString
 {
 public:

@@ -14,17 +14,20 @@
 
 extern BodyMorphInterface g_bodyMorphInterface;
 
-bool BodyGenInterface::ReadBodyMorphTemplates(const BSFixedString & filePath)
+bool BodyGenInterface::ReadBodyMorphTemplates(const char * filePath)
 {
-	BSResourceNiBinaryStream file(filePath.c_str());
+	BSResourceNiBinaryStream file(filePath);
 	if (!file.IsValid()) {
 		return false;
 	}
 
+	BSResourceTextFile<0x7FFF> textFile(&file);
+
 	UInt32 lineCount = 0;
 	std::string str = "";
+	UInt32 loadedTemplates = 0;
 
-	while (BSReadLine(&file, &str))
+	while (textFile.ReadLine(&str))
 	{
 		lineCount++;
 		str = std::trim(str);
@@ -35,14 +38,14 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const BSFixedString & filePath)
 
 		std::vector<std::string> side = std::explode(str, '=');
 		if (side.size() < 2) {
-			_ERROR("%s - Error - Line (%d) loading a morph from %s has no left-hand side.", __FUNCTION__, lineCount, filePath.c_str());
+			_ERROR("%s - Error - Template has no left-hand side.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath);
 			continue;
 		}
 
 		std::string lSide = std::trim(side[0]);
 		std::string rSide = std::trim(side[1]);
 
-		BSFixedString templateName = lSide.c_str();
+		F4EEFixedString templateName = lSide.c_str();
 
 		BodyGenTemplatePtr bodyGenSets = std::make_shared<BodyGenTemplate>();
 
@@ -66,7 +69,9 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const BSFixedString & filePath)
 
 					std::vector<std::string> pairs = std::explode(selectors[k], '@');
 					if (pairs.size() < 2) {
-						error = "Must have value pair with @";
+						error = "Must have value pair with @ (";
+						error += selectors[k];
+						error += ")";
 						break;
 					}
 
@@ -78,7 +83,9 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const BSFixedString & filePath)
 
 					std::string morphValues = std::trim(pairs[1]);
 					if (morphValues.length() == 0) {
-						error = "Empty values";
+						error = "Empty values for (";
+						error += morphName;
+						error += ")";
 						break;
 					}
 
@@ -89,7 +96,9 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const BSFixedString & filePath)
 					if (range.size() > 1) {
 						std::string lowerRange = std::trim(range[0]);
 						if (lowerRange.length() == 0) {
-							error = "Empty lower range";
+							error = "Empty lower range for (";
+							error += morphName;
+							error += ")";
 							break;
 						}
 
@@ -97,7 +106,9 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const BSFixedString & filePath)
 
 						std::string upperRange = std::trim(range[1]);
 						if (upperRange.length() == 0) {
-							error = "Empty upper range";
+							error = "Empty upper range for (";
+							error += morphName;
+							error += ")";
 							break;
 						}
 
@@ -128,29 +139,60 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const BSFixedString & filePath)
 		}
 
 		if (error.length() > 0) {
-			_ERROR("%s - Error - Line (%d) could not parse morphs from %s. (%s)", __FUNCTION__, lineCount, filePath.c_str(), error.c_str());
+			_ERROR("%s - Error - Could not parse morphs %s.\tLine (%d) [%s]", __FUNCTION__, error.c_str(), lineCount, filePath);
 			continue;
 		}
 
-		if (bodyGenSets->size() > 0)
+		if (bodyGenSets->size() > 0) {
 			bodyGenTemplates[templateName] = bodyGenSets;
+			loadedTemplates++;
+		}
 	}
 
+	_DMESSAGE("%s - Info - Loaded %d template(s).\t[%s]", __FUNCTION__, loadedTemplates, filePath);
 	return true;
 }
 
-bool BodyGenInterface::ReadBodyMorphs(const BSFixedString & filePath)
+void BodyGenInterface::GetFilteredNPCList(std::vector<TESNPC*> activeNPCs[], SInt32 modIndex, UInt32 gender, TESRace * raceFilter)
 {
-	BSResourceNiBinaryStream file(filePath.c_str());
+	for (UInt32 i = 0; i < (*g_dataHandler)->arrNPC_.count; i++)
+	{
+		TESNPC * npc = nullptr;
+		if ((*g_dataHandler)->arrNPC_.GetNthItem(i, npc))
+		{
+			bool matchMod = (modIndex == -1 || (npc->formID >> 24) == modIndex);
+			bool matchRace = (npc->race.race == nullptr || npc->race.race == raceFilter);
+			if (npc && npc->templateNPC == nullptr && matchMod && matchRace)
+			{
+				if(gender == 0xFF)
+				{
+					activeNPCs[0].push_back(npc);
+					activeNPCs[1].push_back(npc);
+				}
+				else
+					activeNPCs[gender].push_back(npc);
+			}
+		}
+	}
+}
+
+bool BodyGenInterface::ReadBodyMorphs(const char * filePath)
+{
+	BSResourceNiBinaryStream file(filePath);
 	if (!file.IsValid()) {
 		return false;
 	}
 
+	BSResourceTextFile<0x7FFF> textFile(&file);
+
 	UInt32 lineCount = 0;
 	std::string str = "";
-	UInt32 totalTargets = 0;
+	UInt32 maleTargets = 0;
+	UInt32 femaleTargets = 0;
+	UInt32 maleOverwrite = 0;
+	UInt32 femaleOverwrite = 0;
 
-	while (BSReadLine(&file, &str))
+	while (textFile.ReadLine(&str))
 	{
 		lineCount++;
 		str = std::trim(str);
@@ -161,7 +203,7 @@ bool BodyGenInterface::ReadBodyMorphs(const BSFixedString & filePath)
 
 		std::vector<std::string> side = std::explode(str, '=');
 		if (side.size() < 2) {
-			_ERROR("%s - Error - %s (%d) loading a morph from %s has no left-hand side.", __FUNCTION__, filePath.c_str(), lineCount);
+			_ERROR("%s - Error - Morph has no left-hand side.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath);
 			continue;
 		}
 
@@ -170,93 +212,144 @@ bool BodyGenInterface::ReadBodyMorphs(const BSFixedString & filePath)
 
 		std::vector<std::string> form = std::explode(lSide, '|');
 		if (form.size() < 2) {
-			_ERROR("%s - Error - %s (%d) morph left side from %s missing mod name or formID.", __FUNCTION__, filePath.c_str(), lineCount);
+			_ERROR("%s - Error - Morph left side missing mod name or formID.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath);
 			continue;
 		}
 
-		std::vector<TESNPC*> activeNPCs;
-		std::string modNameText = std::trim(form[0]);
-		if (_strnicmp(modNameText.c_str(), "All", 3) == 0)
+		int paramIndex = 0;
+
+		std::vector<TESNPC*> activeNPCs[2];
+		std::string modNameText = std::trim(form[paramIndex]);
+		paramIndex++;
+
+		// All|Gender[|Race]
+		if (_strnicmp(modNameText.c_str(), "all", 3) == 0)
 		{
-			std::string genderText = std::trim(form[1]);
-			UInt8 gender = 0;
-			if (_strnicmp(genderText.c_str(), "Male", 4) == 0)
-				gender = 0;
-			else if (_strnicmp(genderText.c_str(), "Female", 6) == 0)
-				gender = 1;
-			else {
-				_ERROR("%s - Error - %s (%d) invalid gender specified.", __FUNCTION__, filePath.c_str(), lineCount);
-				continue;
+			UInt8 gender = 0xFF;
+			if (form.size() > paramIndex)
+			{
+				std::string genderText = std::trim(form[paramIndex]);
+				std::transform(genderText.begin(), genderText.end(), genderText.begin(), ::tolower);
+				if (genderText.compare("male") == 0) {
+					gender = 0;
+					paramIndex++;
+				}
+				else if (genderText.compare("female") == 0) {
+					gender = 1;
+					paramIndex++;
+				}
 			}
 
-			bool raceFilter = false;
 			TESRace * foundRace = nullptr;
-			if (form.size() >= 3)
+			if (form.size() > paramIndex)
 			{
-				std::string raceText = std::trim(form[2]);
-				for (UInt32 i = 0; i < (*g_dataHandler)->arrRACE.count; i++)
-				{
-					TESRace * race = nullptr;
-					if ((*g_dataHandler)->arrRACE.GetNthItem(i, race)) {
-						if (race && _strnicmp(raceText.c_str(), race->editorId.c_str(), raceText.size()) == 0) {
-							foundRace = race;
-							break;
-						}
-					}
-				}
-				raceFilter = true;
-
+				std::string raceText = std::trim(form[paramIndex]);
+				foundRace = GetRaceByName(raceText);
 				if (foundRace == nullptr)
 				{
-					_ERROR("%s - Error - %s (%d) invalid race %s specified.", __FUNCTION__, filePath.c_str(), lineCount, raceText.c_str());
+					_ERROR("%s - Error - Invalid race %s specified.\tLine (%d) [%s]", __FUNCTION__, raceText.c_str(), lineCount, filePath);
 					continue;
 				}
+				paramIndex++;
 			}
 
-			for (UInt32 i = 0; i < (*g_dataHandler)->arrNPC_.count; i++)
-			{
-				TESNPC * npc = nullptr;
-				if ((*g_dataHandler)->arrNPC_.GetNthItem(i, npc)) {
-					if (npc && npc->templateNPC == nullptr && CALL_MEMBER_FN(npc, GetSex)() == gender && (raceFilter == false || npc->race.race == foundRace))
-						activeNPCs.push_back(npc);
-				}
-			}
+			GetFilteredNPCList(activeNPCs, -1, gender, foundRace);
 		}
 		else
 		{
-			BSFixedString modText(modNameText.c_str());
-			UInt8 modIndex = (*g_dataHandler)->GetModIndex(modText.c_str());
+			UInt8 modIndex = (*g_dataHandler)->GetLoadedModIndex(modNameText.c_str());
 			if (modIndex == -1) {
-				_WARNING("%s - Warning - %s (%d) Mod %s not a loaded mod.", __FUNCTION__, filePath.c_str(), lineCount, modText.c_str());
+				_WARNING("%s - Warning - Mod '%s' not a loaded mod.\tLine (%d) [%s]", __FUNCTION__, modNameText.c_str(), lineCount, filePath);
 				continue;
 			}
 
-			std::string formIdText = std::trim(form[1]);
-			UInt32 formLower = strtoul(formIdText.c_str(), NULL, 16);
+			TESForm * foundForm = nullptr;
+			std::string formIdText = std::trim(form[paramIndex]);
+			paramIndex++;
 
-			if (formLower == 0) {
-				_ERROR("%s - Error - %s (%d) invalid formID.", __FUNCTION__, filePath.c_str(), lineCount);
-				continue;
+			UInt8 gender = 0xFF;
+			if (form.size() > paramIndex) {
+				std::string genderText = std::trim(form[paramIndex]);
+				std::transform(genderText.begin(), genderText.end(), genderText.begin(), ::tolower);
+				if (genderText.compare("male") == 0) {
+					gender = 0;
+					paramIndex++;
+				}
+				else if (genderText.compare("female") == 0) {
+					gender = 1;
+					paramIndex++;
+				}
 			}
 
-			UInt32 formId = modIndex << 24 | formLower & 0xFFFFFF;
-			TESForm * foundForm = LookupFormByID(formId);
-			if (!foundForm) {
-				_ERROR("%s - Error - %s (%d) invalid form %08X.", __FUNCTION__, filePath.c_str(), lineCount, formId);
-				continue;
+			// Fallout4.esm|All[|Gender][|Race]
+			if (_strnicmp(formIdText.c_str(), "all", 3) == 0)
+			{
+				TESRace * foundRace = nullptr;
+				if (form.size() > paramIndex)
+				{
+					std::string raceText = std::trim(form[paramIndex]);
+					foundRace = GetRaceByName(raceText);
+					if (foundRace == nullptr)
+					{
+						_ERROR("%s - Error - Invalid race '%s' specified.\tLine (%d) [%s]", __FUNCTION__, raceText.c_str(), lineCount, filePath);
+						continue;
+					}
+					paramIndex++;
+				}
+
+				GetFilteredNPCList(activeNPCs, modIndex, gender, foundRace);
+			}
+			else // Fallout4.esm|XXXX[|Gender]
+			{
+				UInt32 formLower = strtoul(formIdText.c_str(), NULL, 16);
+				if (formLower == 0) {
+					_ERROR("%s - Error - Invalid formID.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath);
+					continue;
+				}
+
+				UInt32 formId = modIndex << 24 | formLower & 0xFFFFFF;
+				foundForm = LookupFormByID(formId);
+				if (!foundForm) {
+					_ERROR("%s - Error - Invalid form %08X.\tLine (%d) [%s]", __FUNCTION__, formId, lineCount, filePath);
+					continue;
+				}
+
+				// Dont apply randomization to the player
+				if (formId == 7)
+					continue;
 			}
 
-			// Dont apply randomization to the player
-			if (formId == 7)
-				continue;
 
-			TESNPC * npc = DYNAMIC_CAST(foundForm, TESForm, TESNPC);
-			if (!npc) {
-				_ERROR("%s - Error - %s (%d) invalid form %08X not an ActorBase.", __FUNCTION__, filePath.c_str(), lineCount, formId);
-				continue;
+			if(foundForm)
+			{
+				TESLevCharacter * levCharacter = DYNAMIC_CAST(foundForm, TESForm, TESLevCharacter);
+				if(levCharacter) {
+					VisitLeveledCharacter(levCharacter, [&](TESNPC * npc)
+					{
+						if(gender == 0xFF) {
+							activeNPCs[0].push_back(npc);
+							activeNPCs[1].push_back(npc);
+						}
+						else
+							activeNPCs[gender].push_back(npc);
+					});
+				}
+
+				TESNPC * npc = DYNAMIC_CAST(foundForm, TESForm, TESNPC);
+				if(npc) {
+					if(gender == 0xFF) {
+						activeNPCs[0].push_back(npc);
+						activeNPCs[1].push_back(npc);
+					}
+					else
+						activeNPCs[gender].push_back(npc);
+				}
+
+				if (!npc && !levCharacter) {
+					_ERROR("%s - Error - Invalid form %08X not an ActorBase or LeveledActor.\tLine (%d) [%s]", __FUNCTION__, foundForm->formID, lineCount, filePath);
+					continue;
+				}
 			}
-
-			activeNPCs.push_back(npc);
 		}
 
 		BodyGenDataTemplatesPtr dataTemplates = std::make_shared<BodyGenDataTemplates>();
@@ -268,29 +361,58 @@ bool BodyGenInterface::ReadBodyMorphs(const BSFixedString & filePath)
 			BodyTemplateList templateList;
 			for (UInt32 k = 0; k < selectors.size(); k++) {
 				selectors[k] = std::trim(selectors[k]);
-				BSFixedString templateName(selectors[k].c_str());
+				F4EEFixedString templateName(selectors[k].c_str());
 				auto & temp = bodyGenTemplates.find(templateName);
 				if (temp != bodyGenTemplates.end())
 					templateList.push_back(temp->second);
 				else
-					_WARNING("%s - Warning - %s (%d) template %s not found.", __FUNCTION__, filePath.c_str(), lineCount, templateName.c_str());
+					_WARNING("%s - Warning - template %s not found.\tLine (%d) [%s]", __FUNCTION__, templateName.c_str(), lineCount, filePath);
 			}
 
 			dataTemplates->push_back(templateList);
 		}
 
-		for (auto & npc : activeNPCs)
+		for (auto & npc : activeNPCs[0])
 		{
-			bodyGenData[npc] = dataTemplates;
+			if(bodyGenData[0].find(npc) == bodyGenData[0].end()) {
 #ifdef _DEBUG
-			_DMESSAGE("%s - Read target %s", __FUNCTION__, npc->fullName.name.c_str());
+				_DMESSAGE("%s - Read male target %s (%08X)", __FUNCTION__, npc->fullName.name.c_str(), npc->formID);
 #endif
+				maleTargets++;
+			} else {
+				maleOverwrite++;
+			}
+
+			bodyGenData[0][npc] = dataTemplates;
+
+
 		}
 
-		totalTargets += activeNPCs.size();
+		for (auto & npc : activeNPCs[1])
+		{
+			if(bodyGenData[1].find(npc) == bodyGenData[1].end()) {
+#ifdef _DEBUG
+				_DMESSAGE("%s - Read female target %s (%08X)", __FUNCTION__, npc->fullName.name.c_str(), npc->formID);
+#endif
+				femaleTargets++;
+			} else {
+				femaleOverwrite++;
+			}
+
+			bodyGenData[1][npc] = dataTemplates;
+		}
+
+		if(maleOverwrite)
+			_DMESSAGE("%s - Info - %d male NPC targets(s) overwritten.\tLine (%d) [%s]", __FUNCTION__, maleOverwrite, lineCount, filePath);
+		if(femaleOverwrite)
+			_DMESSAGE("%s - Info - %d female NPC targets(s) overwritten.\tLine (%d) [%s]", __FUNCTION__, femaleOverwrite, lineCount, filePath);
+
+		maleOverwrite = 0;
+		femaleOverwrite = 0;
 	}
 
-	_DMESSAGE("%s - Read %d target(s) from %s", __FUNCTION__, totalTargets, filePath.c_str());
+	_DMESSAGE("%s - Info - Acquired %d male NPC target(s).\t[%s]", __FUNCTION__, maleTargets, filePath);
+	_DMESSAGE("%s - Info - Acquired %d female NPC target(s).\t[%s]", __FUNCTION__, femaleTargets, filePath);
 	return true;
 }
 
@@ -302,7 +424,9 @@ UInt32 BodyGenMorphSelector::Evaluate(std::function<void(const F4EEFixedString &
 		std::uniform_int_distribution<> rndMorph(0, size() - 1);
 
 		auto & bodyMorph = at(rndMorph(gen));
-		std::uniform_real_distribution<> rndValue(bodyMorph.lower, bodyMorph.upper);
+		float a = bodyMorph.lower;
+		float b = bodyMorph.upper;
+		std::uniform_real_distribution<> rndValue(a <= b ? a : b, a <= b ? b : a);
 		float val = rndValue(gen);
 		if (val != 0) {
 			eval(bodyMorph.name, val);
@@ -369,22 +493,22 @@ UInt32 BodyGenInterface::EvaluateBodyMorphs(Actor * actor, bool isFemale)
 {
 	TESNPC * actorBase = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
 	if (actorBase) {
-		BodyGenData::iterator morphSet = bodyGenData.end();
+		UInt8 gender = isFemale ? 1 : 0;
+		BodyGenData::iterator morphSet = bodyGenData[gender].end();
 		do {
-			morphSet = bodyGenData.find(actorBase);
+			morphSet = bodyGenData[gender].find(actorBase);
 			actorBase = actorBase->templateNPC;
-		} while (actorBase && morphSet == bodyGenData.end());
+		} while (actorBase && morphSet == bodyGenData[gender].end());
 
 		// Found a matching template
-		if (morphSet != bodyGenData.end()) {
-			std::random_device rd;
-			std::default_random_engine gen(rd());
-
+		if (morphSet != bodyGenData[gender].end()) {
+			_DMESSAGE("%s - Generating BodyMorphs for %s (%08X)", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
 			auto & templates = morphSet->second;
 			UInt32 ret = templates->Evaluate([&](const F4EEFixedString & morphName, float value)
 			{
 				g_bodyMorphInterface.SetMorph(actor, isFemale, morphName, nullptr, value);
 			});
+
 			return ret;
 		}
 	}

@@ -104,9 +104,10 @@ const std::string & F4EEGetRuntimeDirectory(void)
 	return s_runtimeDirectory;
 }
 
-const std::string & F4EEGetConfigPath(void)
+const std::string & F4EEGetConfigPath(bool custom = false)
 {
 	static std::string s_configPath;
+	static std::string s_configPathCustom;
 
 	if(s_configPath.empty())
 	{
@@ -115,11 +116,21 @@ const std::string & F4EEGetConfigPath(void)
 		{
 			s_configPath = runtimePath + "Data\\F4SE\\Plugins\\f4ee.ini";
 
-			_MESSAGE("config path = %s", s_configPath.c_str());
+			_MESSAGE("default config path = %s", s_configPath.c_str());
+		}
+	}
+	if(s_configPathCustom.empty())
+	{
+		std::string	runtimePath = F4EEGetRuntimeDirectory();
+		if(!runtimePath.empty())
+		{
+			s_configPathCustom = runtimePath + "Data\\F4SE\\Plugins\\f4ee_custom.ini";
+
+			_MESSAGE("custom config path = %s", s_configPathCustom.c_str());
 		}
 	}
 
-	return s_configPath;
+	return custom ? s_configPathCustom : s_configPath;
 }
 
 std::string F4EEGetConfigOption(const char * section, const char * key)
@@ -127,14 +138,21 @@ std::string F4EEGetConfigOption(const char * section, const char * key)
 	std::string	result;
 
 	const std::string & configPath = F4EEGetConfigPath();
+	const std::string & configPathCustom = F4EEGetConfigPath(true);
+
+	char	resultBuf[256];
+	resultBuf[0] = 0;
+
 	if(!configPath.empty())
 	{
-		char	resultBuf[256];
-		resultBuf[0] = 0;
-
 		UInt32	resultLen = GetPrivateProfileString(section, key, NULL, resultBuf, sizeof(resultBuf), configPath.c_str());
-
 		result = resultBuf;
+	}
+	if(!configPathCustom.empty())
+	{
+		UInt32	resultLen = GetPrivateProfileString(section, key, NULL, resultBuf, sizeof(resultBuf), configPathCustom.c_str());
+		if(resultLen > 0) // Only take custom if we have it
+			result = resultBuf;
 	}
 
 	return result;
@@ -194,8 +212,11 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 			if(g_bEnableModelPreprocessor)
 				g_bodyMorphInterface.SetModelProcessor();
 
-			if(g_bEnableBodygen)
+			if(g_bEnableBodygen) {
+				GetEventDispatcher<TESInitScriptEvent>()->AddEventSink(&g_bodyMorphInterface);
+				GetEventDispatcher<TESLoadGameEvent>()->AddEventSink(&g_bodyMorphInterface);
 				GetEventDispatcher<TESObjectLoadedEvent>()->AddEventSink(&g_bodyMorphInterface);
+			}
 		}
 		break;
 	case F4SEMessagingInterface::kMessage_GameDataReady:
@@ -267,7 +288,6 @@ void F4EESerialization_Load(const F4SESerializationInterface * intfc)
 		}
 	}
 
-	g_bodyMorphInterface.SetLoading(false);
 	g_bodyMorphInterface.ResolvePendingMorphs();
 }
 

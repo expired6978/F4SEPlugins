@@ -4,11 +4,15 @@
 #include "f4se/GameTypes.h"
 #include "StringTable.h"
 
+#include <string>
 #include <functional>
 
 class BSResourceNiBinaryStream;
 class NiAVObject;
 class TESRace;
+class Actor;
+class TESLevCharacter;
+class TESNPC;
 
 #include "f4se/Serialization.h"
 
@@ -26,10 +30,33 @@ namespace std
 	std::vector<std::string> explode(const std::string& str, const char& ch);
 }
 
+std::string bytes_to_string(std::size_t size);
 TESRace * GetRaceByName(const std::string & name);
+TESRace * GetActorRace(Actor * actor);
 std::string GetFormIdentifier(TESForm * form);
 TESForm * GetFormFromIdentifier(const std::string & formIdentifier);
 
-bool BSReadLine(BSResourceNiBinaryStream* fin, std::string* str);
+template<int MaxBuf>
+class BSResourceTextFile
+{
+public:
+	BSResourceTextFile(BSResourceNiBinaryStream* file) : fin(file) { }
+
+	bool ReadLine(std::string* str)
+	{
+		UInt32 ret = fin->ReadLine((char*)buf, MaxBuf, '\n');
+		if (ret > 0) {
+			*str = buf;
+			return true;
+		}
+		return false;
+	}
+
+protected:
+	BSResourceNiBinaryStream* fin;
+	char buf[MaxBuf];
+};
+
 void BSReadAll(BSResourceNiBinaryStream* fin, std::string* str);
 bool VisitObjects(NiAVObject * parent, std::function<bool(NiAVObject*)> functor);
+void VisitLeveledCharacter(TESLevCharacter * character, std::function<void(TESNPC*)> functor);

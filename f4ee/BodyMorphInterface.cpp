@@ -32,6 +32,12 @@ extern F4SETaskInterface * g_task;
 
 using namespace Serialization;
 
+#ifdef _DEBUG
+//#define _DEBUG_FILEIO
+//#define _DEBUG_SERIALIZATION
+#define _DEBUG_MOPRHING
+#endif
+
 void TriShapeFullVertexData::ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor)
 {
 	if (!vertices)
@@ -102,7 +108,7 @@ BodyMorphMapPtr TriShapeMap::GetMorphData(const F4EEFixedString & name)
 
 TriShapeMapPtr BodyMorphInterface::GetTrishapeMap(const char * relativePath)
 {
-	BSFixedString filePath(relativePath);
+	F4EEFixedString filePath(relativePath);
 	if(relativePath == "")
 		return nullptr;
 
@@ -115,7 +121,7 @@ TriShapeMapPtr BodyMorphInterface::GetTrishapeMap(const char * relativePath)
 	}
 	m_morphCacheLock.Release();
 
-#ifdef _DEBUG
+#ifdef _DEBUG_FILEIO
 	_MESSAGE("%s - Parsing: %s", __FUNCTION__, filePath.c_str());
 #endif
 
@@ -150,7 +156,7 @@ TriShapeMapPtr BodyMorphInterface::GetTrishapeMap(const char * relativePath)
 			trishapeMap->memoryUsage += binaryStream.Read(trishapeNameRaw, size);
 			F4EEFixedString trishapeName(trishapeNameRaw);
 
-#ifdef _DEBUG
+#ifdef _DEBUG_FILEIO
 			_MESSAGE("%s - Reading TriShape %s", __FUNCTION__, trishapeName.c_str());
 #endif
 
@@ -178,11 +184,11 @@ TriShapeMapPtr BodyMorphInterface::GetTrishapeMap(const char * relativePath)
 				trishapeMap->memoryUsage += binaryStream.Read(morphNameRaw, tsize);
 				F4EEFixedString morphName(morphNameRaw);
 
-#ifdef _DEBUG
+#ifdef _DEBUG_FILEIO
 				_MESSAGE("%s - Reading Morph %s at (%08X)", __FUNCTION__, morphName.c_str(), binaryStream.GetOffset());
 #endif
 				if (tsize == 0) {
-					_WARNING("%s - %s - Read empty name morph at (%08X)", __FUNCTION__, filePath.c_str(), binaryStream.GetOffset());
+					_WARNING("%s - Warning - Read empty name morph.\t(%08X) [%s]", __FUNCTION__, binaryStream.GetOffset(), filePath.c_str());
 				}
 
 				if (!packed) {
@@ -201,18 +207,18 @@ TriShapeMapPtr BodyMorphInterface::GetTrishapeMap(const char * relativePath)
 				}
 
 				if (vertexNum == 0) {
-					_WARNING("%s - %s - Read morph %s on %s with no vertices at (%08X)", __FUNCTION__, filePath.c_str(), morphName.c_str(), trishapeName.c_str(), binaryStream.GetOffset());
+					_WARNING("%s - Error - Read morph %s on %s with no vertices.\t(%08X) [%s]", __FUNCTION__, morphName.c_str(), trishapeName.c_str(), binaryStream.GetOffset(), filePath.c_str());
 				}
 				if (multiplier == 0.0f) {
-					_WARNING("%s - %s - Read morph %s on %s with zero multiplier at (%08X)", __FUNCTION__, filePath.c_str(), morphName.c_str(), trishapeName.c_str(), binaryStream.GetOffset());
+					_WARNING("%s - Error - Read morph %s on %s with zero multiplier.\t(%08X) [%s]", __FUNCTION__, morphName.c_str(), trishapeName.c_str(), binaryStream.GetOffset(), filePath.c_str());
 				}
 
-#ifdef _DEBUG
+#ifdef _DEBUG_FILEIO
 				_MESSAGE("%s - Total Vertices read: %d at (%08X)", __FUNCTION__, vertexNum, binaryStream.GetOffset());
 #endif
 				if (vertexNum > (std::numeric_limits<UInt16>::max)())
 				{
-					_ERROR("%s - %s - Too many vertices for %s on %s read: %d at (%08X)", __FUNCTION__, filePath.c_str(), morphName.c_str(), vertexNum, trishapeName.c_str(), binaryStream.GetOffset());
+					_ERROR("%s - Error - Too many vertices for %s on %s read: %d.\t(%08X) [%s]", __FUNCTION__, morphName.c_str(), vertexNum, trishapeName.c_str(), binaryStream.GetOffset(), filePath.c_str());
 					return nullptr;
 				}
 
@@ -266,12 +272,12 @@ TriShapeMapPtr BodyMorphInterface::GetTrishapeMap(const char * relativePath)
 
 		m_totalMemory += trishapeMap->memoryUsage;
 
-		_DMESSAGE("%s - Loaded %s (%d bytes)", __FUNCTION__, relativePath, trishapeMap->memoryUsage);
+		_DMESSAGE("%s - Info - Loaded %s (%s) (Cache: %s / %s)", __FUNCTION__, relativePath, bytes_to_string(trishapeMap->memoryUsage).c_str(), bytes_to_string(m_totalMemory).c_str(), bytes_to_string(m_memoryLimit).c_str());
 		return trishapeMap;
 	}
 	else
 	{
-		_ERROR("%s - Failed to load %s", __FUNCTION__, relativePath);
+		_ERROR("%s - Error - Failed to load.\t[%s]", __FUNCTION__, relativePath);
 	}
 
 
@@ -328,15 +334,20 @@ bool BodyMorphInterface::LoadBodyGenSliders(const std::string & filePath)
 			return false;
 		}
 
+		UInt32 totalSliders = 0;
+
 		for(auto & item : root)
 		{
 			BodySliderPtr pBodySlider = std::make_shared<BodySlider>();
 			if(pBodySlider->Parse(item)) {
 				if(pBodySlider->gender == 0 || pBodySlider->gender == 1) {
 					m_sliderMap[pBodySlider->gender][pBodySlider->morph] = pBodySlider;
+					totalSliders++;
 				}
 			}
 		}
+
+		_DMESSAGE("%s - Info - Loaded %d slider(s).\t[%s]", __FUNCTION__, totalSliders, filePath.c_str());
 	}
 
 	return true;
@@ -380,6 +391,28 @@ bool BodySlider::Parse(const Json::Value & entry)
 	return true;
 }
 
+bool BodyMorphInterface::IsNodeMorphable(NiAVObject * rootNode)
+{
+	return VisitObjects(rootNode, [&](NiAVObject * node)
+	{
+		BSTriShape * trishape = node->GetAsBSTriShape();
+		if(trishape)
+		{
+			NiPointer<NiStringExtraData> bodyMorph(DYNAMIC_CAST(trishape->GetExtraData("MORPH_SHAPE"), NiExtraData, NiStringExtraData));
+			if(!bodyMorph)
+				return false;
+
+			NiPointer<NiStringExtraData> morphPath(DYNAMIC_CAST(trishape->GetExtraData("MORPH_FILE"), NiExtraData, NiStringExtraData));
+			if(!morphPath)
+				return false;
+
+			return true;
+		}
+
+		return false;
+	});
+}
+
 void BodyMorphInterface::GetMorphableShapes(NiAVObject * rootNode, std::vector<MorphableShapePtr> & shapes)
 {
 	VisitObjects(rootNode, [&](NiAVObject * node)
@@ -401,9 +434,11 @@ void BodyMorphInterface::GetMorphableShapes(NiAVObject * rootNode, std::vector<M
 	});
 }
 
-F4EEBodyGenUpdate::F4EEBodyGenUpdate(TESForm * form)
+F4EEBodyGenUpdate::F4EEBodyGenUpdate(TESForm * form, bool doEquipment, bool doQueue)
 {
 	m_formId = form ? form->formID : 0;
+	m_doEquipment = doEquipment;
+	m_doQueue = doQueue;
 }
 
 void F4EEBodyGenUpdate::Run()
@@ -412,7 +447,35 @@ void F4EEBodyGenUpdate::Run()
 	if(form) {
 		Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
 		if(actor) {
-			CALL_MEMBER_FN(actor, QueueUpdate)(true, 0, false, 0x0C);
+			if(actor->unk300) {
+#ifdef _DEBUG_MOPRHING
+				_MESSAGE("%s - Activating Update for %s (%08X)", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
+#endif
+				// Detaching the node will cause the game to regenerate when UpdateEquipment is called
+				// We only need to detach armor, and armor that's even eligible for morphing
+				auto equipData = actor->equipData;
+				if(equipData)
+				{
+					for(UInt32 i = 0; i < 31; ++i)
+					{
+						NiPointer<NiAVObject> slotNode(equipData->slots[i].node);
+						if(slotNode && g_bodyMorphInterface.IsNodeMorphable(slotNode))
+						{
+							NiPointer<NiNode> parent(slotNode->m_parent);
+							if(parent) {
+								parent->Remove(slotNode);
+							}
+						}
+					}
+				}
+
+				//CALL_MEMBER_FN(actor, QueueUpdate)(m_doEquipment, 0, m_doQueue, 0xC);
+				CALL_MEMBER_FN(actor->unk300, UpdateEquipment)(actor, 0x11);
+			}
+#ifdef _DEBUG_MOPRHING
+			else
+				_MESSAGE("%s - Skipping Update for %s (%08X) no equipData", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
+#endif
 		}
 	}
 }
@@ -462,24 +525,27 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 		if(!baseData)
 			return false;
 
+		auto vertexData = baseData->vertexData;
+		if(!vertexData)
+			return false;
+
 		if(!(vertexDesc & BSGeometry::kFlag_Vertex)) // What kind of dumbass mesh doesn't have verts
 			return false;
 
+#ifdef _DEBUG_MOPRHING
+		_DMESSAGE("%s - Morphing %s (%08X) (%s -> %s) through hook", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID, morphableShape->shapeName.c_str(), geometry->m_name.c_str());
+#endif
+
+		UInt8 * newBlock = nullptr;
+
 		// Create the cloned copy
-		geomData = CALL_MEMBER_FN(g_renderManager, CreateBSGeometryData)(&blockSize, baseData->vertexData, geometry->vertexDesc, baseData->triangleData);
+		geomData = CALL_MEMBER_FN(g_renderManager, CreateBSGeometryData)(&blockSize, vertexData->vertexBlock, geometry->vertexDesc, baseData->triangleData);
 		if(!geomData)
 			return false;
 
-		// Copy from the base data to the newly created block
-		memcpy(geomData->vertexData->vertexBlock, baseData->vertexData->vertexBlock, geometry->numVertices * vertexSize);
+		newBlock = geomData->vertexData->vertexBlock;
 
-		// We don't want to delete the original copy, but we'll release because we are forking (Don't know what the other ref is for?)
-		if(baseData->refCount > 2)
-			InterlockedDecrement(&baseData->refCount);
-
-		geometry->geometryData = geomData;
-
-		MorphApplicator morpher(geometry, [&](std::vector<Morpher::Vector3> & verts)
+		MorphApplicator morpher(geometry, newBlock, newBlock, [&](std::vector<Morpher::Vector3> & verts)
 		{
 			SimpleLocker locker(&m_morphLock);
 			for(auto & actorMorph : *actorMorphs)
@@ -495,6 +561,14 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 				morph->ApplyMorph(geometry->numVertices, (NiPoint3*)&verts.at(0), effectiveValue);
 			}
 		});
+
+		if(geomData) {
+			geometry->geometryData = geomData;
+
+			// We don't want to delete the original copy, but we'll release because we are forking (Don't know what the other ref is for?)
+			if(baseData->refCount > 2)
+				InterlockedDecrement(&baseData->refCount);
+		}
 	}
 
 	return false;
@@ -526,26 +600,26 @@ bool BodyMorphInterface::ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNod
 	return true;
 }
 
-bool BodyMorphInterface::UpdateMorphs(Actor * actor)
+bool BodyMorphInterface::UpdateMorphs(Actor * actor, bool doEquipment, bool doQueue)
 {
 	if(!actor)
 			return false;
 
 	if(g_task)
-		g_task->AddTask(new F4EEBodyGenUpdate(actor));
+		g_task->AddTask(new F4EEBodyGenUpdate(actor, doEquipment, doQueue));
 
 	return true;
 }
 
-BSFixedString PrefixMeshPath(const char * relativePath)
+F4EEFixedString PrefixMeshPath(const char * relativePath)
 {
 	if(relativePath == "")
-		return BSFixedString("");
+		return F4EEFixedString("");
 
 	std::string targetPath = "meshes\\";
 	targetPath += std::string(relativePath);
 	std::transform(targetPath.begin(), targetPath.end(), targetPath.begin(), ::tolower);
-	return BSFixedString(targetPath.c_str());
+	return F4EEFixedString(targetPath.c_str());
 }
 
 MorphValueMapPtr BodyMorphInterface::GetMorphMap(Actor * actor, bool isFemale)
@@ -815,7 +889,7 @@ void BodyMorphInterface::Save(const F4SESerializationInterface * intfc, UInt32 k
 		// Key
 		WriteData<UInt64>(intfc, &morph.first);
 
-#ifdef _DEBUG
+#ifdef _DEBUG_SERIALIZATION
 		_MESSAGE("%s - Saving Male Morph Handle %016llX", __FUNCTION__, morph.first);
 #endif
 
@@ -831,7 +905,7 @@ void BodyMorphInterface::Save(const F4SESerializationInterface * intfc, UInt32 k
 		// Key
 		WriteData<UInt64>(intfc, &morph.first);
 
-#ifdef _DEBUG
+#ifdef _DEBUG_SERIALIZATION
 		_MESSAGE("%s - Saving Female Morph Handle %016llX", __FUNCTION__, morph.first);
 #endif
 
@@ -848,7 +922,7 @@ void MorphValueMap::Save(const F4SESerializationInterface * intfc, UInt32 kVersi
 
 	WriteData<UInt32>(intfc, &numMorphs);
 
-#ifdef _DEBUG
+#ifdef _DEBUG_SERIALIZATION
 	_MESSAGE("%s - Saving %d morphs", __FUNCTION__, numMorphs);
 #endif
 
@@ -996,8 +1070,9 @@ bool BodyMorphInterface::Load(const F4SESerializationInterface * intfc, bool isF
 
 		Actor * actor = GetObjectFromHandle<Actor>(newHandle);
 		if(actor) {
-			m_loadingBodyGen.erase((isFemale ? 1LL << 32 : 0) | actor->formID);
-			UpdateMorphs(actor);
+			UInt64 updateHandle = (isFemale ? 1LL << 32 : 0) | actor->formID;
+			m_pendingMorphs.erase(updateHandle);
+			m_pendingUpdates.emplace(actor->formID);
 		}
 	}
 
@@ -1013,11 +1088,10 @@ void BodyMorphInterface::Revert()
 
 void BodyMorphInterface::SetModelProcessor()
 {
-	m_oldProcessor = (*g_TESProcessor);
-	(*g_TESProcessor) = this;
+	(*g_TESProcessor) = new BodyMorphProcessor(*g_TESProcessor);
 }
 
-void BodyMorphInterface::Process(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject ** root, UInt32 * typeOut)
+void BodyMorphProcessor::Process(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject ** root, UInt32 * typeOut)
 {
 	NiAVObject * object = root ? *root : nullptr;
 	if(object)
@@ -1033,12 +1107,12 @@ void BodyMorphInterface::Process(BSModelDB::ModelData * modelData, const char * 
 				auto triPath = PrefixMeshPath(stringData->m_string);
 				stringData->DecRef();
 
-				auto trishapeMap = GetTrishapeMap(triPath);
+				auto trishapeMap = g_bodyMorphInterface.GetTrishapeMap(triPath);
 				if(trishapeMap)
 				{
 					for(auto & shape : *trishapeMap)
 					{
-						BSFixedString str(shape.first);
+						BSAutoFixedString str(shape.first);
 						NiAVObject * child = object->GetObjectByName(&str);
 						if(child) {
 							child->IncRef();
@@ -1054,7 +1128,7 @@ void BodyMorphInterface::Process(BSModelDB::ModelData * modelData, const char * 
 					}
 				}
 
-				ShrinkMorphCache();
+				g_bodyMorphInterface.ShrinkMorphCache();
 			}
 		}
 
@@ -1071,37 +1145,72 @@ EventResult	BodyMorphInterface::ReceiveEvent(TESObjectLoadedEvent * evn, void * 
 	{
 		// We need to collect pending loads because these will fire before the load game event
 		TESForm * form = LookupFormByID(evn->formId);
-		if(form && form->formType == Actor::kTypeID)
-		{
-			Actor * actor = static_cast<Actor*>(form);
-			TESNPC * npc = static_cast<TESNPC *>(actor->baseForm);
-			UInt64 gender = CALL_MEMBER_FN(npc, GetSex)();
-			bool isFemale = gender == 1 ? true : false;
+		if(!form)
+			return kEvent_Continue;
 
-			if(m_loading)
+		Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
+		if(!actor)
+			return kEvent_Continue;
+
+		TESNPC * npc =  DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(!npc)
+			return kEvent_Continue;
+
+		UInt64 gender = CALL_MEMBER_FN(npc, GetSex)();
+		bool isFemale = gender == 1 ? true : false;
+
+		m_pendingLock.Lock();
+		if(m_loading) // We're mid-load, lets just push these to pending
+		{
+			m_pendingMorphs.insert((gender << 32) | form->formID);
+		}
+		else
+		{
+			// We've loaded the game, we can just generate and apply morphs if we don't already have any and we meet the outlined criteria for generation
+			auto morphMap = GetMorphMap(actor, isFemale);
+			if(!morphMap)
 			{
-				m_loadingBodyGen.insert((gender << 32) | form->formID);
-			}
-			else
-			{
-				// We've loaded the game, we can just generate and apply morphs if we don't already have any
-				// and we meet the outlined criteria for generation
-				// Generate morph list
-				auto morphMap = GetMorphMap(actor, isFemale);
-				if(!morphMap)
-				{
-					g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale);
-				}
+				if(g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale))
+					UpdateMorphs(actor, true, true);
 			}
 		}
+		m_pendingLock.Release();
 	}
 
 	return kEvent_Continue;
 };
 
+EventResult	BodyMorphInterface::ReceiveEvent(TESInitScriptEvent * evn, void * dispatcher)
+{
+	// We need to collect pending loads because these will fire before the load game event
+	Actor * actor = DYNAMIC_CAST(evn->reference, TESForm, Actor);
+	if(!actor)
+		return kEvent_Continue;
+
+	TESNPC * npc =  DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+	if(!npc)
+		return kEvent_Continue;
+
+	UInt64 gender = CALL_MEMBER_FN(npc, GetSex)();
+	bool isFemale = gender == 1 ? true : false;
+
+	if(!m_loading)
+	{
+		// We've spawned a new Reference, can we morph it?
+		auto morphMap = GetMorphMap(actor, isFemale);
+		if(!morphMap)
+		{
+			if(g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale))
+				UpdateMorphs(actor, true, true);
+		}
+	}
+	return kEvent_Continue;
+}
+
 void BodyMorphInterface::ResolvePendingMorphs()
 {
-	for(auto & uid : m_loadingBodyGen)
+	m_pendingLock.Lock();
+	for(auto & uid : m_pendingMorphs)
 	{
 		UInt8 gender = uid >> 32;
 		UInt32 formID = uid & 0xFFFFFFFF;
@@ -1114,9 +1223,33 @@ void BodyMorphInterface::ResolvePendingMorphs()
 			auto morphMap = GetMorphMap(actor, isFemale);
 			if(!morphMap)
 			{
-				g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale);
+				if(g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale))
+					m_pendingUpdates.emplace(formID);
 			}
 		}
 	}
-	m_loadingBodyGen.clear();
+	m_pendingMorphs.clear();
+	m_pendingLock.Release();
+}
+
+EventResult BodyMorphInterface::ReceiveEvent(TESLoadGameEvent * evn, void * dispatcher)
+{
+	if(m_loading)
+		m_loading = false;
+
+	m_pendingLock.Lock();
+	for(auto & uid : m_pendingUpdates)
+	{
+		TESForm * form = LookupFormByID(uid);
+		if(form && form->formType == Actor::kTypeID)
+		{
+			Actor * actor = static_cast<Actor*>(form);
+			UpdateMorphs(actor, true, true);
+		}
+	}
+
+	m_pendingUpdates.clear();
+	m_pendingLock.Release();
+
+	return kEvent_Continue;
 }

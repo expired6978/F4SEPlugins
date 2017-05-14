@@ -4,8 +4,15 @@
 #include "f4se/NiTypes.h"
 #include "f4se/GameForms.h"
 #include "f4se/GameData.h"
+#include "f4se/GameReferences.h"
+#include "f4se/GameObjects.h"
+#include "f4se/GameRTTI.h"
 
+#include <iomanip>
+#include <sstream>
 #include <cctype>
+#include <unordered_set>
+#include <queue>
 
 template <>
 bool Serialization::WriteData<F4EEFixedString>(const F4SESerializationInterface * intfc, const F4EEFixedString * str)
@@ -48,18 +55,22 @@ bool Serialization::ReadData<F4EEFixedString>(const F4SESerializationInterface *
 	return true;
 }
 
-bool BSReadLine(BSResourceNiBinaryStream* fin, std::string* str)
-{
-	char buf[1024];
-	UInt32 ret = 0;
+std::string bytes_to_string(std::size_t size) {               
+	static const char *SIZES[] = { "B", "KB", "MB", "GB" };
 
-	ret = fin->ReadLine((char*)buf, 1024, '\n');
-	if (ret > 0) {
-		buf[ret - 1] = '\0';
-		*str = buf;
-		return true;
+	int div = 0;
+	size_t rem = 0;
+	while (size >= 1024 && div < (sizeof SIZES / sizeof *SIZES)) {
+		rem = (size % 1024);
+		div++;
+		size /= 1024;
 	}
-	return false;
+
+	double size_d = (float)size + (float)rem / 1024.0;
+
+	std::stringstream ss;
+	ss << std::fixed << std::setprecision(2) << size_d << SIZES[div];
+	return ss.str();
 }
 
 void BSReadAll(BSResourceNiBinaryStream* fin, std::string* str)
@@ -122,15 +133,28 @@ TESForm * GetFormFromIdentifier(const std::string & formIdentifier)
 	return LookupFormByID(formId);
 }
 
+TESRace * GetActorRace(Actor * actor)
+{
+	TESRace * race = actor->race;
+	if(!race) {
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(npc)
+			race = npc->race.race;
+	}
+
+	return race;
+}
+
 TESRace * GetRaceByName(const std::string & raceName)
 {
-	BSAutoFixedString name(raceName.c_str());
+	F4EEFixedString lower(raceName.c_str());
 	for(UInt64 i = 0; i < (*g_dataHandler)->arrRACE.count; i++)
 	{
 		TESRace * race;
 		(*g_dataHandler)->arrRACE.GetNthItem(i, race);
 
-		if(race->editorId == name)
+		F4EEFixedString raceName(race->editorId.c_str());
+		if(raceName == lower)
 		{
 			return race;
 		}
@@ -173,4 +197,37 @@ std::vector<std::string> std::explode(const std::string& str, const char& ch) {
 	if (!next.empty())
 		result.push_back(next);
 	return result;
+}
+
+void VisitLeveledCharacter(TESLevCharacter * character, std::function<void(TESNPC*)> functor)
+{
+	std::unordered_set<TESLevCharacter*> visited;
+	std::queue<TESLevCharacter*> visit;
+
+	visit.push(character);
+
+	while(!visit.empty())
+	{
+		character = visit.front();
+		visit.pop();
+
+		if(character)
+		{
+			for(UInt32 i = 0; i < character->leveledList.length; i++)
+			{
+				TESForm * form = character->leveledList.entries[i].form;
+				if(form) {
+					TESLevCharacter * levCharacter = DYNAMIC_CAST(form, TESForm, TESLevCharacter);
+					if(levCharacter && visited.find(levCharacter) == visited.end())
+						visit.push(levCharacter);
+
+					TESNPC * npc = DYNAMIC_CAST(form, TESForm, TESNPC);
+					if(npc)
+						functor(npc);
+				}
+			}
+
+			visited.insert(character);
+		}
+	}
 }

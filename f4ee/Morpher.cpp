@@ -10,7 +10,7 @@ float round(float num)
 	return (num > 0.0) ? floor(num + 0.5) : ceil(num - 0.5);
 }
 
-MorphApplicator::MorphApplicator(BSTriShape * _geometry, std::function<void(std::vector<Morpher::Vector3> &)> morph) : geometry(_geometry), morphFunc(morph)
+MorphApplicator::MorphApplicator(BSTriShape * _geometry, UInt8 * srcBlock, UInt8 * dstBlock, std::function<void(std::vector<Morpher::Vector3> &)> morph) : geometry(_geometry), morphFunc(morph)
 {
 	UInt64 vertexDesc = geometry->vertexDesc;
 	UInt32 vertexSize = geometry->GetVertexSize();
@@ -31,7 +31,7 @@ MorphApplicator::MorphApplicator(BSTriShape * _geometry, std::function<void(std:
 		}
 	}
 
-	UInt8 * vertexBlock = geomData->vertexData->vertexBlock;
+	UInt8 * vertexBlock = srcBlock ? srcBlock : geomData->vertexData->vertexBlock;
 	for(UInt32 i = 0; i < numVertices; i++)
 	{
 		UInt8 * vBegin = &vertexBlock[i * vertexSize];
@@ -70,7 +70,7 @@ MorphApplicator::MorphApplicator(BSTriShape * _geometry, std::function<void(std:
 	RecalcNormals(geometry->numTriangles, triangles);
 	CalcTangentSpace(geometry->numTriangles, triangles);
 	
-	vertexBlock = geomData->vertexData->vertexBlock;
+	vertexBlock = dstBlock ? dstBlock : geomData->vertexData->vertexBlock;
 	for(UInt32 i = 0; i < numVertices; i++)
 	{
 		UInt8 * vBegin = &vertexBlock[i * vertexSize];

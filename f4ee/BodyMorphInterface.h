@@ -153,8 +153,8 @@ class BodySlider
 public:
 	virtual bool Parse(const Json::Value & entry);
 
-	BSFixedString	morph;
-	BSFixedString	name;
+	F4EEFixedString	morph;
+	F4EEFixedString	name;
 	UInt8			gender;
 	UInt32			sort;
 	float			minimum;
@@ -166,33 +166,50 @@ typedef std::shared_ptr<BodySlider> BodySliderPtr;
 class MorphableShape
 {
 public:
-	MorphableShape(NiAVObject * _object, const BSFixedString & _morphPath, const BSFixedString & _shapeName) : object(_object), morphPath(_morphPath), shapeName(_shapeName) { }
+	MorphableShape(NiAVObject * _object, const F4EEFixedString & _morphPath, const F4EEFixedString & _shapeName) : object(_object), morphPath(_morphPath), shapeName(_shapeName) { }
 
 	NiPointer<NiAVObject>	object;
-	BSFixedString			morphPath;
-	BSFixedString			shapeName;
+	F4EEFixedString			morphPath;
+	F4EEFixedString			shapeName;
 };
 typedef std::shared_ptr<MorphableShape> MorphableShapePtr;
 
 class F4EEBodyGenUpdate : public ITaskDelegate
 {
 public:
-	F4EEBodyGenUpdate(TESForm * form);
+	F4EEBodyGenUpdate(TESForm * form, bool doEquipment, bool doQueue);
 	virtual ~F4EEBodyGenUpdate() { };
 	virtual void Run() override;
 
 protected:
 	UInt32					m_formId;
+	bool					m_doEquipment;
+	bool					m_doQueue;
 };
 
-class BodyMorphInterface : public BSModelDB::TESProcessor,
-				public BSTEventSink<TESObjectLoadedEvent>
+class BodyMorphProcessor : public BSModelDB::BSModelProcessor
 {
 public:
-	BodyMorphInterface() : m_totalMemory(0), m_memoryLimit(0x80000000LL), m_loading(false), m_oldProcessor(nullptr) { } // 2GB
+	BodyMorphProcessor(BSModelDB::BSModelProcessor * oldProcessor) : m_oldProcessor(oldProcessor) { }
 
 	virtual void Process(BSModelDB::ModelData * modelData, const char * modelName, NiAVObject ** root, UInt32 * typeOut);
+
+	DEFINE_STATIC_HEAP(Heap_Allocate, Heap_Free)
+
+protected:
+	BSModelDB::BSModelProcessor	* m_oldProcessor;
+};
+
+class BodyMorphInterface :	public BSTEventSink<TESObjectLoadedEvent>,
+							public BSTEventSink<TESLoadGameEvent>,
+							public BSTEventSink<TESInitScriptEvent>
+{
+public:
+	BodyMorphInterface() : m_totalMemory(0), m_memoryLimit(0x80000000LL), m_loading(false) { } // 2GB
+	
 	virtual	EventResult	ReceiveEvent(TESObjectLoadedEvent * evn, void * dispatcher);
+	virtual	EventResult	ReceiveEvent(TESLoadGameEvent * evn, void * dispatcher);
+	virtual	EventResult	ReceiveEvent(TESInitScriptEvent * evn, void * dispatcher);
 
 	enum
 	{
@@ -227,7 +244,9 @@ public:
 	virtual void GetMorphableShapes(NiAVObject * node, std::vector<MorphableShapePtr> & shapes);
 	virtual bool ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNode);
 	virtual bool ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morphableShape);
-	virtual bool UpdateMorphs(Actor * actor);
+	virtual bool UpdateMorphs(Actor * actor, bool doEquipment, bool doQueue);
+
+	bool IsNodeMorphable(NiAVObject * rootNode);
 
 	void ShrinkMorphCache();
 	void SetCacheLimit(UInt64 limit);
@@ -248,8 +267,10 @@ public:
 	}
 
 private:
-	bool												m_loading;			// True when the game is loading, false when the game has loaded
-	std::unordered_set<UInt64>							m_loadingBodyGen;	// Stores the pending actors while loading (Populated while loading, erased during load, remaining actors get new morphs, cleared after)
+	SimpleLock											m_pendingLock;
+	bool												m_loading;			// True when the game is loading, false when the cell has loaded
+	std::unordered_set<UInt64>							m_pendingMorphs;	// Stores the pending actors while loading (Populated while loading, erased during load, remaining actors get new morphs, cleared after)
+	std::unordered_set<UInt64>							m_pendingUpdates;	// Stores the actors for update
 
 	SimpleLock											m_morphLock;
 	std::unordered_map<UInt64, MorphValueMapPtr>		m_morphMap[2];
@@ -260,8 +281,4 @@ private:
 	UInt64												m_memoryLimit;
 
 	std::unordered_map<F4EEFixedString, BodySliderPtr>	m_sliderMap[2];
-
-	ICriticalSection									m_bodyGenLock;
-
-	BSModelDB::TESProcessor								* m_oldProcessor;
 };

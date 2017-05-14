@@ -55,7 +55,7 @@ DWORD CharGenInterface::SavePreset(const std::string & filePath)
 	if(!npc)
 		return ERROR_INVALID_ADDRESS;
 
-	TESRace * race = npc->race.race;
+	TESRace * race = GetActorRace(actor);
 	if(!race)
 		return ERROR_INVALID_ADDRESS;
 
@@ -155,8 +155,6 @@ DWORD CharGenInterface::SavePreset(const std::string & filePath)
 	CharacterCreation::MorphIntensity * intensity = g_morphIntensityMap->Find(&npc);
 	if(intensity) {
 		root["Morphs"]["Intensity"] = intensity->morphIntensity;
-	} else {
-		root["Morphs"]["Intensity"] = 1.0f;
 	}
 
 	Json::Value tintData;
@@ -245,7 +243,7 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 	if(!npc)
 		return ERROR_INVALID_ADDRESS;
 
-	TESRace * race = npc->race.race;
+	TESRace * race = GetActorRace(actor);
 	if(!race)
 		return ERROR_INVALID_ADDRESS;
 
@@ -413,13 +411,17 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 	{
 		try
 		{
-			float intensity = root["Morphs"].isMember("Intensity") ? root["Morphs"]["Intensity"].asFloat() : 1.0f;
+			bool hasIntensity = root["Morphs"].isMember("Intensity");
+			float intensity = hasIntensity ? root["Morphs"]["Intensity"].asFloat() : 1.0f;
 
 			if(CharacterCreation::MorphIntensity * found = g_morphIntensityMap->Find(&npc))
 			{
-				found->morphIntensity = intensity;
+				if(hasIntensity)
+					found->morphIntensity = root["Morphs"]["Intensity"].asFloat();
+				else
+					g_morphIntensityMap->Remove(&npc);
 			}
-			else
+			else if(hasIntensity)
 			{
 				CharacterCreation::MorphIntensity mi;
 				mi.npc = npc;

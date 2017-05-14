@@ -59,7 +59,7 @@ void F4EEScaleform_LoadPreset::Invoke(Args * args)
 		characterCreation->dirty = 1;
 
 		if(g_bEnableBodyMorphs) {
-			g_bodyMorphInterface.UpdateMorphs(characterCreation->actor);
+			g_bodyMorphInterface.UpdateMorphs(characterCreation->actor, true, true);
 		}
 	}
 
@@ -178,7 +178,7 @@ void F4EEScaleform_CloneBodyMorphs::Invoke(Args * args)
 
 		if(actor != (*g_player) && ((bVerify && (npc == (*g_customizationDummy1) || npc == (*g_customizationDummy2))) || !bVerify)) {
 			g_bodyMorphInterface.CloneMorphs(actor, (*g_player));
-			g_bodyMorphInterface.UpdateMorphs(*g_player);
+			g_bodyMorphInterface.UpdateMorphs(*g_player, true, true);
 		}
 	}
 }
@@ -187,7 +187,7 @@ void F4EEScaleform_UpdateBodyMorphs::Invoke(Args * args)
 {
 	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
 	if(characterCreation) {
-		g_bodyMorphInterface.UpdateMorphs(characterCreation->actor);
+		g_bodyMorphInterface.UpdateMorphs(characterCreation->actor, true, true);
 	}
 }
 

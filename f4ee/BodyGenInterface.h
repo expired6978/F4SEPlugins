@@ -5,6 +5,7 @@
 
 class TESNPC;
 class Actor;
+class TESRace;
 
 #include <vector>
 #include <unordered_map>
@@ -61,11 +62,14 @@ class BodyGenInterface
 public:
 	void LoadBodyGenMods();
 
-	virtual bool ReadBodyMorphs(const BSFixedString & filePath);
-	virtual bool ReadBodyMorphTemplates(const BSFixedString & filePath);
+	virtual bool ReadBodyMorphs(const char * filePath);
+	virtual bool ReadBodyMorphTemplates(const char * filePath);
 	virtual UInt32 EvaluateBodyMorphs(Actor * actor, bool isFemale);
+
+	void GetFilteredNPCList(std::vector<TESNPC*> activeNPCs[], SInt32 modIndex, UInt32 gender, TESRace * raceFilter);
+
 
 protected:
 	BodyGenTemplates bodyGenTemplates;
-	BodyGenData	bodyGenData;
+	BodyGenData	bodyGenData[2];
 };
