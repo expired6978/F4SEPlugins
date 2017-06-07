@@ -103,3 +103,10 @@ bool StringTable::Load(const F4SESerializationInterface * intfc, UInt32 kVersion
 
 	return error;
 }
+
+void StringTable::Revert()
+{
+	SimpleLocker locker(&m_lock);
+	m_table.clear();
+	m_tableVector.clear();
+}

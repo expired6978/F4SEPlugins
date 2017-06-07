@@ -1,5 +1,6 @@
 #include "BodyMorphInterface.h"
 #include "BodyGenInterface.h"
+#include "OverlayInterface.h"
 
 #include "f4se/GameData.h"
 #include "f4se/GameStreams.h"
@@ -24,8 +25,11 @@
 
 extern BodyGenInterface g_bodyGenInterface;
 extern BodyMorphInterface g_bodyMorphInterface;
+extern OverlayInterface g_overlayInterface;
+
 extern StringTable g_stringTable;
 extern bool g_bEnableBodyMorphs;
+extern bool g_bEnableOverlays;
 extern bool g_bUseTaskInterface;
 extern bool g_bParallelShapes;
 extern F4SETaskInterface * g_task;
@@ -38,10 +42,11 @@ using namespace Serialization;
 #define _DEBUG_MOPRHING
 #endif
 
-void TriShapeFullVertexData::ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor)
+bool TriShapeFullVertexData::ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor)
 {
+	bool outOfBounds = false;
 	if (!vertices)
-		return;
+		return outOfBounds;
 
 	UInt32 size = m_vertexDeltas.size();
 	for (UInt32 i = 0; i < size; i++)
@@ -55,16 +60,20 @@ void TriShapeFullVertexData::ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, f
 			vertices[vertexIndex].y += vertexDiff->y * factor;
 			vertices[vertexIndex].z += vertexDiff->z * factor;
 		}
-		else {
-			_DMESSAGE("%s - Vertex %d out of bounds X:%f Y:%f Z:%f", __FUNCTION__, vertexIndex, vertexDiff->x, vertexDiff->y, vertexDiff->z);
+		else if(!outOfBounds) { // Prevent spam
+			_DMESSAGE("%s - Vertex (%d/%d) out of bounds X:%f Y:%f Z:%f", __FUNCTION__, vertexIndex, vertCount, vertexDiff->x, vertexDiff->y, vertexDiff->z);
+			outOfBounds = true;
 		}
 	}
+
+	return outOfBounds;
 }
 
-void TriShapePackedVertexData::ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor)
+bool TriShapePackedVertexData::ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor)
 {
+	bool outOfBounds = false;
 	if (!vertices)
-		return;
+		return outOfBounds;
 
 	UInt32 size = m_vertexDeltas.size();
 	for (UInt32 i = 0; i < size; i++)
@@ -72,16 +81,22 @@ void TriShapePackedVertexData::ApplyMorph(UInt16 vertCount, NiPoint3 * vertices,
 		TriShapePackedVertexDelta * vert = &m_vertexDeltas.at(i);
 
 		UInt16 vertexIndex = vert->index;
+		float xDelta = (float)vert->x * m_multiplier;
+		float yDelta = (float)vert->y * m_multiplier;
+		float zDelta = (float)vert->z * m_multiplier;
 		if (vertexIndex < vertCount)
 		{
-			vertices[vertexIndex].x += (float)vert->x * m_multiplier * factor;
-			vertices[vertexIndex].y += (float)vert->y * m_multiplier * factor;
-			vertices[vertexIndex].z += (float)vert->z * m_multiplier * factor;
+			vertices[vertexIndex].x += xDelta * factor;
+			vertices[vertexIndex].y += yDelta * factor;
+			vertices[vertexIndex].z += zDelta * factor;
 		}
-		else {
-			_DMESSAGE("%s - Vertex %d out of bounds X:%f Y:%f Z:%f", __FUNCTION__, vertexIndex, vert->x, vert->y, vert->z);
+		else if(!outOfBounds) { // Prevent spam
+			_DMESSAGE("%s - Vertex (%d/%d) out of bounds X:%f Y:%f Z:%f", __FUNCTION__, vertexIndex, vertCount, xDelta, yDelta, zDelta);
+			outOfBounds = true;
 		}
 	}
+
+	return outOfBounds;
 }
 
 TriShapeVertexDataPtr BodyMorphMap::GetVertexData(const F4EEFixedString & name)
@@ -453,17 +468,32 @@ void F4EEBodyGenUpdate::Run()
 #endif
 				// Detaching the node will cause the game to regenerate when UpdateEquipment is called
 				// We only need to detach armor, and armor that's even eligible for morphing
-				auto equipData = actor->equipData;
-				if(equipData)
+				ActorEquipData * equipData[2];
+				equipData[0] = actor->equipData;
+				equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData : nullptr;
+
+				for(UInt32 s = 0; s < (actor == (*g_player) ? 2 : 1); s++)
 				{
-					for(UInt32 i = 0; i < 31; ++i)
+					if(equipData[s])
 					{
-						NiPointer<NiAVObject> slotNode(equipData->slots[i].node);
-						if(slotNode && g_bodyMorphInterface.IsNodeMorphable(slotNode))
+						for(UInt32 i = 0; i < 31; ++i)
 						{
-							NiPointer<NiNode> parent(slotNode->m_parent);
-							if(parent) {
-								parent->Remove(slotNode);
+							NiPointer<NiAVObject> slotNode(equipData[s]->slots[i].node);
+							if(slotNode && g_bodyMorphInterface.IsNodeMorphable(slotNode))
+							{
+								NiPointer<NiNode> parent(slotNode->m_parent);
+								if(parent) {
+									if(g_bEnableOverlays) {
+										NiNode * rootNode = GetRootNode(actor, slotNode);
+										if(rootNode) {
+											NiNode * overlayRoot = g_overlayInterface.GetOverlayRoot(actor, rootNode);
+											if(overlayRoot)
+												g_overlayInterface.DestroyOverlaySlot(actor, overlayRoot, i);
+										}
+									}
+
+									parent->Remove(slotNode);
+								}
 							}
 						}
 					}
@@ -558,7 +588,10 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 				if(!morph)
 					continue;
 
-				morph->ApplyMorph(geometry->numVertices, (NiPoint3*)&verts.at(0), effectiveValue);
+				bool outOfBounds = morph->ApplyMorph(geometry->numVertices, (NiPoint3*)&verts.at(0), effectiveValue);
+				if(outOfBounds) {
+					_DMESSAGE("BodyMorphInterface::ApplyMorphsToShape - Shape: %s Morph: %s contained out of bounds vertices\t[%s]", morphableShape->shapeName.c_str(), actorMorph.first->c_str(), morphableShape->morphPath.c_str());
+				}
 			}
 		});
 
@@ -1170,9 +1203,11 @@ EventResult	BodyMorphInterface::ReceiveEvent(TESObjectLoadedEvent * evn, void * 
 			auto morphMap = GetMorphMap(actor, isFemale);
 			if(!morphMap)
 			{
-				if(g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale))
-					UpdateMorphs(actor, true, true);
+				g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale);
 			}
+			morphMap = GetMorphMap(actor, isFemale);
+			if(morphMap)
+				UpdateMorphs(actor, true, true);
 		}
 		m_pendingLock.Release();
 	}

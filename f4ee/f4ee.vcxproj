@@ -163,7 +163,9 @@
     <ClCompile Include="CharGenTint.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Morpher.cpp" />
+    <ClCompile Include="OverlayInterface.cpp" />
     <ClCompile Include="PapyrusBodyGen.cpp" />
+    <ClCompile Include="PapyrusOverlays.cpp" />
     <ClCompile Include="ScaleformNatives.cpp" />
     <ClCompile Include="StringTable.cpp" />
     <ClCompile Include="Utilities.cpp" />
@@ -216,7 +218,9 @@
     <ClInclude Include="half.hpp" />
     <ClInclude Include="kd_matcher.hpp" />
     <ClInclude Include="Morpher.h" />
+    <ClInclude Include="OverlayInterface.h" />
     <ClInclude Include="PapyrusBodyGen.h" />
+    <ClInclude Include="PapyrusOverlays.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ScaleformNatives.h" />
     <ClInclude Include="shape.hpp" />

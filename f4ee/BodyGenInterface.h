@@ -65,6 +65,12 @@ public:
 	virtual bool ReadBodyMorphs(const char * filePath);
 	virtual bool ReadBodyMorphTemplates(const char * filePath);
 	virtual UInt32 EvaluateBodyMorphs(Actor * actor, bool isFemale);
+	virtual void ClearBodyGenMods()
+	{
+		bodyGenTemplates.clear();
+		bodyGenData[0].clear();
+		bodyGenData[1].clear();
+	}
 
 	void GetFilteredNPCList(std::vector<TESNPC*> activeNPCs[], SInt32 modIndex, UInt32 gender, TESRace * raceFilter);
 

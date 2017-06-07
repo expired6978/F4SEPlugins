@@ -49,14 +49,14 @@ public:
 class TriShapeVertexData
 {
 public:
-	virtual void ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor) = 0;
+	virtual bool ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor) = 0;
 };
 typedef std::shared_ptr<TriShapeVertexData> TriShapeVertexDataPtr;
 
 class TriShapeFullVertexData : public TriShapeVertexData
 {
 public:
-	virtual void ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor);
+	virtual bool ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor) override;
 
 	std::vector<TriShapeVertexDelta> m_vertexDeltas;
 };
@@ -65,7 +65,7 @@ typedef std::shared_ptr<TriShapeFullVertexData> TriShapeFullVertexDataPtr;
 class TriShapePackedVertexData : public TriShapeVertexData
 {
 public:
-	virtual void ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor);
+	virtual bool ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, float factor) override;
 
 	float									m_multiplier;
 	std::vector<TriShapePackedVertexDelta>	m_vertexDeltas;

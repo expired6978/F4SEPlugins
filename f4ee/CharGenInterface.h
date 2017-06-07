@@ -43,6 +43,12 @@ public:
 
 	virtual void ProcessHairColor(NiAVObject * node, BGSColorForm * colorForm, BSLightingShaderMaterialBase * shaderMaterial);
 	virtual const char * ProcessEyebrowPath(TESNPC * npc);
+
+	virtual void ClearHairColorMods()
+	{
+		m_LUTs.clear();
+		m_LUTMap.clear();
+	}
 	/*virtual TESNPC::HeadData * ProcessHeadData(TESNPC * npc);
 
 	virtual void SetBaseTintTextureOverride(BGSTextureSet * textureSet);

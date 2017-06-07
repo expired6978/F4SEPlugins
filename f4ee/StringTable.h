@@ -73,6 +73,7 @@ public:
 
 	void Save(const F4SESerializationInterface * intfc, UInt32 kVersion);
 	bool Load(const F4SESerializationInterface * intfc, UInt32 kVersion, std::unordered_map<UInt32, StringTableItem> & stringTable);
+	void Revert();
 
 	StringTableItem GetString(const F4EEFixedString & str);
 

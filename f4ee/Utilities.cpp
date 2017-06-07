@@ -231,3 +231,33 @@ void VisitLeveledCharacter(TESLevCharacter * character, std::function<void(TESNP
 		}
 	}
 }
+
+NiNode * GetRootNode(Actor * actor, NiAVObject * object)
+{
+	NiNode * rootNode = actor->GetActorRootNode(false);
+
+	bool isFirstPerson = false;
+
+	// Only the player will have a first person skeleton
+	if(actor == (*g_player)) {
+		NiNode * node1P = actor->GetActorRootNode(true);
+
+		// Go up to the root and see if it is the first person one
+		NiNode * foundNode = nullptr;
+		NiNode * parent = object->m_parent;
+		while(parent)
+		{
+			if (parent == node1P) {
+				foundNode = node1P;
+				break;
+			}
+			parent = parent->m_parent;
+		}
+
+		isFirstPerson = (foundNode == node1P);
+		if(isFirstPerson)
+			rootNode = node1P;
+	}
+
+	return rootNode;
+}

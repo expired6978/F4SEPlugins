@@ -12,8 +12,11 @@
 #include "CharGenInterface.h"
 #include "BodyMorphInterface.h"
 #include "BodyGenInterface.h"
+#include "OverlayInterface.h"
+#include "Utilities.h"
 
 #include "PapyrusBodyGen.h"
+#include "PapyrusOverlays.h"
 #include "ScaleformNatives.h"
 
 #include <shlobj.h>
@@ -30,6 +33,7 @@
 CharGenInterface g_charGenInterface;
 BodyGenInterface g_bodyGenInterface;
 BodyMorphInterface g_bodyMorphInterface;
+OverlayInterface g_overlayInterface;
 StringTable g_stringTable;
 
 IDebugLog	gLog;
@@ -48,6 +52,7 @@ UInt32 g_f4seVersion;
 bool g_bExportRace = false;
 bool g_bEnableBodygen = false;
 bool g_bEnableBodyMorphs = false;
+bool g_bEnableOverlays = false;
 bool g_bParallelShapes = false;
 bool g_bEnableTintExtensions = true;
 bool g_bIgnoreTintPalettes = false;
@@ -217,6 +222,11 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 				GetEventDispatcher<TESLoadGameEvent>()->AddEventSink(&g_bodyMorphInterface);
 				GetEventDispatcher<TESObjectLoadedEvent>()->AddEventSink(&g_bodyMorphInterface);
 			}
+
+			if(g_bEnableOverlays) {
+				GetEventDispatcher<TESLoadGameEvent>()->AddEventSink(&g_overlayInterface);
+				GetEventDispatcher<TESObjectLoadedEvent>()->AddEventSink(&g_overlayInterface);
+			}
 		}
 		break;
 	case F4SEMessagingInterface::kMessage_GameDataReady:
@@ -245,9 +255,17 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 					g_charGenInterface.UnlockTints();
 				}
 			}
-			else if(g_bEnableBodyMorphs)
+			else
 			{
-				g_bodyMorphInterface.ClearBodyGenSliders();
+				if(g_bEnableBodyMorphs) {
+					g_bodyMorphInterface.ClearBodyGenSliders();
+				}
+				if(g_bEnableBodygen) {
+					g_bodyGenInterface.ClearBodyGenMods();
+				}
+				if(g_bExtendedLUTs) {
+					g_charGenInterface.ClearHairColorMods();
+				}
 			}
 
 			s_loadLock.Leave();
@@ -259,6 +277,8 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 void F4EESerialization_Revert(const F4SESerializationInterface * intfc)
 {
 	g_bodyMorphInterface.Revert();
+	g_overlayInterface.Revert();
+	g_stringTable.Revert();
 }
 
 
@@ -266,6 +286,7 @@ void F4EESerialization_Save(const F4SESerializationInterface * intfc)
 {
 	g_stringTable.Save(intfc, StringTable::kSerializationVersion);
 	g_bodyMorphInterface.Save(intfc, BodyMorphInterface::kSerializationVersion);
+	g_overlayInterface.Save(intfc, OverlayInterface::kSerializationVersion);
 }
 
 void F4EESerialization_Load(const F4SESerializationInterface * intfc)
@@ -281,6 +302,8 @@ void F4EESerialization_Load(const F4SESerializationInterface * intfc)
 			case 'STTB':	g_stringTable.Load(intfc, version, stringTable);		break;
 			case 'MRPH':	g_bodyMorphInterface.Load(intfc, true, version, stringTable);		break;	// Female Morphs
 			case 'MRPM':	g_bodyMorphInterface.Load(intfc, false, version, stringTable);		break;	// Male Morphs
+			case 'OVRF':	g_overlayInterface.Load(intfc, true, version, stringTable);			break;	// Female Overlays
+			case 'OVRM':	g_overlayInterface.Load(intfc, false, version, stringTable);		break;	// Male Overlays
 			default:
 				_MESSAGE("unhandled type %08X (%.4s)", type, &type);
 				error = true;
@@ -432,6 +455,22 @@ const char * GetHairTexturePath_Hook(TESNPC * npc)
 	return g_charGenInterface.ProcessEyebrowPath(npc);
 }
 
+void InstallArmorAddon(TESForm * form, NiAVObject * object, UInt32 slotIndex)
+{
+	Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
+	if(actor) {
+		if(g_bEnableBodyMorphs)
+			g_bodyMorphInterface.ApplyMorphsToShapes(actor, object);
+
+		if(g_bEnableOverlays) {
+			NiNode * rootNode = GetRootNode(actor, object);
+			if(rootNode)
+				g_overlayInterface.UpdateOverlays(actor, rootNode, object, slotIndex);
+		}
+	}
+}
+
+/*
 UInt32 InstallArmorAddon_Hook(void * unk1, UInt32 unk2, TESForm * form, NiAVObject * object)
 {
 	UInt32 ret = InstallArmorAddon_Original(unk1, unk2, form);
@@ -443,6 +482,7 @@ UInt32 InstallArmorAddon_Hook(void * unk1, UInt32 unk2, TESForm * form, NiAVObje
 
 	return ret;
 }
+*/
 
 void InitializeSharedTarget_Hook(BSRenderTargetManager * targetManager, UInt32 type, BSRenderTargetManager::SharedTargetInfo * targetInfo, UInt8 unk1)
 {
@@ -461,6 +501,7 @@ void InitializeSharedTarget_Hook(BSRenderTargetManager * targetManager, UInt32 t
 bool RegisterFuncs(VirtualMachine * vm)
 {	
 	papyrusBodyGen::RegisterFuncs(vm);
+	papyrusOverlays::RegisterFuncs(vm);
 	return true;
 }
 
@@ -476,6 +517,8 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 	F4EEGetConfigValue("Debug", "uExportIdMax", &g_uExportIdMax);
 
 	F4EEGetConfigValue("Global", "bEnableModelPreprocessor", &g_bEnableModelPreprocessor);
+
+	F4EEGetConfigValue("Overlays", "bEnableOverlays", &g_bEnableOverlays);
 
 	F4EEGetConfigValue("BodyMorph", "bEnable", &g_bEnableBodyMorphs);
 	F4EEGetConfigValue("BodyMorph", "bEnableBodyGen", &g_bEnableBodygen);
@@ -528,9 +571,35 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 	}
 	
 	// hook Armor Attachment
-	if(g_bEnableBodyMorphs)
+	if(g_bEnableBodyMorphs || g_bEnableOverlays)
 	{
 		struct InstallArmorAddon_Code : Xbyak::CodeGenerator {
+			InstallArmorAddon_Code(void * buf, UInt64 funcAddr) : Xbyak::CodeGenerator(4096, buf)
+			{
+				Xbyak::Label funcLabel;
+				Xbyak::Label retnLabel;
+				Xbyak::Label originLabel;
+
+				call(ptr [rip + originLabel]);
+
+				mov(r8d, ptr[rbp+0x1C0-0x208]); // Stack var to current index of equip item loop
+				mov(rdx, r12);					// ObjectNode
+				mov(rcx, ptr[rsp+0x2A8-0x268]); // Actor - rbx - ptr[rsp+0x2A8-0x268]
+				call(ptr [rip + funcLabel]);
+
+				jmp(ptr [rip + retnLabel]);
+
+				L(funcLabel);
+				dq(funcAddr);
+
+				L(originLabel);
+				dq(InstallArmorAddon_Original.GetUIntPtr());
+
+				L(retnLabel);
+				dq(InstallArmorAddon_Start.GetUIntPtr() + 5);
+			}
+		};
+		/*struct InstallArmorAddon_Code : Xbyak::CodeGenerator {
 			InstallArmorAddon_Code(void * buf, UInt64 funcAddr) : Xbyak::CodeGenerator(4096, buf)
 			{
 				Xbyak::Label funcLabel;
@@ -546,16 +615,18 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 				L(retnLabel);
 				dq(InstallArmorAddon_Start.GetUIntPtr() + 5);
 			}
-		};
+		};*/
 
 		void * codeBuf = g_localTrampoline.StartAlloc();
-		InstallArmorAddon_Code code(codeBuf, (uintptr_t)InstallArmorAddon_Hook);
+		InstallArmorAddon_Code code(codeBuf, (uintptr_t)InstallArmorAddon);
+		//InstallArmorAddon_Code code(codeBuf, (uintptr_t)InstallArmorAddon_Hook);
 		g_localTrampoline.EndAlloc(code.getCurr());
 
 		g_branchTrampoline.Write5Branch(InstallArmorAddon_Start.GetUIntPtr(), uintptr_t(code.getCode()));
 	}
 
 	// SetHairColor Palette Index
+	if(g_bExtendedLUTs)
 	{
 		struct SetHairColorPalette_Code : Xbyak::CodeGenerator {
 			SetHairColorPalette_Code(void * buf, UInt64 funcAddr) : Xbyak::CodeGenerator(4096, buf)
@@ -585,6 +656,7 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 	}
 
 	// SetEyebrowLUTPath
+	if(g_bExtendedLUTs)
 	{
 		struct GetHairTexturePath_Code : Xbyak::CodeGenerator {
 			GetHairTexturePath_Code(void * buf, UInt64 funcAddr) : Xbyak::CodeGenerator(4096, buf)

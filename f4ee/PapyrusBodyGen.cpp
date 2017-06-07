@@ -14,8 +14,12 @@
 #include "f4se/BSGeometry.h"
 
 #include "BodyMorphInterface.h"
+#include "BodyGenInterface.h"
+
+#include "f4se/GameObjects.h"
 
 extern BodyMorphInterface g_bodyMorphInterface;
+extern BodyGenInterface g_bodyGenInterface;
 
 namespace papyrusBodyGen
 {
@@ -39,6 +43,11 @@ namespace papyrusBodyGen
 		g_bodyMorphInterface.RemoveMorphsByKeyword(actor, isFemale, keyword);
 	}
 
+	void RemoveAllMorphs(StaticFunctionTag*, Actor * actor, bool isFemale)
+	{
+		g_bodyMorphInterface.ClearMorphs(actor, isFemale);
+	}
+
 	VMArray<BGSKeyword*> GetKeywords(StaticFunctionTag*, Actor * actor, bool isFemale, BSFixedString morph)
 	{
 		std::vector<BGSKeyword*> keywords;
@@ -51,6 +60,25 @@ namespace papyrusBodyGen
 		std::vector<BSFixedString> morphs;
 		g_bodyMorphInterface.GetMorphs(actor, isFemale, morphs);
 		return VMArray<BSFixedString>(morphs);
+	}
+
+	void RegenerateMorphs(StaticFunctionTag*, Actor * actor, bool update)
+	{
+		if(!actor)
+			return;
+
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(!npc)
+			return;
+
+		UInt64 gender = CALL_MEMBER_FN(npc, GetSex)();
+		bool isFemale = gender == 1 ? true : false;
+
+		g_bodyMorphInterface.ClearMorphs(actor, isFemale);
+		g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale);
+
+		if(update)
+			g_bodyMorphInterface.UpdateMorphs(actor, true, true);
 	}
 
 	void UpdateMorphs(StaticFunctionTag*, Actor * actor)
@@ -74,10 +102,16 @@ void papyrusBodyGen::RegisterFuncs(VirtualMachine* vm)
 		new NativeFunction3<StaticFunctionTag, void, Actor*, bool, BGSKeyword*>("RemoveMorphsByKeyword", "BodyGen", papyrusBodyGen::RemoveMorphsByKeyword, vm));
 
 	vm->RegisterFunction(
+		new NativeFunction2<StaticFunctionTag, void, Actor*, bool>("RemoveAllMorphs", "BodyGen", papyrusBodyGen::RemoveAllMorphs, vm));
+
+	vm->RegisterFunction(
 		new NativeFunction3<StaticFunctionTag, VMArray<BGSKeyword*>, Actor*, bool, BSFixedString>("GetKeywords", "BodyGen", papyrusBodyGen::GetKeywords, vm));
 
 	vm->RegisterFunction(
 		new NativeFunction2<StaticFunctionTag, VMArray<BSFixedString>, Actor*, bool>("GetMorphs", "BodyGen", papyrusBodyGen::GetMorphs, vm));
+
+	vm->RegisterFunction(
+		new NativeFunction2<StaticFunctionTag, void, Actor*, bool>("RegenerateMorphs", "BodyGen", papyrusBodyGen::RegenerateMorphs, vm));
 
 	vm->RegisterFunction(
 		new NativeFunction1<StaticFunctionTag, void, Actor*>("UpdateMorphs", "BodyGen", papyrusBodyGen::UpdateMorphs, vm));

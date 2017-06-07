@@ -199,6 +199,12 @@
     <ClCompile Include="BodyGenInterface.cpp">
       <Filter>BodyGen</Filter>
     </ClCompile>
+    <ClCompile Include="OverlayInterface.cpp">
+      <Filter>BodyGen</Filter>
+    </ClCompile>
+    <ClCompile Include="PapyrusOverlays.cpp">
+      <Filter>f4se\papyrus\functions</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -357,6 +363,12 @@
     </ClInclude>
     <ClInclude Include="BodyGenInterface.h">
       <Filter>BodyGen</Filter>
+    </ClInclude>
+    <ClInclude Include="OverlayInterface.h">
+      <Filter>BodyGen</Filter>
+    </ClInclude>
+    <ClInclude Include="PapyrusOverlays.h">
+      <Filter>f4se\papyrus\functions</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

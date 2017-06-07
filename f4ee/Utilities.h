@@ -2,6 +2,7 @@
 
 #include "f4se/PluginAPI.h"
 #include "f4se/GameTypes.h"
+#include "f4se/NiTypes.h"
 #include "StringTable.h"
 
 #include <string>
@@ -13,6 +14,7 @@ class TESRace;
 class Actor;
 class TESLevCharacter;
 class TESNPC;
+class NiNode;
 
 #include "f4se/Serialization.h"
 
@@ -60,3 +62,6 @@ protected:
 void BSReadAll(BSResourceNiBinaryStream* fin, std::string* str);
 bool VisitObjects(NiAVObject * parent, std::function<bool(NiAVObject*)> functor);
 void VisitLeveledCharacter(TESLevCharacter * character, std::function<void(TESNPC*)> functor);
+
+// Travels up a node tree to determine the right node
+NiNode * GetRootNode(Actor * actor, NiAVObject * object);
