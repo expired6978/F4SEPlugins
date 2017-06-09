@@ -62,8 +62,8 @@ class BodyGenInterface
 public:
 	void LoadBodyGenMods();
 
-	virtual bool ReadBodyMorphs(const char * filePath);
-	virtual bool ReadBodyMorphTemplates(const char * filePath);
+	virtual bool ReadBodyMorphs(const std::string & filePath);
+	virtual bool ReadBodyMorphTemplates(const std::string & filePath);
 	virtual UInt32 EvaluateBodyMorphs(Actor * actor, bool isFemale);
 	virtual void ClearBodyGenMods()
 	{

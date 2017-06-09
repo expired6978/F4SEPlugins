@@ -15,29 +15,36 @@
 	import scaleform.clik.constants.InputValue;
 	import scaleform.clik.events.InputEvent;
 	import scaleform.clik.ui.InputDetails;
+	import utils.Translator;
 	
 	public dynamic class LooksMenu extends Shared.IMenu
 	{
 		internal const AllModeInputMap:Object={"Done":0, "Accept":1, "Cancel":2, "XButton":3, "YButton":4, "LTrigger":5, "RTrigger":6, "LShoulder":7, "RShoulder":8, "Left":9, "Right":10, "Up":11, "Down":12};
 		internal const StartModeInputMapKBM:Object={"Done":0, "F":1, "B":2, "Accept":3, "X":4, "KeyLeft":5, "KeyRight":6, "R":7};
 		internal const FaceHairModeInputMap:Object={"Done":0, "Accept":1, "Cancel":2, "T":3, "C":4};
-		internal const BodyModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "T":3, "XButton":3};
+		internal const BodyModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "T":3, "XButton":3, "R": 4, "YButton": 4};
 		internal const SculptModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "KeyDown":9, "KeyUp":10, "KeyLeft":7, "KeyRight":8};
 		internal const FeatureModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "Space":3, "R":4, "KeyLeft":7, "KeyRight":8};
 		internal const PresetModeInputMap:Object={"Done":0, "Accept":1, "Cancel":2, "X":3, "YButton":3};
 		internal const FeatureCategoryModeInputMap:Object={"Accept":1, "Cancel":2, "R":4};
 		internal const BodyAdvancedModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "KeyLeft":3, "KeyRight":4, "Left":3, "Right":4, "37":3, "39":4, "LTrigger":5, "RTrigger":6, "LShoulder":7, "RShoulder":8};
-		internal const InputMapA:Array=[StartModeInputMapController, FaceHairModeInputMap, BodyModeInputMap, SculptModeInputMap, FaceHairModeInputMap, FeatureModeInputMap, FeatureCategoryModeInputMap, PresetModeInputMap, undefined, BodyAdvancedModeInputMap];
+		internal const BodyOverlayModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "KeyLeft":3, "KeyRight":4, "Left":3, "Right":4, "37":3, "39":4, "YButton": 5, "R": 5, "XButton": 6, "X": 6};
+		internal const BodyOverlaySelectModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "Space": 3, "YButton": 3, "X": 4, "XButton": 4};
+		internal const BodyOverlayTransformModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "KeyLeft":3, "KeyRight":4, "Left":3, "Right":4, "37":3, "39":4, "LTrigger":5, "RTrigger":6, "LShoulder":7, "RShoulder":8};
+		internal const InputMapA:Array=[StartModeInputMapController, FaceHairModeInputMap, BodyModeInputMap, SculptModeInputMap, FaceHairModeInputMap, FeatureModeInputMap, FeatureCategoryModeInputMap, PresetModeInputMap, undefined, BodyAdvancedModeInputMap, BodyOverlayModeInputMap, BodyOverlaySelectModeInputMap, BodyOverlayTransformModeInputMap];
 		internal const StartModeFunctionsReleased:Array=[ConfirmCloseMenu, FaceMode, BodyMode, ExtrasMode, ChangeSex, CharacterPresetLeft, CharacterPresetRight, PresetMode, undefined, undefined, undefined, undefined, undefined];
 		internal const FaceModeFunctionsReleased:Array=[ConfirmCloseMenu, SculptMode, StartMode, TypeMode, ColorMode, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
-		internal const BodyModeFunctionsReleased:Array=[undefined, AcceptChanges, CancelChanges, BodyAdvancedMode, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
+		internal const BodyModeFunctionsReleased:Array=[undefined, AcceptChanges, CancelChanges, BodyAdvancedMode, BodyOverlayMode, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
 		internal const SculptModeFunctionsReleased:Array=[undefined, AcceptChanges, CancelChanges, undefined, undefined, undefined, undefined, SculptModeRotateLeft, SculptModeRotateRight, SculptModeShrink, SculptModeEnlarge, SculptModeOut, SculptModeIn];
 		internal const HairModeFunctionsReleased:Array=[ConfirmCloseMenu, StyleMode, StartMode, TypeMode, ColorMode, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
 		internal const FeatureModeFunctionsReleased:Array=[undefined, undefined, CancelChanges, FeaturesApply, undefined, undefined, undefined, FeatureModeLBumper, FeatureModeRBumper, undefined, undefined, undefined, undefined];
 		internal const FeatureCategoryModeFunctionsReleased:Array=[undefined, undefined, StartMode, undefined, FeaturesClear, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
 		internal const PresetModeFunctionsReleased:Array=[ConfirmCloseMenu, PresetLoad, StartMode, PresetSave];
 		internal const BodyAdvancedModeFunctionsReleased:Array=[undefined, AcceptBodyAdvancedChanges, CancelBodyAdvancedChanges, DecrementBodySlider, IncrementBodySlider, BackstepBodySlider, ForwardstepBodySlider, MinBodySlider, MaxBodySlider];
-		internal const InputFunctionsA:Array=[StartModeFunctionsReleased, FaceModeFunctionsReleased, BodyModeFunctionsReleased, SculptModeFunctionsReleased, HairModeFunctionsReleased, FeatureModeFunctionsReleased, FeatureCategoryModeFunctionsReleased, PresetModeFunctionsReleased, undefined, BodyAdvancedModeFunctionsReleased];
+		internal const BodyOverlayModeFunctionsReleased:Array=[undefined, AcceptBodyOverlayChanges, CancelBodyOverlayChanges, MoveBodyOverlayUp, MoveBodyOverlayDown, AddBodyOverlay, EditBodyOverlay];
+		internal const BodyOverlaySelectModeFunctionsReleased:Array=[undefined, AcceptBodyOverlaySelectChanges, CancelBodyOverlaySelectChanges, SelectOrRemoveBodyOverlay, StartTransformBodyOverlay];
+		internal const BodyOverlayTransformModeFunctionsReleased:Array=[undefined, AcceptBodyOverlayTransformChanges, CancelBodyOverlayTransformChanges, DecrementBodySlider, IncrementBodySlider, BackstepBodySlider, ForwardstepBodySlider, MinBodySlider, MaxBodySlider];
+		internal const InputFunctionsA:Array=[StartModeFunctionsReleased, FaceModeFunctionsReleased, BodyModeFunctionsReleased, SculptModeFunctionsReleased, HairModeFunctionsReleased, FeatureModeFunctionsReleased, FeatureCategoryModeFunctionsReleased, PresetModeFunctionsReleased, undefined, BodyAdvancedModeFunctionsReleased, BodyOverlayModeFunctionsReleased, BodyOverlaySelectModeFunctionsReleased, BodyOverlayTransformModeFunctionsReleased];
 		internal const StartModeInputMapController:Object={"Done":0, "Accept":1, "B":2, "XButton":3, "YButton":4, "KeyLeft":5, "KeyRight":6};
 		internal const FeatureIntensityStep:Number=0.01;
 		internal const FeatureIntensityRampDurationCeiling:Number=3;
@@ -79,6 +86,9 @@
 		internal const PRESET_MODE:uint=7;
 		internal const PRESET_NAME_MODE:uint=8;
 		internal const BODY_ADVANCED_MODE:uint=9;
+		internal const BODY_OVERLAY_MODE:uint=10;
+		internal const BODY_OVERLAY_SELECT_MODE:uint=11;
+		internal const BODY_OVERLAY_TRANSFORM_MODE:uint=12;
 		internal const AST_HAIR:uint=0;
 		internal const AST_HAIR_COLOR:uint=1;
 		internal const AST_BEARD:uint=2;
@@ -175,10 +185,28 @@
 		protected var buttonHint_PresetMode_Back:Shared.AS3.BSButtonHintData;
 		protected var buttonHint_PresetName_Done:Shared.AS3.BSButtonHintData;
 		protected var buttonHint_PresetName_Cancel:Shared.AS3.BSButtonHintData;
+		
 		protected var buttonHint_BodyAdvancedMode_Accept:Shared.AS3.BSButtonHintData;
 		protected var buttonHint_BodyAdvancedMode_Cancel:Shared.AS3.BSButtonHintData;
 		protected var buttonHint_BodyAdvancedMode_Value:Shared.AS3.BSButtonHintData;
 		protected var buttonHint_BodyMode_Advanced:Shared.AS3.BSButtonHintData;
+		
+		protected var buttonHint_BodyOverlayMode_Accept:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodyOverlayMode_Cancel:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodyOverlayMode_Order:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodyOverlayMode_Add:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodyOverlayMode_Edit:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodyMode_Overlays:Shared.AS3.BSButtonHintData;
+		
+		protected var buttonHint_BodyOverlaySelectMode_Accept:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodyOverlaySelectMode_Cancel:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodyOverlaySelectMode_Edit:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodyOverlaySelectMode_Transform:Shared.AS3.BSButtonHintData;
+		
+		protected var buttonHint_BodyOverlayTransformMode_Accept:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodyOverlayTransformMode_Cancel:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodyOverlayTransformMode_Value:Shared.AS3.BSButtonHintData;
+		
 		internal var CurrentSelectedExtra:uint=0;		
 		public static var GlobalTintColors:Array=[1.0, 0.0, 1.0, 1.0];
 		internal var CurrentSelectedBoneID:uint=4294967295;
@@ -186,6 +214,10 @@
 		internal var buttonStatesV:__AS3__.vec.Vector.<Boolean>;
 		internal var _bodyDirty:Boolean=false;
 		internal var bodyTimer:Timer;
+		internal var CurrentOverlayInfo:Object = {"id": "", "uid": uint(0), "template": "", "sid": "", "object": {"offsetU": 0, "offsetV": 0, "scaleU": 1, "scaleV": 1}, "temp": {"offsetU": 0, "offsetV": 0, "scaleU": 1, "scaleV": 1} };
+		internal var overlayTemplates:Array = null;
+		internal var overlayTimer:Timer;
+		internal var _overlayDirty:Boolean=false;
 		
 		public function LooksMenu()
 		{
@@ -217,10 +249,27 @@
 			this.buttonHint_PresetMode_Back = new Shared.AS3.BSButtonHintData("$BACK", "Esc", "PSN_B", "Xenon_B", 1, this.StartMode);
 			this.buttonHint_PresetName_Done = new Shared.AS3.BSButtonHintData("$DONE", "Enter", "PSN_Start", "Xenon_Start", 1, this.PresetNameConfirm);
 			this.buttonHint_PresetName_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.PresetNameCancel);
+			
 			this.buttonHint_BodyAdvancedMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptBodyAdvancedChanges);
 			this.buttonHint_BodyAdvancedMode_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.CancelBodyAdvancedChanges);
 			this.buttonHint_BodyAdvancedMode_Value = new Shared.AS3.BSButtonHintData("$VALUE", "A", "PSN_L2", "Xenon_L2", 1, this.DecrementBodySlider);
 			this.buttonHint_BodyMode_Advanced = new Shared.AS3.BSButtonHintData("$ADVANCED", "T", "PSN_X", "Xenon_X", 1, this.BodyAdvancedMode);
+			
+			this.buttonHint_BodyOverlayMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptBodyOverlayChanges);
+			this.buttonHint_BodyOverlayMode_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.CancelBodyOverlayChanges);
+			this.buttonHint_BodyOverlayMode_Order = new Shared.AS3.BSButtonHintData("$ORDER", "A", "PSN_L2", "Xenon_L2", 1, this.MoveBodyOverlayUp);
+			this.buttonHint_BodyOverlayMode_Add = new Shared.AS3.BSButtonHintData("$ADD", "R", "PSN_Y", "Xenon_Y", 1, this.AddBodyOverlay);
+			this.buttonHint_BodyOverlayMode_Edit = new Shared.AS3.BSButtonHintData("$EDIT", "X", "PSN_X", "Xenon_X", 1, this.EditBodyOverlay);
+			this.buttonHint_BodyMode_Overlays = new Shared.AS3.BSButtonHintData("$OVERLAYS", "R", "PSN_Y", "Xenon_Y", 1, this.BodyOverlayMode);
+			
+			this.buttonHint_BodyOverlaySelectMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptBodyOverlaySelectChanges);
+			this.buttonHint_BodyOverlaySelectMode_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.CancelBodyOverlaySelectChanges);
+			this.buttonHint_BodyOverlaySelectMode_Edit = new Shared.AS3.BSButtonHintData("$SELECT", "Space", "PSN_Y", "Xenon_Y", 1, this.SelectOrRemoveBodyOverlay);
+			this.buttonHint_BodyOverlaySelectMode_Transform = new Shared.AS3.BSButtonHintData("$TRANSFORM", "X", "PSN_X", "Xenon_X", 1, this.StartTransformBodyOverlay);
+			
+			this.buttonHint_BodyOverlayTransformMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptBodyOverlayTransformChanges);
+			this.buttonHint_BodyOverlayTransformMode_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.CancelBodyOverlayTransformChanges);
+			this.buttonHint_BodyOverlayTransformMode_Value = new Shared.AS3.BSButtonHintData("$VALUE", "A", "PSN_L2", "Xenon_L2", 1, this.DecrementBodySlider);
 			
 			this.FacialBoneRegions = new Array();
 			this.ControlAxes = [this.X_AXIS, this.Y_AXIS, this.X_ROT_AXIS, this.X_SCALE_AXIS, this.Z_AXIS];
@@ -247,6 +296,10 @@
 			this.buttonHint_FeatureMode_Modifier.secondaryButtonCallback = this.FeatureModeLBumper;
 			this.buttonHint_BodyAdvancedMode_Value.SetSecondaryButtons("D", "PSN_R2", "Xenon_R2");
 			this.buttonHint_BodyAdvancedMode_Value.secondaryButtonCallback = this.IncrementBodySlider;
+			this.buttonHint_BodyOverlayMode_Order.SetSecondaryButtons("D", "PSN_R2", "Xenon_R2");
+			this.buttonHint_BodyOverlayMode_Order.secondaryButtonCallback = this.MoveBodyOverlayDown;
+			this.buttonHint_BodyOverlayTransformMode_Value.SetSecondaryButtons("D", "PSN_R2", "Xenon_R2");
+			this.buttonHint_BodyOverlayTransformMode_Value.secondaryButtonCallback = this.IncrementBodySlider;
 			this._buttonHintDataV = new Vector.<Shared.AS3.BSButtonHintData>();
 			this._buttonHintDataV.push(this.buttonHint_StartMode_BodyPreset);
 			this._buttonHintDataV.push(this.buttonHint_StartMode_Preset);
@@ -267,19 +320,39 @@
 			this._buttonHintDataV.push(this.buttonHint_EditAccept);
 			this._buttonHintDataV.push(this.buttonHint_FeatureMode_Apply);
 			this._buttonHintDataV.push(this.buttonHint_EditCancel);
+			
 			this._buttonHintDataV.push(this.buttonHint_PresetMode_Load);
 			this._buttonHintDataV.push(this.buttonHint_PresetMode_Save);
 			this._buttonHintDataV.push(this.buttonHint_PresetMode_Back);
 			this._buttonHintDataV.push(this.buttonHint_PresetName_Done);
 			this._buttonHintDataV.push(this.buttonHint_PresetName_Cancel);
+			
 			this._buttonHintDataV.push(this.buttonHint_StartMode_Done);
 			this._buttonHintDataV.push(this.buttonHint_FeatureCategoryMode_Select);
 			this._buttonHintDataV.push(this.buttonHint_FeatureCategoryMode_RemoveAll);
 			this._buttonHintDataV.push(this.buttonHint_FeatureCategoryMode_Back);
+			
 			this._buttonHintDataV.push(this.buttonHint_BodyAdvancedMode_Accept);
 			this._buttonHintDataV.push(this.buttonHint_BodyAdvancedMode_Cancel);
 			this._buttonHintDataV.push(this.buttonHint_BodyAdvancedMode_Value);
 			this._buttonHintDataV.push(this.buttonHint_BodyMode_Advanced);
+			
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlayMode_Accept);
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlayMode_Cancel);
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlayMode_Order);
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlayMode_Add);
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlayMode_Edit);
+			this._buttonHintDataV.push(this.buttonHint_BodyMode_Overlays);
+			
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlaySelectMode_Accept);
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlaySelectMode_Cancel);
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlaySelectMode_Edit);
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlaySelectMode_Transform);
+			
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlayTransformMode_Accept);
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlayTransformMode_Cancel);
+			this._buttonHintDataV.push(this.buttonHint_BodyOverlayTransformMode_Value);
+			
 			this.ButtonHintBar_mc.SetButtonHintData(this._buttonHintDataV);
 			this.UpdateButtons();
 			this.bInitialized = true;
@@ -294,8 +367,13 @@
 			FeaturePanel_mc.Brackets_mc.BracketExtents_mc.ShadedBackgroundMethod = "Shader";
 			FeaturePanel_mc.Brackets_mc.BracketExtents_mc.ShadedBackgroundType = "normal";
 			
+			Translator.Create(root);
+			
 			bodyTimer = new Timer(100);
 			bodyTimer.addEventListener(TimerEvent.TIMER, onBodyTimer);
+			
+			overlayTimer = new Timer(100);
+			overlayTimer.addEventListener(TimerEvent.TIMER, onOverlayTimer);
 			
 			root.addEventListener("F4EE::Initialized", onF4EEInitialized);
 			root.addEventListener(FeatureListEntry.VALUE_CHANGE, onSliderChanged);
@@ -364,18 +442,53 @@
 		{
 			var slider = event.target;
 			var sliderData = slider["data"];
-			if(sliderData) {
-				sliderData.value = event.value;
-				try
+			
+			if(sliderData)
+			{
+				if(eMode == BODY_ADVANCED_MODE)
 				{
-					root.f4se.plugins.F4EE.SetBodyMorph(sliderData.morph, sliderData.value);
-					_bodyDirty = true;
+					sliderData.value = event.value;
+					try
+					{
+						root.f4se.plugins.F4EE.SetBodyMorph(sliderData.morph, sliderData.value);
+						_bodyDirty = true;
+					}
+					catch(e:Error)
+					{
+							
+					}
+					bodyTimer.start();
 				}
-				catch(e:Error)
+				else if(eMode == BODY_OVERLAY_TRANSFORM_MODE)
 				{
-						
+					// Operates on the temp object
+					sliderData.value = event.value;
+					switch(sliderData.type) {
+						case "offset_u":
+						sliderData.object.offsetU = sliderData.value;
+						break;
+						case "offset_v":
+						sliderData.object.offsetV = sliderData.value;
+						break;
+						case "scale_u":
+						sliderData.object.scaleU = sliderData.value;
+						break;
+						case "scale_v":
+						sliderData.object.scaleV = sliderData.value;
+						break;
+					}
+					
+					try
+					{
+						root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, sliderData.object);
+						_overlayDirty = true;
+					}
+					catch(e:Error)
+					{
+							
+					}
+					overlayTimer.start();
 				}
-				bodyTimer.start();
 			}
 		}
 
@@ -442,11 +555,34 @@
 			buttonHint_PresetName_Done.ButtonVisible = bInitialized && eMode == PRESET_NAME_MODE;
 			buttonHint_PresetName_Cancel.ButtonVisible = bInitialized && eMode == PRESET_NAME_MODE;
 			buttonHint_StartMode_BodyPreset.ButtonEnabled = bInitialized && bExtensionsInitialized;
+			
 			buttonHint_BodyAdvancedMode_Accept.ButtonVisible = eMode == BODY_ADVANCED_MODE;
 			buttonHint_BodyAdvancedMode_Cancel.ButtonVisible = eMode == BODY_ADVANCED_MODE;
 			buttonHint_BodyAdvancedMode_Value.ButtonVisible = eMode == BODY_ADVANCED_MODE;
 			buttonHint_BodyMode_Advanced.ButtonVisible = eMode == BODY_MODE;
 			buttonHint_BodyMode_Advanced.ButtonEnabled = bInitialized && bExtensionsInitialized;
+			
+			buttonHint_BodyOverlayMode_Accept.ButtonVisible = eMode == BODY_OVERLAY_MODE;
+			buttonHint_BodyOverlayMode_Cancel.ButtonVisible = eMode == BODY_OVERLAY_MODE;
+			buttonHint_BodyOverlayMode_Order.ButtonVisible = eMode == BODY_OVERLAY_MODE;
+			buttonHint_BodyOverlayMode_Add.ButtonVisible = eMode == BODY_OVERLAY_MODE;
+			buttonHint_BodyOverlayMode_Add.ButtonEnabled = overlayTemplates && overlayTemplates.length > 0 ? true : false;
+			buttonHint_BodyOverlayMode_Edit.ButtonVisible = eMode == BODY_OVERLAY_MODE;
+			buttonHint_BodyOverlayMode_Edit.ButtonEnabled = FeaturePanel_mc.List_mc.entryList.length > 0 ? true : false;
+			buttonHint_BodyMode_Overlays.ButtonVisible = eMode == BODY_MODE;
+			buttonHint_BodyMode_Overlays.ButtonEnabled = bInitialized && bExtensionsInitialized;
+			buttonHint_BodyOverlaySelectMode_Accept.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE;
+			buttonHint_BodyOverlaySelectMode_Cancel.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE;
+			buttonHint_BodyOverlaySelectMode_Edit.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE;
+			buttonHint_BodyOverlaySelectMode_Edit.ButtonText = "$SELECT";
+			
+			buttonHint_BodyOverlaySelectMode_Transform.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE && FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.applied;
+			buttonHint_BodyOverlaySelectMode_Transform.ButtonEnabled = FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.transformable;
+			
+			buttonHint_BodyOverlayTransformMode_Accept.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
+			buttonHint_BodyOverlayTransformMode_Cancel.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
+			buttonHint_BodyOverlayTransformMode_Value.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
+			
 			PresetInput_mc.visible = PresetInput_mc.enabled = eMode == PRESET_NAME_MODE;
 			
 			var bHitPanel = FeaturePanel_mc.hitTestPoint(Cursor_mc.x, Cursor_mc.y);
@@ -454,8 +590,8 @@
 			LoadingSpinner_mc.visible = _loading ? true : false;
 			FacePartLabel_tf.alpha = EditMode != EDIT_HAIRCUT && eMode != START_MODE && eMode != BODY_MODE && eMode != FEATURE_CATEGORY_MODE && (eMode != FEATURE_MODE || eFeature != AST_EXTRAS);
 			WeightTriangle_mc.alpha = eMode != BODY_MODE ? 0 : 1;
-			FeaturePanel_mc.visible = eMode == FEATURE_MODE || eMode == FEATURE_CATEGORY_MODE || eMode == PRESET_MODE || eMode == FACE_MODE || (eMode == HAIR_MODE && EditMode != EDIT_HAIRCUT) || eMode == BODY_ADVANCED_MODE;
-			FeaturePanel_mc.Brackets_mc.BracketExtents_mc.visible = eMode == FEATURE_MODE || eMode == FEATURE_CATEGORY_MODE || eMode == PRESET_MODE || eMode == FACE_MODE || (eMode == HAIR_MODE && EditMode != EDIT_HAIRCUT) || eMode == BODY_ADVANCED_MODE;
+			FeaturePanel_mc.visible = eMode == FEATURE_MODE || eMode == FEATURE_CATEGORY_MODE || eMode == PRESET_MODE || eMode == FACE_MODE || (eMode == HAIR_MODE && EditMode != EDIT_HAIRCUT) || eMode == BODY_ADVANCED_MODE || eMode == BODY_OVERLAY_MODE || eMode == BODY_OVERLAY_SELECT_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE;
+			FeaturePanel_mc.Brackets_mc.BracketExtents_mc.visible = eMode == FEATURE_MODE || eMode == FEATURE_CATEGORY_MODE || eMode == PRESET_MODE || eMode == FACE_MODE || (eMode == HAIR_MODE && EditMode != EDIT_HAIRCUT) || eMode == BODY_ADVANCED_MODE || eMode == BODY_OVERLAY_MODE || eMode == BODY_OVERLAY_SELECT_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE;
 			switch (eMode) 
 			{
 				case START_MODE:
@@ -544,19 +680,29 @@
 					break;
 				}
 				case PRESET_MODE:
-				{
-					FacePartLabel_tf.visible = false;
-					FacePartLabel_tf.alpha = 0;
-					break;
-				}
-				case BODY_MODE:
-				{
-					break;
-				}
+				case BODY_OVERLAY_MODE:
 				case BODY_ADVANCED_MODE:
 				{
 					FacePartLabel_tf.visible = false;
 					FacePartLabel_tf.alpha = 0;
+					break;
+				}
+				case BODY_OVERLAY_SELECT_MODE:
+				{
+					FacePartLabel_tf.visible = false;
+					FacePartLabel_tf.alpha = 0;
+					
+					if(FeaturePanel_mc.List_mc.selectedEntry) {
+						if(FeaturePanel_mc.List_mc.selectedEntry.applied) {
+							buttonHint_BodyOverlaySelectMode_Edit.ButtonText = "$REMOVE";
+						}
+					} else {
+						buttonHint_BodyOverlaySelectMode_Edit.ButtonEnabled = false;
+					}
+					break;
+				}
+				case BODY_MODE:
+				{
 					break;
 				}
 				case SCULPT_MODE:
@@ -683,7 +829,14 @@
 					}
 					if (control == "Accept") 
 					{
-						if (eMode == FEATURE_MODE || eMode == FEATURE_CATEGORY_MODE || eMode == PRESET_MODE)
+						if (eMode == FEATURE_MODE || eMode == FEATURE_CATEGORY_MODE || eMode == PRESET_MODE || eMode == BODY_OVERLAY_SELECT_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE)
+						{
+							BlockNextAccept = true;
+						}
+					}
+					if(control == "Done")
+					{
+						if(eMode == BODY_OVERLAY_SELECT_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE)
 						{
 							BlockNextAccept = true;
 						}
@@ -1048,6 +1201,46 @@
 						
 						UpdateButtons();
 					}
+					else if(eMode == BODY_OVERLAY_SELECT_MODE)
+					{
+						try
+						{
+							if(CurrentOverlayInfo.uid != 0 && FeaturePanel_mc.List_mc.selectedEntry)
+							{
+								// Default no transform
+								var transformData = {
+									"offsetU": 0.0,
+									"offsetV": 0.0,
+									"scaleU": 1.0,
+									"scaleV": 1.0
+								};
+								
+								// If we're selecting the applied item, apply its transform rather than none
+								if(FeaturePanel_mc.List_mc.selectedEntry.applied) {
+									transformData = CurrentOverlayInfo.object;
+								}
+								
+								// Update transform and template
+								root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, 
+									{
+										"template": FeaturePanel_mc.List_mc.selectedEntry.id,
+										"offsetU": transformData.offsetU,
+										"offsetV": transformData.offsetV,
+										"scaleU": transformData.scaleU,
+										"scaleV": transformData.scaleV
+									}
+								);
+								_overlayDirty = true;
+								overlayTimer.start();
+							}
+						}
+						catch(e:Error)
+						{
+							
+						}
+						
+						UpdateButtons();
+					}
 				}
 				else 
 				{
@@ -1127,6 +1320,10 @@
 						}
 					}
 					AcceptChanges();
+				}
+				else if(eMode == BODY_OVERLAY_SELECT_MODE)
+				{
+					SelectOrRemoveBodyOverlay();
 				}
 			}
 			else
@@ -1519,6 +1716,357 @@
 				slider.value = slider.maximum;
 			}
 		}
+		
+		internal function AcceptBodyOverlayChanges():*
+		{
+			PreviousMode(true);
+		}
+		
+		internal function CancelBodyOverlayChanges():*
+		{			
+			PreviousMode(false);
+		}
+		
+		internal function AddBodyOverlay()
+		{
+			// Bring to stage 2
+			try
+			{
+				var priority = 0;
+				if(FeaturePanel_mc.List_mc.selectedEntry) {
+					priority = FeaturePanel_mc.List_mc.selectedEntry.priority;
+				}
+				
+				CurrentOverlayInfo.uid = root.f4se.plugins.F4EE.CreateOverlay(priority, overlayTemplates[0].id);
+				CurrentOverlayInfo.object = {
+					"offsetU": 0.0,
+					"offsetV": 0.0,
+					"scaleU": 1.0,
+					"scaleV": 1.0
+				};
+				root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, {"template": ""});
+				_overlayDirty = true;
+				overlayTimer.start();
+			}
+			catch(e:Error)
+			{
+				CurrentOverlayInfo.uid = 0;
+			}
+			
+			CurrentOverlayInfo.id = "";  // Used for tracking the current template, doesn't exist if we're adding
+			CurrentOverlayInfo.sid = ""; // Used for tracking the Template selection
+			BodyOverlaySelectMode();
+		}
+		
+		internal function EditBodyOverlay()
+		{
+			// Bring to stage 2 and select current id item
+			var selectedEntry = FeaturePanel_mc.List_mc.selectedEntry;
+			if(selectedEntry) {
+				CurrentOverlayInfo.id = selectedEntry.id;
+				CurrentOverlayInfo.sid = selectedEntry.id;
+				
+				CurrentOverlayInfo.uid = selectedEntry.uid;
+				CurrentOverlayInfo.object = {
+					"offsetU": selectedEntry.offsetU,
+					"offsetV": selectedEntry.offsetV,
+					"scaleU": selectedEntry.scaleU,
+					"scaleV": selectedEntry.scaleV
+				};
+				BodyOverlaySelectMode();
+			}
+		}
+		
+		internal function ModifyPriority(priority: int)
+		{
+			try
+			{
+				var newPriority = 0;
+				var currentUID = 0;
+				if(FeaturePanel_mc.List_mc.selectedEntry) {
+					newPriority = FeaturePanel_mc.List_mc.selectedEntry.priority;
+					currentUID = FeaturePanel_mc.List_mc.selectedEntry.uid;
+					
+					newPriority += priority;
+				
+					root.f4se.plugins.F4EE.ReorderOverlay(currentUID, newPriority);
+					
+					FeaturePanel_mc.List_mc.entryList = BuildOverlayList();
+					FeatureListChangeLock++;
+					FeaturePanel_mc.List_mc.InvalidateData();
+					FeatureListChangeLock--;
+					
+					_overlayDirty = true;
+					overlayTimer.start();
+				}
+			}
+			catch(e:Error)
+			{
+				trace("Failed to re-order overlay");
+			}
+		}
+		
+		internal function MoveBodyOverlayUp()
+		{
+			// Decrement Priority
+			ModifyPriority(-1);
+		}
+		
+		internal function MoveBodyOverlayDown()
+		{
+			// Increment Priority
+			ModifyPriority(1);
+		}
+
+		internal function AcceptBodyOverlaySelectChanges():*
+		{
+			// We had an overlay selected
+			var isRemoving:Boolean = true;
+			var templateId:String = "";
+			
+			for(var i = 0; i < FeaturePanel_mc.List_mc.entryList.length; i++)
+			{
+				if(FeaturePanel_mc.List_mc.entryList[i].applied) {
+					isRemoving = false;
+					templateId = FeaturePanel_mc.List_mc.entryList[i].id;
+					break;
+				}
+			}
+			
+			try
+			{
+				// We're accepting a delete of an overlay, delete and update
+				if(CurrentOverlayInfo.uid != 0) {
+					if(isRemoving) {
+						root.f4se.plugins.F4EE.DeleteOverlay(CurrentOverlayInfo.uid);
+						CurrentOverlayInfo.id = "";
+						CurrentOverlayInfo.uid = 0;
+						
+					} else {
+						root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, 
+							{
+								"template": templateId,
+								"offsetU": CurrentOverlayInfo.object.offsetU,
+								"offsetV": CurrentOverlayInfo.object.offsetV,
+								"scaleU": CurrentOverlayInfo.object.scaleU,
+								"scaleV": CurrentOverlayInfo.object.scaleV
+							}
+						);
+					}
+
+					_overlayDirty = true;
+					overlayTimer.start();
+				}
+			}
+			catch(e:Error)
+			{
+				trace("Failed to delete overlay");
+			}
+			
+			PreviousMode(true);
+		}
+		
+		internal function CancelBodyOverlaySelectChanges():*
+		{
+			try
+			{
+				if(CurrentOverlayInfo.uid != 0)
+				{
+					// We were making a new overlay, delete it
+					if(CurrentOverlayInfo.id == "") {
+						root.f4se.plugins.F4EE.DeleteOverlay(CurrentOverlayInfo.uid);
+						CurrentOverlayInfo.id = "";
+						CurrentOverlayInfo.uid = 0;
+					} else { // Reset the template back to what it was when we started
+						root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, 
+							{
+								"template": CurrentOverlayInfo.id,
+								"offsetU": CurrentOverlayInfo.object.offsetU,
+								"offsetV": CurrentOverlayInfo.object.offsetV,
+								"scaleU": CurrentOverlayInfo.object.scaleU,
+								"scaleV": CurrentOverlayInfo.object.scaleV
+							}
+						);
+					}
+					
+					_overlayDirty = true;
+					overlayTimer.start();
+				}
+			}
+			catch(e:Error)
+			{
+				trace("Failed to cancel body overlay changes");
+			}
+			
+			PreviousMode(false);
+		}
+		
+		internal function SelectOrRemoveBodyOverlay()
+		{
+			var isRemoving = FeaturePanel_mc.List_mc.selectedEntry.applied;
+			for(var i = 0; i < FeaturePanel_mc.List_mc.entryList.length; i++)
+			{
+				FeaturePanel_mc.List_mc.entryList[i].applied = false;
+				FeaturePanel_mc.List_mc.UpdateEntry(FeaturePanel_mc.List_mc.entryList[i]);
+			}
+			
+			if(!isRemoving)
+			{
+				FeaturePanel_mc.List_mc.selectedEntry.applied = true;
+				FeaturePanel_mc.List_mc.UpdateSelectedEntry();
+				
+				CurrentOverlayInfo.sid = FeaturePanel_mc.List_mc.selectedEntry.id; // We selected a new template explicitly
+				
+				// Kill the transform that we have, we picked something else
+				CurrentOverlayInfo.object = {
+					"offsetU": 0.0,
+					"offsetV": 0.0,
+					"scaleU": 1.0,
+					"scaleV": 1.0
+				};
+			}
+			
+			try
+			{
+				root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, 
+					{
+						"template": isRemoving ? "" : FeaturePanel_mc.List_mc.selectedEntry.id,
+						"offsetU": CurrentOverlayInfo.object.offsetU,
+						"offsetV": CurrentOverlayInfo.object.offsetV,
+						"scaleU": CurrentOverlayInfo.object.scaleU,
+						"scaleV": CurrentOverlayInfo.object.scaleV
+					}
+				);
+				_overlayDirty = true;
+				overlayTimer.start();
+			}
+			catch(e:Error)
+			{
+				trace("Failed to set overlay template");
+			}
+			
+			UpdateButtons();
+		}
+		
+		internal function StartTransformBodyOverlay()
+		{
+			for(var i = 0; i < FeaturePanel_mc.List_mc.entryList.length; i++)
+			{
+				if(FeaturePanel_mc.List_mc.entryList[i].applied) {
+					CurrentOverlayInfo.sid = FeaturePanel_mc.List_mc.entryList[i].id;
+					break;
+				}
+			}
+			
+			// Create temp info to store before editing
+			CurrentOverlayInfo.temp = {
+				"offsetU": CurrentOverlayInfo.object.offsetU,
+				"offsetV": CurrentOverlayInfo.object.offsetV,
+				"scaleU": CurrentOverlayInfo.object.scaleU,
+				"scaleV": CurrentOverlayInfo.object.scaleV
+			};
+	
+			CurrentOverlayInfo.template = FeaturePanel_mc.List_mc.selectedEntry.text;
+			TransformBodyOverlayMode();
+		}
+		
+		internal function TransformBodyOverlayMode()
+		{
+			if (eMode == BODY_OVERLAY_SELECT_MODE && FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.transformable && (EditMode == EDIT_CHARGEN || EditMode == EDIT_BODYMOD)) 
+			{
+				eMode = BODY_OVERLAY_TRANSFORM_MODE;
+
+				var panelTitle = CurrentOverlayInfo.template;
+				
+				FeaturePanel_mc.List_mc.entryList = null;
+				
+				FeaturePanel_mc.List_mc.entryList.push(
+					{
+						"text": "$Offset X", 
+						"type": "offset_u",
+						"min": -2.0, 
+						"max": 2.0, 
+						"value": CurrentOverlayInfo.temp.offsetU, 
+						"interval": 0.001,
+						"object": CurrentOverlayInfo.temp
+					}
+				);
+				FeaturePanel_mc.List_mc.entryList.push(
+					{
+						"text": "$Offset Y", 
+						"type": "offset_v",
+						"min": -2.0, 
+						"max": 2.0, 
+						"value": CurrentOverlayInfo.temp.offsetV, 
+						"interval": 0.001,
+						"object": CurrentOverlayInfo.temp
+					}
+				);
+				FeaturePanel_mc.List_mc.entryList.push(
+					{
+						"text": "$Scale X", 
+						"type": "scale_u",
+						"min": -2.0, 
+						"max": 2.0, 
+						"value": CurrentOverlayInfo.temp.scaleU, 
+						"interval": 0.001,
+						"object": CurrentOverlayInfo.temp
+					}
+				);
+				FeaturePanel_mc.List_mc.entryList.push(
+					{
+						"text": "$Scale Y", 
+						"type": "scale_v",
+						"min": -2.0, 
+						"max": 2.0, 
+						"value": CurrentOverlayInfo.temp.scaleV, 
+						"interval": 0.001,
+						"object": CurrentOverlayInfo.temp
+					}
+				);
+				
+				FeatureListChangeLock++;
+				FeaturePanel_mc.List_mc.InvalidateData();
+				FeatureListChangeLock--;
+				FeaturePanel_mc.List_mc.selectedIndex = 0;
+				Shared.GlobalFunc.SetText(FeaturePanel_mc.Brackets_mc.Label_tf, panelTitle, false, true);
+				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x = FeaturePanel_mc.Brackets_mc.Label_tf.x + FeaturePanel_mc.Brackets_mc.Label_tf.textWidth + 5;
+				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
+				
+				PreviousStageFocus = stage.focus;
+				stage.focus = FeaturePanel_mc.List_mc;
+				
+				UpdateButtons();
+			}
+		}
+		
+		internal function AcceptBodyOverlayTransformChanges():*
+		{			
+			// Commit changes to transform
+			CurrentOverlayInfo.object.offsetU = CurrentOverlayInfo.temp.offsetU;
+			CurrentOverlayInfo.object.offsetV = CurrentOverlayInfo.temp.offsetV;
+			CurrentOverlayInfo.object.scaleU = CurrentOverlayInfo.temp.scaleU;
+			CurrentOverlayInfo.object.scaleV = CurrentOverlayInfo.temp.scaleV;
+			
+			PreviousMode(true);
+		}
+		
+		internal function CancelBodyOverlayTransformChanges():*
+		{
+			// Revert to real values
+			root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, 
+				{
+					"offsetU": CurrentOverlayInfo.object.offsetU,
+					"offsetV": CurrentOverlayInfo.object.offsetV,
+					"scaleU": CurrentOverlayInfo.object.scaleU,
+					"scaleV": CurrentOverlayInfo.object.scaleV
+				}
+			);
+			_overlayDirty = true;
+			overlayTimer.start();
+			
+			PreviousMode(false);
+		}
 
 		public function SculptModeLStickMouse(x_axis:Number, y_axis:Number):*
 		{
@@ -1666,6 +2214,24 @@
 			}
 		}
 		
+		internal function onOverlayTimer(e:TimerEvent)
+		{
+			if(_overlayDirty)
+			{
+				try
+				{
+					root.f4se.plugins.F4EE.UpdateOverlays();
+				}
+				catch(e:Error)
+				{
+					
+				}
+				
+				_overlayDirty = false;
+				overlayTimer.stop();
+			}
+		}
+		
 		internal function BodyAdvancedMode():*
 		{
 			if (eMode == BODY_MODE && (EditMode == EDIT_CHARGEN || EditMode == EDIT_BODYMOD)) 
@@ -1680,7 +2246,17 @@
 					var sliders = root.f4se.plugins.F4EE.GetBodySliders();
 					for(var i = 0; i < sliders.length; i++)
 					{
-						FeaturePanel_mc.List_mc.entryList.push({"text": sliders[i].name, "morph": sliders[i].morph, "min": sliders[i].minimum, "max": sliders[i].maximum, "value": sliders[i].value, "stored": sliders[i].value, "interval": sliders[i].interval});
+						FeaturePanel_mc.List_mc.entryList.push(
+							{
+								"text": sliders[i].name, 
+								"morph": sliders[i].morph, 
+								"min": sliders[i].minimum, 
+								"max": sliders[i].maximum, 
+								"value": sliders[i].value, 
+								"stored": sliders[i].value, 
+								"interval": sliders[i].interval
+							}
+						);
 					}
 				}
 				catch(e:Error)
@@ -1697,6 +2273,131 @@
 				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
 				PreviousStageFocus = stage.focus;
 				stage.focus = FeaturePanel_mc.List_mc;
+			}
+		}
+		
+		internal function BuildOverlayList(): Array
+		{
+			var result = new Array();
+			try
+			{
+				var overlays = root.f4se.plugins.F4EE.GetOverlays();
+				for(var i = 0; i < overlays.length; i++)
+				{
+					result.push(
+						{
+							"text": "[" + overlays[i].priority + "] " + Translator.translate(overlays[i].name), 
+							"id": overlays[i].id, 
+							"uid": overlays[i].uid, 
+							"priority": overlays[i].priority, 
+							"red": overlays[i].red, 
+							"green": overlays[i].green, 
+							"blue": overlays[i].blue, 
+							"alpha": overlays[i].alpha,
+							"offsetU": overlays[i].offsetU,
+							"offsetV": overlays[i].offsetV,
+							"scaleU": overlays[i].scaleU,
+							"scaleV": overlays[i].scaleV
+						}
+					);
+				}
+			}
+			catch(e:Error)
+			{
+				trace("Failed to populate list: " + e);
+			}
+			
+			return result;
+		}
+		
+		internal function BuildOverlayTemplateList(): Array
+		{
+			var result = new Array();
+			try
+			{
+				var templates = root.f4se.plugins.F4EE.GetOverlayTemplates();
+				for(i = 0; i < templates.length; i++)
+				{
+					result.push(
+						{
+							"text": templates[i].name, 
+							"id": templates[i].id, 
+							"applied": false, 
+							"transformable": templates[i].transformable
+						}
+					);
+				}
+			}
+			catch(e:Error)
+			{
+				trace("Failed to populate list: " + e);
+			}
+						
+			return result;
+		}
+		
+		internal function PopulateBodyOverlays()
+		{
+			var panelTitle = "$OVERLAYS";
+			FeaturePanel_mc.List_mc.entryList = BuildOverlayList();
+			overlayTemplates = overlayTemplates ? overlayTemplates : BuildOverlayTemplateList();
+							
+			FeatureListChangeLock++;
+			FeaturePanel_mc.List_mc.InvalidateData();
+			FeatureListChangeLock--;
+			FeaturePanel_mc.List_mc.selectedIndex = 0;
+			Shared.GlobalFunc.SetText(FeaturePanel_mc.Brackets_mc.Label_tf, panelTitle, false, true);
+			FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x = FeaturePanel_mc.Brackets_mc.Label_tf.x + FeaturePanel_mc.Brackets_mc.Label_tf.textWidth + 5;
+			FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
+			PreviousStageFocus = stage.focus;
+			stage.focus = FeaturePanel_mc.List_mc;
+			
+			UpdateButtons();
+		}
+		
+		internal function BodyOverlayMode():*
+		{
+			if (eMode == BODY_MODE && (EditMode == EDIT_CHARGEN || EditMode == EDIT_BODYMOD)) 
+			{
+				eMode = BODY_OVERLAY_MODE;
+				PopulateBodyOverlays();
+			}
+		}
+		
+		internal function PopulateBodyOverlayTemplates()
+		{
+			var panelTitle = "$OVERLAY";
+			FeaturePanel_mc.List_mc.entryList = overlayTemplates;
+						
+			var sel = 0;
+			for(var i = 0; i < overlayTemplates.length; i++)
+			{
+				overlayTemplates[i].applied = false;
+				if(overlayTemplates[i].id == CurrentOverlayInfo.sid) {
+					overlayTemplates[i].applied = true;
+					sel = i;
+				}
+			}
+			
+			FeatureListChangeLock++;
+			FeaturePanel_mc.List_mc.InvalidateData();
+			FeatureListChangeLock--;
+			FeaturePanel_mc.List_mc.selectedIndex = sel;
+			Shared.GlobalFunc.SetText(FeaturePanel_mc.Brackets_mc.Label_tf, panelTitle, false, true);
+			FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x = FeaturePanel_mc.Brackets_mc.Label_tf.x + FeaturePanel_mc.Brackets_mc.Label_tf.textWidth + 5;
+			FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
+			PreviousStageFocus = stage.focus;
+			stage.focus = FeaturePanel_mc.List_mc;
+			
+			UpdateButtons();
+		}
+		
+		internal function BodyOverlaySelectMode():*
+		{
+			if (eMode == BODY_OVERLAY_MODE && (EditMode == EDIT_CHARGEN || EditMode == EDIT_BODYMOD)) 
+			{
+				eMode = BODY_OVERLAY_SELECT_MODE;
+				PopulateBodyOverlayTemplates();
 			}
 		}
 
@@ -2030,6 +2731,30 @@
 				case BODY_ADVANCED_MODE:
 				{
 					menuMode = BODY_MODE;
+					stage.focus = PreviousStageFocus;
+					break;
+				}
+				
+				case BODY_OVERLAY_MODE:
+				{
+					menuMode = BODY_MODE;
+					overlayTemplates = null;
+					stage.focus = PreviousStageFocus;
+					break;
+				}
+				
+				case BODY_OVERLAY_SELECT_MODE:
+				{
+					menuMode = BODY_OVERLAY_MODE;
+					PopulateBodyOverlays();					
+					stage.focus = PreviousStageFocus;
+					break;
+				}
+				
+				case BODY_OVERLAY_TRANSFORM_MODE:
+				{
+					menuMode = BODY_OVERLAY_SELECT_MODE;
+					PopulateBodyOverlayTemplates();
 					stage.focus = PreviousStageFocus;
 					break;
 				}

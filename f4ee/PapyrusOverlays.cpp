@@ -15,64 +15,97 @@ namespace papyrusOverlays
 {
 	DECLARE_STRUCT(Entry, "Overlays");
 
-	void Add(StaticFunctionTag *, Actor * actor, bool isFemale, Entry overlay)
+	UInt32 Add(StaticFunctionTag *, Actor * actor, bool isFemale, Entry overlay)
 	{
 		if(actor) {
-			UInt32 slotIndex;
 			SInt32 priority;
-			BGSKeyword * keyword = nullptr;
-			BSFixedString materialPath;
+			BSFixedString id;
 			NiColorA color;
-			overlay.Get("slotIndex", &slotIndex);
+			NiPoint2 offsetUV;
+			NiPoint2 scaleUV;
 			overlay.Get("priority", &priority);
-			overlay.Get("owner", &keyword);
-			overlay.Get("materialPath", &materialPath);
+			overlay.Get("template", &id);
 			overlay.Get("red", &color.r);
 			overlay.Get("green", &color.g);
 			overlay.Get("blue", &color.b);
 			overlay.Get("alpha", &color.a);
+			overlay.Get("offset_u", &offsetUV.x);
+			overlay.Get("offset_v", &offsetUV.y);
+			overlay.Get("scale_u", &scaleUV.x);
+			overlay.Get("scale_v", &scaleUV.y);
 
-			g_overlayInterface.AddOverlay(actor, isFemale, slotIndex, priority, keyword, materialPath, color);
+			UInt32 uid = g_overlayInterface.AddOverlay(actor, isFemale, priority, id, color, offsetUV, scaleUV);
+			overlay.Set("uid", uid);
+			return uid;
 		}
+		return 0;
 	}
 
-	// Only looks at slot, priority, owner, and material to remove an entry
-	bool Remove(StaticFunctionTag *, Actor * actor, bool isFemale, Entry overlay)
+	bool Set(StaticFunctionTag *, Actor * actor, bool isFemale, UInt32 uid, Entry overlay)
 	{
-		if(actor) {
-			UInt32 slotIndex;
+		auto pOverlay = g_overlayInterface.GetActorOverlayByUID(actor, isFemale, uid);
+		if(pOverlay.second) {
 			SInt32 priority;
-			BGSKeyword * keyword = nullptr;
-			BSFixedString materialPath;
-
-			overlay.Get("slotIndex", &slotIndex);
+			BSFixedString id;
+			NiColorA color;
+			NiPoint2 offsetUV;
+			NiPoint2 scaleUV;
 			overlay.Get("priority", &priority);
-			overlay.Get("owner", &keyword);
-			overlay.Get("materialPath", &materialPath);
+			overlay.Get("template", &id);
+			overlay.Get("red", &color.r);
+			overlay.Get("green", &color.g);
+			overlay.Get("blue", &color.b);
+			overlay.Get("alpha", &color.a);
+			overlay.Get("offset_u", &offsetUV.x);
+			overlay.Get("offset_v", &offsetUV.y);
+			overlay.Get("scale_u", &scaleUV.x);
+			overlay.Get("scale_v", &scaleUV.y);
 
-			return g_overlayInterface.RemoveOverlay(actor, isFemale, slotIndex, priority, keyword, materialPath);
+			if(pOverlay.first != priority) {
+				g_overlayInterface.ReorderOverlay(actor, isFemale, uid, priority);
+			}
+
+			pOverlay.second->tintColor = color;
+			pOverlay.second->offsetUV = offsetUV;
+			pOverlay.second->scaleUV = scaleUV;
+			return true;
 		}
 
 		return false;
 	}
 
-	bool ChangePriority(StaticFunctionTag *, Actor * actor, bool isFemale, Entry overlay, SInt32 newPriority)
+	Entry Get(StaticFunctionTag *, Actor * actor, bool isFemale, UInt32 uid)
+	{
+		Entry overlay;
+		overlay.SetNone(true);
+		auto pOverlay = g_overlayInterface.GetActorOverlayByUID(actor, isFemale, uid);
+		if(pOverlay.second) {
+
+			BSFixedString templateName = pOverlay.second->templateName ? pOverlay.second->templateName->c_str() : "";
+
+			overlay.Set("uid", uid);
+			overlay.Set("priority", pOverlay.first);
+			overlay.Set("template", templateName);
+			overlay.Set("red", pOverlay.second->tintColor.r);
+			overlay.Set("green", pOverlay.second->tintColor.g);
+			overlay.Set("blue", pOverlay.second->tintColor.b);
+			overlay.Set("alpha", pOverlay.second->tintColor.a);
+			overlay.Set("offset_u", pOverlay.second->offsetUV.x);
+			overlay.Set("offset_v", pOverlay.second->offsetUV.y);
+			overlay.Set("scale_u", pOverlay.second->scaleUV.x);
+			overlay.Set("scale_v", pOverlay.second->scaleUV.y);
+
+			overlay.SetNone(false);
+		}
+
+		return overlay;
+	}
+
+	// Only looks at slot, priority, owner, and material to remove an entry
+	bool Remove(StaticFunctionTag *, Actor * actor, bool isFemale, UInt32 uid)
 	{
 		if(actor) {
-			UInt32 slotIndex;
-			SInt32 priority;
-			BGSKeyword * keyword = nullptr;
-			BSFixedString materialPath;
-
-			overlay.Get("slotIndex", &slotIndex);
-			overlay.Get("priority", &priority);
-			overlay.Get("owner", &keyword);
-			overlay.Get("materialPath", &materialPath);
-
-			if(g_overlayInterface.ReorderOverlay(actor, isFemale, slotIndex, priority, keyword, materialPath, newPriority)) {
-				overlay.Set("priority", newPriority);
-				return true;
-			}
+			return g_overlayInterface.RemoveOverlay(actor, isFemale, uid);
 		}
 
 		return false;
@@ -93,138 +126,50 @@ namespace papyrusOverlays
 		if(!actor)
 			return results;
 
-		g_overlayInterface.ForEachOverlay(actor, isFemale, [&](UInt32 slotIndex, SInt32 priority, const OverlayInterface::OverlayDataPtr & overlay)
+		g_overlayInterface.ForEachOverlay(actor, isFemale, [&](SInt32 priority, const OverlayInterface::OverlayDataPtr & overlay)
 		{
 			Entry entry;
-			entry.Set("slotIndex", slotIndex);
 			entry.Set("priority", priority);
+			entry.Set("uid", overlay->uid);
 
-			BGSKeyword * keyword = (BGSKeyword*)PapyrusVM::GetObjectFromHandle(overlay->m_keyword, BGSKeyword::kTypeID);
-			entry.Set("owner", keyword);
+			BSFixedString templateName = overlay->templateName ? overlay->templateName->c_str() : "";
+			entry.Set("template", templateName);
 
-			BSFixedString materialPath = overlay->m_materialPath ? overlay->m_materialPath->c_str() : "";
-			entry.Set("materialPath", materialPath);
-
-			entry.Set("red", overlay->m_tintColor.r);
-			entry.Set("green", overlay->m_tintColor.g);
-			entry.Set("blue", overlay->m_tintColor.b);
-			entry.Set("alpha", overlay->m_tintColor.a);
+			entry.Set("red", overlay->tintColor.r);
+			entry.Set("green", overlay->tintColor.g);
+			entry.Set("blue", overlay->tintColor.b);
+			entry.Set("alpha", overlay->tintColor.a);
 
 			results.Push(&entry);
 		});
 
 		return results;
 	}
-
-	VMArray<Entry> GetBySlot(StaticFunctionTag *, Actor * actor, bool isFemale, UInt32 slotIndex)
-	{
-		VMArray<Entry> results;
-		if(!actor)
-			return results;
-
-		g_overlayInterface.ForEachOverlayBySlot(actor, isFemale, slotIndex, [&](UInt32 slotIndex, SInt32 priority, const OverlayInterface::OverlayDataPtr & overlay)
-		{
-			Entry entry;
-			entry.Set("slotIndex", slotIndex);
-			entry.Set("priority", priority);
-
-			BGSKeyword * keyword = (BGSKeyword*)PapyrusVM::GetObjectFromHandle(overlay->m_keyword, BGSKeyword::kTypeID);
-			entry.Set("owner", keyword);
-
-			BSFixedString materialPath = overlay->m_materialPath ? overlay->m_materialPath->c_str() : "";
-			entry.Set("materialPath", materialPath);
-
-			entry.Set("red", overlay->m_tintColor.r);
-			entry.Set("green", overlay->m_tintColor.g);
-			entry.Set("blue", overlay->m_tintColor.b);
-			entry.Set("alpha", overlay->m_tintColor.a);
-
-			results.Push(&entry);
-		});
-
-		return results;
-	}
-
-	VMArray<Entry> GetByPriority(StaticFunctionTag *, Actor * actor, bool isFemale, SInt32 priority)
-	{
-		VMArray<Entry> results;
-		if(!actor)
-			return results;
-
-		g_overlayInterface.ForEachOverlayByPriority(actor, isFemale, priority, [&](UInt32 slotIndex, SInt32 priority, const OverlayInterface::OverlayDataPtr & overlay)
-		{
-			Entry entry;
-			entry.Set("slotIndex", slotIndex);
-			entry.Set("priority", priority);
-
-			BGSKeyword * keyword = (BGSKeyword*)PapyrusVM::GetObjectFromHandle(overlay->m_keyword, BGSKeyword::kTypeID);
-			entry.Set("owner", keyword);
-
-			BSFixedString materialPath = overlay->m_materialPath ? overlay->m_materialPath->c_str() : "";
-			entry.Set("materialPath", materialPath);
-
-			entry.Set("red", overlay->m_tintColor.r);
-			entry.Set("green", overlay->m_tintColor.g);
-			entry.Set("blue", overlay->m_tintColor.b);
-			entry.Set("alpha", overlay->m_tintColor.a);
-
-			results.Push(&entry);
-		});
-
-		return results;
-	}
-
-	VMArray<Entry> GetByKeyword(StaticFunctionTag *, Actor * actor, bool isFemale, BGSKeyword * keyword)
-	{
-		VMArray<Entry> results;
-		if(!actor)
-			return results;
-
-		g_overlayInterface.ForEachOverlayByKeyword(actor, isFemale, keyword, [&](UInt32 slotIndex, SInt32 priority, const OverlayInterface::OverlayDataPtr & overlay)
-		{
-			Entry entry;
-			entry.Set("slotIndex", slotIndex);
-			entry.Set("priority", priority);
-
-			BGSKeyword * keyword = (BGSKeyword*)PapyrusVM::GetObjectFromHandle(overlay->m_keyword, BGSKeyword::kTypeID);
-			entry.Set("owner", keyword);
-
-			BSFixedString materialPath = overlay->m_materialPath ? overlay->m_materialPath->c_str() : "";
-			entry.Set("materialPath", materialPath);
-
-			entry.Set("red", overlay->m_tintColor.r);
-			entry.Set("green", overlay->m_tintColor.g);
-			entry.Set("blue", overlay->m_tintColor.b);
-			entry.Set("alpha", overlay->m_tintColor.a);
-
-			results.Push(&entry);
-		});
-
-		return results;
-	}
-
+	
 	void Update(StaticFunctionTag*, Actor * actor)
 	{
 		g_overlayInterface.UpdateOverlays(actor);
 	}
 
-	void UpdateSlot(StaticFunctionTag*, Actor * actor, UInt32 slotIndex)
+	/*void UpdateUID(StaticFunctionTag*, Actor * actor, UInt32 uid)
 	{
-		if(slotIndex >= 0 && slotIndex <= 31)
-			g_overlayInterface.UpdateOverlay(actor, slotIndex);
-	}
+		g_overlayInterface.UpdateOverlay(actor, uid);
+	}*/
 };
 
 void papyrusOverlays::RegisterFuncs(VirtualMachine* vm)
 {
 	vm->RegisterFunction(
-		new NativeFunction3<StaticFunctionTag, void, Actor*, bool, Entry>("Add", "Overlays", papyrusOverlays::Add, vm));
+		new NativeFunction3<StaticFunctionTag, UInt32, Actor*, bool, Entry>("Add", "Overlays", papyrusOverlays::Add, vm));
 
 	vm->RegisterFunction(
-		new NativeFunction3<StaticFunctionTag, bool, Actor*, bool, Entry>("Remove", "Overlays", papyrusOverlays::Remove, vm));
+		new NativeFunction3<StaticFunctionTag, bool, Actor*, bool, UInt32>("Remove", "Overlays", papyrusOverlays::Remove, vm));
 
 	vm->RegisterFunction(
-		new NativeFunction4<StaticFunctionTag, bool, Actor*, bool, Entry, SInt32>("ChangePriority", "Overlays", papyrusOverlays::ChangePriority, vm));
+		new NativeFunction4<StaticFunctionTag, bool, Actor*, bool, UInt32, Entry>("Set", "Overlays", papyrusOverlays::Set, vm));
+
+	vm->RegisterFunction(
+		new NativeFunction3<StaticFunctionTag, Entry, Actor*, bool, UInt32>("Get", "Overlays", papyrusOverlays::Get, vm));
 
 	vm->RegisterFunction(
 		new NativeFunction2<StaticFunctionTag, bool, Actor*, bool>("RemoveAll", "Overlays", papyrusOverlays::RemoveAll, vm));
@@ -233,29 +178,19 @@ void papyrusOverlays::RegisterFuncs(VirtualMachine* vm)
 		new NativeFunction2<StaticFunctionTag, VMArray<Entry>, Actor*, bool>("GetAll", "Overlays", papyrusOverlays::GetAll, vm));
 
 	vm->RegisterFunction(
-		new NativeFunction3<StaticFunctionTag, VMArray<Entry>, Actor*, bool, UInt32>("GetBySlot", "Overlays", papyrusOverlays::GetBySlot, vm));
-
-	vm->RegisterFunction(
-		new NativeFunction3<StaticFunctionTag, VMArray<Entry>, Actor*, bool, SInt32>("GetByPriority", "Overlays", papyrusOverlays::GetByPriority, vm));
-
-	vm->RegisterFunction(
-		new NativeFunction3<StaticFunctionTag, VMArray<Entry>, Actor*, bool, BGSKeyword*>("GetByKeyword", "Overlays", papyrusOverlays::GetByKeyword, vm));
-
-	vm->RegisterFunction(
 		new NativeFunction1<StaticFunctionTag, void, Actor*>("Update", "Overlays", papyrusOverlays::Update, vm));
 
-	vm->RegisterFunction(
-		new NativeFunction2<StaticFunctionTag, void, Actor*, UInt32>("UpdateSlot", "Overlays", papyrusOverlays::UpdateSlot, vm));
+	/*vm->RegisterFunction(
+		new NativeFunction2<StaticFunctionTag, void, Actor*, UInt32>("UpdateUID", "Overlays", papyrusOverlays::UpdateUID, vm));*/
 
 
 	vm->SetFunctionFlags("Overlays", "Add", IFunction::kFunctionFlag_NoWait);
 	vm->SetFunctionFlags("Overlays", "Remove", IFunction::kFunctionFlag_NoWait);
+	vm->SetFunctionFlags("Overlays", "Set", IFunction::kFunctionFlag_NoWait);
+	vm->SetFunctionFlags("Overlays", "Get", IFunction::kFunctionFlag_NoWait);
 	vm->SetFunctionFlags("Overlays", "RemoveAll", IFunction::kFunctionFlag_NoWait);
 	vm->SetFunctionFlags("Overlays", "GetAll", IFunction::kFunctionFlag_NoWait);
-	vm->SetFunctionFlags("Overlays", "GetBySlot", IFunction::kFunctionFlag_NoWait);
-	vm->SetFunctionFlags("Overlays", "GetByPriority", IFunction::kFunctionFlag_NoWait);
-	vm->SetFunctionFlags("Overlays", "GetByKeyword", IFunction::kFunctionFlag_NoWait);
 
 	vm->SetFunctionFlags("Overlays", "Update", IFunction::kFunctionFlag_NoWait);
-	vm->SetFunctionFlags("Overlays", "UpdateSlot", IFunction::kFunctionFlag_NoWait);
+	//vm->SetFunctionFlags("Overlays", "UpdateUID", IFunction::kFunctionFlag_NoWait);
 }

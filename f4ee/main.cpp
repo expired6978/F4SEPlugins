@@ -210,7 +210,12 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 	switch(msg->type)
 	{
 	case F4SEMessagingInterface::kMessage_PreLoadGame:
-		g_bodyMorphInterface.SetLoading(true);
+		{
+			if(g_bEnableBodyMorphs)
+				g_bodyMorphInterface.SetLoading(true);
+			if(g_bEnableOverlays)
+				g_overlayInterface.SetLoading(true);
+		}
 		break;
 	case F4SEMessagingInterface::kMessage_GameLoaded:
 		{
@@ -219,6 +224,9 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 
 			if(g_bEnableBodygen) {
 				GetEventDispatcher<TESInitScriptEvent>()->AddEventSink(&g_bodyMorphInterface);
+			}
+
+			if(g_bEnableBodyMorphs) {
 				GetEventDispatcher<TESLoadGameEvent>()->AddEventSink(&g_bodyMorphInterface);
 				GetEventDispatcher<TESObjectLoadedEvent>()->AddEventSink(&g_bodyMorphInterface);
 			}
@@ -245,6 +253,9 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 				if(g_bEnableBodygen) {
 					g_bodyGenInterface.LoadBodyGenMods();
 				}
+				if(g_bEnableOverlays) {
+					g_overlayInterface.LoadOverlayMods();
+				}
 				if(g_bExtendedLUTs) {
 					g_charGenInterface.LoadHairColorMods();
 				}
@@ -262,6 +273,9 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 				}
 				if(g_bEnableBodygen) {
 					g_bodyGenInterface.ClearBodyGenMods();
+				}
+				if(g_bEnableOverlays) {
+					g_overlayInterface.ClearMods();
 				}
 				if(g_bExtendedLUTs) {
 					g_charGenInterface.ClearHairColorMods();
@@ -302,8 +316,7 @@ void F4EESerialization_Load(const F4SESerializationInterface * intfc)
 			case 'STTB':	g_stringTable.Load(intfc, version, stringTable);		break;
 			case 'MRPH':	g_bodyMorphInterface.Load(intfc, true, version, stringTable);		break;	// Female Morphs
 			case 'MRPM':	g_bodyMorphInterface.Load(intfc, false, version, stringTable);		break;	// Male Morphs
-			case 'OVRF':	g_overlayInterface.Load(intfc, true, version, stringTable);			break;	// Female Overlays
-			case 'OVRM':	g_overlayInterface.Load(intfc, false, version, stringTable);		break;	// Male Overlays
+			case 'OVRL':	g_overlayInterface.Load(intfc, version, stringTable);			break;	// Female Overlays
 			default:
 				_MESSAGE("unhandled type %08X (%.4s)", type, &type);
 				error = true;
@@ -410,6 +423,14 @@ bool ScaleformCallback(GFxMovieView * view, GFxValue * value)
 	RegisterFunction<F4EEScaleform_SetBodyMorph>(value, view->movieRoot, "SetBodyMorph");
 	RegisterFunction<F4EEScaleform_UpdateBodyMorphs>(value, view->movieRoot, "UpdateBodyMorphs");
 	RegisterFunction<F4EEScaleform_CloneBodyMorphs>(value, view->movieRoot, "CloneBodyMorphs");
+
+	RegisterFunction<F4EEScaleform_GetOverlays>(value, view->movieRoot, "GetOverlays");
+	RegisterFunction<F4EEScaleform_GetOverlayTemplates>(value, view->movieRoot, "GetOverlayTemplates");
+	RegisterFunction<F4EEScaleform_CreateOverlay>(value, view->movieRoot, "CreateOverlay");
+	RegisterFunction<F4EEScaleform_DeleteOverlay>(value, view->movieRoot, "DeleteOverlay");
+	RegisterFunction<F4EEScaleform_SetOverlayData>(value, view->movieRoot, "SetOverlayData");
+	RegisterFunction<F4EEScaleform_ReorderOverlay>(value, view->movieRoot, "ReorderOverlay");
+	RegisterFunction<F4EEScaleform_UpdateOverlays>(value, view->movieRoot, "UpdateOverlays");
 
 	GFxValue dispatchEvent;
 	GFxValue eventArgs[3];

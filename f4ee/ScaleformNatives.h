@@ -62,3 +62,45 @@ class F4EEScaleform_UpdateBodyMorphs : public GFxFunctionHandler
 public:
 	virtual void	Invoke(Args * args);
 };
+
+class F4EEScaleform_GetOverlays : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_GetOverlayTemplates : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_CreateOverlay : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_DeleteOverlay : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_SetOverlayData : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_ReorderOverlay : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_UpdateOverlays : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};

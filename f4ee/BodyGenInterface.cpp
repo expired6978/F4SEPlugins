@@ -14,9 +14,9 @@
 
 extern BodyMorphInterface g_bodyMorphInterface;
 
-bool BodyGenInterface::ReadBodyMorphTemplates(const char * filePath)
+bool BodyGenInterface::ReadBodyMorphTemplates(const std::string & filePath)
 {
-	BSResourceNiBinaryStream file(filePath);
+	BSResourceNiBinaryStream file(filePath.c_str());
 	if (!file.IsValid()) {
 		return false;
 	}
@@ -176,9 +176,9 @@ void BodyGenInterface::GetFilteredNPCList(std::vector<TESNPC*> activeNPCs[], SIn
 	}
 }
 
-bool BodyGenInterface::ReadBodyMorphs(const char * filePath)
+bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 {
-	BSResourceNiBinaryStream file(filePath);
+	BSResourceNiBinaryStream file(filePath.c_str());
 	if (!file.IsValid()) {
 		return false;
 	}

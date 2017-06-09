@@ -10,12 +10,23 @@
 
 #include "CharGenInterface.h"
 #include "BodyMorphInterface.h"
+#include "OverlayInterface.h"
+#include "StringTable.h"
 
 #include <set>
 extern std::set<UInt32> g_presetNPCs;
 extern CharGenInterface g_charGenInterface;
 extern BodyMorphInterface g_bodyMorphInterface;
+extern OverlayInterface g_overlayInterface;
+extern StringTable g_stringTable;
 extern bool g_bEnableBodyMorphs;
+
+inline void RegisterInteger(GFxValue * dst, const char * name, SInt32 value)
+{
+	GFxValue	fxValue;
+	fxValue.SetInt(value);
+	dst->SetMember(name, &fxValue);
+}
 
 inline void RegisterNumber(GFxValue * dst, const char * name, double value)
 {
@@ -191,7 +202,6 @@ void F4EEScaleform_UpdateBodyMorphs::Invoke(Args * args)
 	}
 }
 
-
 #include <Shlwapi.h>
 #include <functional>
 
@@ -290,4 +300,216 @@ void F4EEScaleform_GetExternalFiles::Invoke(Args * args)
 	});
 
 	ScaleformHeap_Free(patterns);
+}
+
+
+
+void F4EEScaleform_GetOverlays::Invoke(Args * args)
+{	
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(npc) {
+			UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
+			bool isFemale = gender == 1 ? true : false;
+
+			args->movie->movieRoot->CreateArray(args->result);
+
+			g_overlayInterface.ForEachOverlay(actor, isFemale, [&](SInt32 priority, const OverlayInterface::OverlayDataPtr & slider) {
+				GFxValue sliderInfo;
+				args->movie->movieRoot->CreateObject(&sliderInfo);
+				RegisterInteger(&sliderInfo, "priority", priority);
+				RegisterInteger(&sliderInfo, "uid", slider->uid);
+				RegisterString(&sliderInfo, args->movie->movieRoot, "id", slider->templateName->c_str());
+				RegisterNumber(&sliderInfo, "red", slider->tintColor.r);
+				RegisterNumber(&sliderInfo, "green", slider->tintColor.g);
+				RegisterNumber(&sliderInfo, "blue", slider->tintColor.b);
+				RegisterNumber(&sliderInfo, "alpha", slider->tintColor.a);
+				RegisterNumber(&sliderInfo, "offsetU", slider->offsetUV.x);
+				RegisterNumber(&sliderInfo, "offsetV", slider->offsetUV.y);
+				RegisterNumber(&sliderInfo, "scaleU", slider->scaleUV.x);
+				RegisterNumber(&sliderInfo, "scaleV", slider->scaleUV.y);
+
+				auto pTemplate = g_overlayInterface.GetTemplateByName(isFemale, *slider->templateName);
+				if(pTemplate) {
+					RegisterString(&sliderInfo, args->movie->movieRoot, "name", pTemplate->displayName);
+					RegisterBool(&sliderInfo, "playable", pTemplate->playable);
+				}
+
+				args->result->PushBack(&sliderInfo);
+			});
+		}
+	}
+}
+
+void F4EEScaleform_GetOverlayTemplates::Invoke(Args * args)
+{	
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(npc) {
+			UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
+			bool isFemale = gender == 1 ? true : false;
+
+			args->movie->movieRoot->CreateArray(args->result);
+
+			std::vector<std::pair<F4EEFixedString, OverlayInterface::OverlayTemplatePtr>> overlays;
+			g_overlayInterface.ForEachOverlayTemplate(gender == 1 ? true : false, [&overlays](const F4EEFixedString & name, const OverlayInterface::OverlayTemplatePtr & slider) {
+				overlays.push_back(std::make_pair(name, slider));
+			});
+
+			std::sort(overlays.begin(), overlays.end(), [&](const std::pair<F4EEFixedString, OverlayInterface::OverlayTemplatePtr> & a, const std::pair<F4EEFixedString, OverlayInterface::OverlayTemplatePtr> & b)
+			{
+				if(a.second->sort == b.second->sort)
+					return std::string(a.second->displayName.c_str()) < std::string(b.second->displayName.c_str());
+				else
+					return a.second->sort < b.second->sort;
+			});
+
+			for(auto & slider : overlays)
+			{
+				if(slider.second->playable) {
+					GFxValue sliderInfo;
+					args->movie->movieRoot->CreateObject(&sliderInfo);
+					RegisterString(&sliderInfo, args->movie->movieRoot, "id", slider.first);
+					RegisterString(&sliderInfo, args->movie->movieRoot, "name", slider.second->displayName);
+					RegisterBool(&sliderInfo, "transformable", slider.second->transformable);
+					args->result->PushBack(&sliderInfo);
+				}
+			}
+		}
+	}
+}
+
+
+
+void F4EEScaleform_CreateOverlay::Invoke(Args * args)
+{
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(npc) {
+			UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
+			bool isFemale = gender == 1 ? true : false;
+
+			SInt32 priority = args->args[0].GetInt();
+			const char * templateName = args->args[1].GetString();
+
+			NiColorA color;
+			color.r = 0.0f;
+			color.g = 0.0f;
+			color.b = 0.0f;
+			color.a = 0.0f;
+			NiPoint2 offsetUV;
+			offsetUV.x = 0.0f;
+			offsetUV.y = 0.0f;
+			NiPoint2 scaleUV;
+			scaleUV.x = 1.0f;
+			scaleUV.y = 1.0f;
+
+			UInt32 uid = g_overlayInterface.AddOverlay(actor, isFemale, priority, templateName, color, offsetUV, scaleUV);
+			args->result->SetUInt(uid);
+		}
+	}
+}
+
+void F4EEScaleform_DeleteOverlay::Invoke(Args * args)
+{
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(npc) {
+			UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
+			bool isFemale = gender == 1 ? true : false;
+
+			UInt32 uid = args->args[0].GetUInt();
+			bool result = g_overlayInterface.RemoveOverlay(actor, isFemale, uid);
+			args->result->SetBool(result);
+		}
+	}
+}
+
+void F4EEScaleform_SetOverlayData::Invoke(Args * args)
+{
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(npc) {
+			UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
+			bool isFemale = gender == 1 ? true : false;
+
+			UInt32 uid = args->args[0].GetUInt();
+
+			bool setParam = false;
+			auto pOverlay = g_overlayInterface.GetActorOverlayByUID(actor, isFemale, uid);
+			if(pOverlay.second) {
+				GFxValue memberData;
+				if(args->args[1].HasMember("template")) {
+					args->args[1].GetMember("template", &memberData);
+					pOverlay.second->templateName = g_stringTable.GetString(memberData.GetString());
+					setParam = true;
+				}
+				if(args->args[1].HasMember("offsetU")) {
+					args->args[1].GetMember("offsetU", &memberData);
+					pOverlay.second->offsetUV.x = memberData.GetNumber();
+					setParam = true;
+				}
+				if(args->args[1].HasMember("offsetV")) {
+					args->args[1].GetMember("offsetV", &memberData);
+					pOverlay.second->offsetUV.y = memberData.GetNumber();
+					setParam = true;
+				}
+				if(args->args[1].HasMember("scaleU")) {
+					args->args[1].GetMember("scaleU", &memberData);
+					pOverlay.second->scaleUV.x = memberData.GetNumber();
+					setParam = true;
+				}
+				if(args->args[1].HasMember("scaleV")) {
+					args->args[1].GetMember("scaleV", &memberData);
+					pOverlay.second->scaleUV.y = memberData.GetNumber();
+					setParam = true;
+				}
+			}
+
+			args->result->SetBool(setParam);
+		}
+	}
+}
+
+void F4EEScaleform_ReorderOverlay::Invoke(Args * args)
+{
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(npc) {
+			UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
+			bool isFemale = gender == 1 ? true : false;
+
+			UInt32 uid = args->args[0].GetUInt();
+			SInt32 priority = args->args[1].GetInt();
+
+			bool result = g_overlayInterface.ReorderOverlay(actor, isFemale, uid, priority);
+			args->result->SetBool(result);
+		}
+	}
+}
+
+void F4EEScaleform_UpdateOverlays::Invoke(Args * args)
+{
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+		if(args->numArgs >= 1) {
+			UInt32 uid = args->args[0].GetInt();
+			g_overlayInterface.UpdateOverlay(actor, uid);
+		} else {
+			g_overlayInterface.UpdateOverlays(actor);
+		}
+	}
 }
