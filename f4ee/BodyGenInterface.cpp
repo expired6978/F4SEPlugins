@@ -522,14 +522,14 @@ void BodyGenInterface::LoadBodyGenMods()
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
 	{
 		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
-		std::string templatesPath = std::string("Data\\F4SE\\Plugins\\F4EE\\BodyGen\\") + std::string(modInfo->name) + "\\templates.ini";
+		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\BodyGen\\") + std::string(modInfo->name) + "\\templates.ini";
 		ReadBodyMorphTemplates(templatesPath.c_str());
 	}
 
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
 	{
 		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
-		std::string templatesPath = std::string("Data\\F4SE\\Plugins\\F4EE\\BodyGen\\") + std::string(modInfo->name) + "\\morphs.ini";
+		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\BodyGen\\") + std::string(modInfo->name) + "\\morphs.ini";
 		ReadBodyMorphs(templatesPath.c_str());
 	}
 }

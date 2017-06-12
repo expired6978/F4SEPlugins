@@ -20,6 +20,7 @@ extern BodyMorphInterface g_bodyMorphInterface;
 extern OverlayInterface g_overlayInterface;
 extern StringTable g_stringTable;
 extern bool g_bEnableBodyMorphs;
+extern bool g_bEnableOverlays;
 
 inline void RegisterInteger(GFxValue * dst, const char * name, SInt32 value)
 {
@@ -71,6 +72,9 @@ void F4EEScaleform_LoadPreset::Invoke(Args * args)
 
 		if(g_bEnableBodyMorphs) {
 			g_bodyMorphInterface.UpdateMorphs(characterCreation->actor, true, true);
+		}
+		if(g_bEnableOverlays) {
+			g_overlayInterface.UpdateOverlays(characterCreation->actor);
 		}
 	}
 
@@ -188,8 +192,10 @@ void F4EEScaleform_CloneBodyMorphs::Invoke(Args * args)
 		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
 
 		if(actor != (*g_player) && ((bVerify && (npc == (*g_customizationDummy1) || npc == (*g_customizationDummy2))) || !bVerify)) {
-			g_bodyMorphInterface.CloneMorphs(actor, (*g_player));
-			g_bodyMorphInterface.UpdateMorphs(*g_player, true, true);
+			if(g_bEnableBodyMorphs) {
+				g_bodyMorphInterface.CloneMorphs(actor, (*g_player));
+				g_bodyMorphInterface.UpdateMorphs(*g_player, true, true);
+			}
 		}
 	}
 }
@@ -474,6 +480,28 @@ void F4EEScaleform_SetOverlayData::Invoke(Args * args)
 					pOverlay.second->scaleUV.y = memberData.GetNumber();
 					setParam = true;
 				}
+				if(args->args[1].HasMember("red")) {
+					args->args[1].GetMember("red", &memberData);
+					pOverlay.second->tintColor.r = memberData.GetNumber();
+					setParam = true;
+				}
+				if(args->args[1].HasMember("green")) {
+					args->args[1].GetMember("green", &memberData);
+					pOverlay.second->tintColor.g = memberData.GetNumber();
+					setParam = true;
+				}
+				if(args->args[1].HasMember("blue")) {
+					args->args[1].GetMember("blue", &memberData);
+					pOverlay.second->tintColor.b = memberData.GetNumber();
+					setParam = true;
+				}
+				if(args->args[1].HasMember("alpha")) {
+					args->args[1].GetMember("alpha", &memberData);
+					pOverlay.second->tintColor.a = memberData.GetNumber();
+					setParam = true;
+				}
+
+				pOverlay.second->UpdateFlags();
 			}
 
 			args->result->SetBool(setParam);
@@ -505,11 +533,26 @@ void F4EEScaleform_UpdateOverlays::Invoke(Args * args)
 	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
 	if(characterCreation) {
 		Actor * actor = characterCreation->actor;
-		if(args->numArgs >= 1) {
-			UInt32 uid = args->args[0].GetInt();
-			g_overlayInterface.UpdateOverlay(actor, uid);
-		} else {
-			g_overlayInterface.UpdateOverlays(actor);
+		g_overlayInterface.UpdateOverlays(actor);
+	}
+}
+
+void F4EEScaleform_CloneOverlays::Invoke(Args * args)
+{
+	bool bVerify = true;
+	if(args->numArgs >= 1) {
+		bVerify = args->args[0].GetBool(); // Used to verify whether the target is the starting character's dummy actor
+	}
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+
+		if(actor != (*g_player) && ((bVerify && (npc == (*g_customizationDummy1) || npc == (*g_customizationDummy2))) || !bVerify)) {
+			if(g_bEnableOverlays) {
+				g_overlayInterface.CloneOverlays(actor, (*g_player));
+				g_overlayInterface.UpdateOverlays(actor);
+			}
 		}
 	}
 }

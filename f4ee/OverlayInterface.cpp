@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <set>
 #include <unordered_map>
+#include <algorithm>
 
 extern OverlayInterface g_overlayInterface;
 extern StringTable g_stringTable;
@@ -109,12 +110,14 @@ bool OverlayInterface::UpdateOverlays(Actor * actor, NiNode * rootNode, NiAVObje
 
 			UInt32 layerIndex = 0;
 
-			std::vector<std::pair<std::string, std::pair<OverlayDataPtr, F4EEFixedString>>> overlays;
+			
 
-			ForEachOverlayBySlot(actor, isFemale, slotIndex, [&](SInt32, const OverlayDataPtr & overlay, const F4EEFixedString & material)
+			std::vector<std::tuple<std::string, OverlayDataPtr, F4EEFixedString, bool>> overlays;
+
+			ForEachOverlayBySlot(actor, isFemale, slotIndex, [&](SInt32, const OverlayDataPtr & overlay, const F4EEFixedString & material, bool effect)
 			{
 				sprintf_s(buff, MAX_PATH, "Layer [%d][%d][%d]", layerIndex, item.first, overlay->uid);
-				overlays.push_back(std::make_pair(buff, std::make_pair(overlay, material)));
+				overlays.push_back(std::make_tuple(buff, overlay, material, effect));
 				layerIndex++;
 			});
 
@@ -138,10 +141,10 @@ bool OverlayInterface::UpdateOverlays(Actor * actor, NiNode * rootNode, NiAVObje
 					extraDataList->lock.Release();
 				}
 				cloned->skinInstance = item.second->skinInstance;
-				cloned->m_name = ovl.first.c_str();
+				cloned->m_name = std::get<0>(ovl).c_str();
 				overlayRoot->AttachChild(cloned, true);
 
-				LoadMaterialData(cloned, ovl.second.second, ovl.second.first);
+				LoadMaterialData(npc, cloned, std::get<2>(ovl), std::get<3>(ovl), std::get<1>(ovl));
 			}
 		}
 	}
@@ -149,20 +152,39 @@ bool OverlayInterface::UpdateOverlays(Actor * actor, NiNode * rootNode, NiAVObje
 	return true;
 }
 
-void OverlayInterface::LoadMaterialData(BSTriShape * shape, const F4EEFixedString & material, const OverlayDataPtr & overlayData)
+void OverlayInterface::LoadMaterialData(TESNPC * npc, BSTriShape * shape, const F4EEFixedString & material, bool effect, const OverlayDataPtr & overlayData)
 {
-	// Setup the Overlays materials
-	BSMaterialBlock matBlock;
-	if(!LoadMaterialFile(material.c_str(), &matBlock, 0))
-		CALL_MEMBER_FN(&matBlock, SetShaderProperties)(shape, true);
+	// Convert the shader type... BECAUSE WE CAN
+	BSLightingShaderProperty * shaderProperty = ni_cast(shape->shaderProperty, BSLightingShaderProperty);
+	if(shaderProperty && effect) {
+		shape->shaderProperty = BSEffectShaderProperty::Create();
+		shape->shaderProperty->m_name = material.c_str();
+	}
+	BSEffectShaderProperty * effectShader = ni_cast(shape->shaderProperty, BSEffectShaderProperty);
+	if(effectShader && !effect) {
+		shape->shaderProperty = BSLightingShaderProperty::Create();
+		shape->shaderProperty->m_name = material.c_str();
+	}
 
-	BSLightingShaderProperty * newShader = ni_cast(shape->shaderProperty, BSLightingShaderProperty);
+	// Setup the Overlays materials
+	BSShaderData shaderData;
+	if(!LoadMaterialFile(material.c_str(), &shaderData, 0))
+		CALL_MEMBER_FN(&shaderData, ApplyMaterialData)(shape, true);
+
+	BSShaderProperty * newShader = ni_cast(shape->shaderProperty, BSShaderProperty);
 	if(newShader) {
-		BSLightingShaderMaterialBase * newMaterial = static_cast<BSLightingShaderMaterialBase *>(newShader->shaderMaterial);
+		BSShaderMaterial * newMaterial = static_cast<BSShaderMaterial *>(newShader->shaderMaterial);
 		if(newMaterial) {
-			if(overlayData->tintColor.a > 0 && newMaterial->GetType() == BSLightingShaderMaterialBase::kType_SkinTint) {
+			if(newMaterial->GetType() == BSLightingShaderMaterialBase::kType_SkinTint) {
 				BSLightingShaderMaterialSkinTint * skinTint = static_cast<BSLightingShaderMaterialSkinTint *>(newShader->shaderMaterial);
-				skinTint->kTintColor = overlayData->tintColor;
+				if(overlayData->tintColor.a > 0) {
+					skinTint->kTintColor = overlayData->tintColor;
+				} else {
+					skinTint->kTintColor.r = (float)npc->skinColor.red / 255.0f;
+					skinTint->kTintColor.g = (float)npc->skinColor.green / 255.0f;
+					skinTint->kTintColor.b = (float)npc->skinColor.blue / 255.0f;
+					skinTint->kTintColor.a = (float)npc->skinColor.alpha / 255.0f;
+				}
 			}
 
 			// Transform the UV
@@ -209,6 +231,7 @@ OverlayInterface::UniqueID OverlayInterface::AddOverlay(Actor * actor, bool isFe
 	overlayData->tintColor = tintColor;
 	overlayData->offsetUV = offsetUV;
 	overlayData->scaleUV = scaleUV;
+	overlayData->UpdateFlags();
 	priorityMap->emplace(priority, overlayData);
 	m_dataMap.emplace(uid, overlayData);
 	return uid;
@@ -223,7 +246,7 @@ OverlayInterface::UniqueID OverlayInterface::GetNextUID()
 		nextUID = m_freeIndices.back();
 		m_freeIndices.pop_back();
 	} else {
-		nextUID = m_dataMap.size() + 1;
+		nextUID = m_dataMap.size() + 1; // This only happens when free indices is empty, meaning we've filled gaps in m_dataMap
 	}
 
 	return nextUID;
@@ -287,6 +310,26 @@ bool OverlayInterface::RemoveOverlay(Actor * actor, bool isFemale, UniqueID uid)
 	}
 
 	return false;
+}
+
+void OverlayInterface::CloneOverlays(Actor * source, Actor * target)
+{
+	if(!source || !target)
+		return;
+
+	SimpleLocker locker(&m_overlayLock);
+	UInt64 handleSrc = PapyrusVM::GetHandleFromObject(source, Actor::kTypeID);
+	UInt64 handleDst = PapyrusVM::GetHandleFromObject(target, Actor::kTypeID);
+
+	bool isFemale = false;
+	TESNPC * npc = DYNAMIC_CAST(source->baseForm, TESForm, TESNPC);
+	if(npc)
+		isFemale = CALL_MEMBER_FN(npc, GetSex)() == 1 ? true : false;
+
+	auto it = m_overlays[isFemale ? 1 : 0].find(handleSrc);
+	if(it != m_overlays[isFemale ? 1 : 0].end()) {
+		m_overlays[isFemale ? 1 : 0][handleDst] = it->second;
+	}
 }
 
 std::pair<SInt32, OverlayInterface::OverlayDataPtr> OverlayInterface::GetActorOverlayByUID(Actor * actor, bool isFemale, UniqueID uid)
@@ -366,7 +409,7 @@ bool OverlayInterface::ForEachOverlay(Actor * actor, bool isFemale, std::functio
 	return true;
 }
 
-bool OverlayInterface::ForEachOverlayBySlot(Actor * actor, bool isFemale, UInt32 slotIndex, std::function<void(SInt32, const OverlayDataPtr&, const F4EEFixedString &)> functor)
+bool OverlayInterface::ForEachOverlayBySlot(Actor * actor, bool isFemale, UInt32 slotIndex, std::function<void(SInt32, const OverlayDataPtr&, const F4EEFixedString &, bool)> functor)
 {
 	UInt64 handle = PapyrusVM::GetHandleFromObject(actor, Actor::kTypeID);
 	
@@ -390,7 +433,7 @@ bool OverlayInterface::ForEachOverlayBySlot(Actor * actor, bool isFemale, UInt32
 				if(pTemplate) {
 					auto slotIter = pTemplate->slotMaterial.find(slotIndex);
 					if(slotIter != pTemplate->slotMaterial.end())
-						functor(it.first, pOverlay, slotIter->second);
+						functor(it.first, pOverlay, slotIter->second.first, slotIter->second.second);
 				}
 			}
 		}
@@ -416,18 +459,28 @@ void OverlayInterface::OverlayData::Save(const F4SESerializationInterface * intf
 	UInt32 stringId = g_stringTable.GetStringID(templateName);
 	Serialization::WriteData<UInt32>(intfc, &stringId);
 
-	UInt32 a = min(0, max(tintColor.a * 255, 255));
-	UInt32 r = min(0, max(tintColor.r * 255, 255));
-	UInt32 g = min(0, max(tintColor.g * 255, 255));
-	UInt32 b = min(0, max(tintColor.b * 255, 255));
+	Serialization::WriteData<UInt32>(intfc, &flags);
 
-	UInt32 tintARGB = (a << 24) | (r << 16) | (g << 8) | b;
+	if((flags & kHasTintColor) == kHasTintColor)
+	{
+		UInt32 a = min(0, max(tintColor.a * 255, 255));
+		UInt32 r = min(0, max(tintColor.r * 255, 255));
+		UInt32 g = min(0, max(tintColor.g * 255, 255));
+		UInt32 b = min(0, max(tintColor.b * 255, 255));
 
-	Serialization::WriteData<UInt32>(intfc, &tintARGB);
-	Serialization::WriteData<float>(intfc, &offsetUV.x);
-	Serialization::WriteData<float>(intfc, &offsetUV.y);
-	Serialization::WriteData<float>(intfc, &scaleUV.x);
-	Serialization::WriteData<float>(intfc, &scaleUV.y);
+		UInt32 tintARGB = (a << 24) | (r << 16) | (g << 8) | b;
+		Serialization::WriteData<UInt32>(intfc, &tintARGB);
+	}
+	if((flags & kHasOffsetUV) == kHasOffsetUV)
+	{
+		Serialization::WriteData<float>(intfc, &offsetUV.x);
+		Serialization::WriteData<float>(intfc, &offsetUV.y);
+	}
+	if((flags & kHasScaleUV) == kHasScaleUV)
+	{
+		Serialization::WriteData<float>(intfc, &scaleUV.x);
+		Serialization::WriteData<float>(intfc, &scaleUV.y);
+	}
 }
 
 bool OverlayInterface::OverlayData::Load(const F4SESerializationInterface * intfc, UInt32 kVersion, const std::unordered_map<UInt32, StringTableItem> & stringTable)
@@ -454,43 +507,57 @@ bool OverlayInterface::OverlayData::Load(const F4SESerializationInterface * intf
 
 	templateName = it->second;
 
-	UInt32 tintARGB;
-
-	if (!Serialization::ReadData<UInt32>(intfc, &tintARGB))
+	if (!Serialization::ReadData<UInt32>(intfc, &flags))
 	{
-		_ERROR("%s - Error loading overlay tint color", __FUNCTION__);
+		_ERROR("%s - Error loading overlay flags", __FUNCTION__);
 		return false;
 	}
 
-	tintColor.a = min(0, max((float)tintColor.a / 255.0f, 1.0f));
-	tintColor.r = min(0, max((float)tintColor.r / 255.0f, 1.0f));
-	tintColor.g = min(0, max((float)tintColor.g / 255.0f, 1.0f));
-	tintColor.b = min(0, max((float)tintColor.b / 255.0f, 1.0f));
-
-	if (!Serialization::ReadData<float>(intfc, &offsetUV.x))
+	if((flags & kHasTintColor) == kHasTintColor)
 	{
-		_ERROR("%s - Error loading overlay offset U", __FUNCTION__);
-		return false;
+		UInt32 tintARGB;
+		if (!Serialization::ReadData<UInt32>(intfc, &tintARGB))
+		{
+			_ERROR("%s - Error loading overlay tint color", __FUNCTION__);
+			return false;
+		}
+
+		tintColor.a = min(0, max((float)tintColor.a / 255.0f, 1.0f));
+		tintColor.r = min(0, max((float)tintColor.r / 255.0f, 1.0f));
+		tintColor.g = min(0, max((float)tintColor.g / 255.0f, 1.0f));
+		tintColor.b = min(0, max((float)tintColor.b / 255.0f, 1.0f));
 	}
 
-	if (!Serialization::ReadData<float>(intfc, &offsetUV.y))
+	if((flags & kHasOffsetUV) == kHasOffsetUV)
 	{
-		_ERROR("%s - Error loading overlay offset V", __FUNCTION__);
-		return false;
+		if (!Serialization::ReadData<float>(intfc, &offsetUV.x))
+		{
+			_ERROR("%s - Error loading overlay offset U", __FUNCTION__);
+			return false;
+		}
+
+		if (!Serialization::ReadData<float>(intfc, &offsetUV.y))
+		{
+			_ERROR("%s - Error loading overlay offset V", __FUNCTION__);
+			return false;
+		}
 	}
 
-	if (!Serialization::ReadData<float>(intfc, &scaleUV.x))
+	if((flags & kHasScaleUV) == kHasScaleUV)
 	{
-		_ERROR("%s - Error loading overlay scale U", __FUNCTION__);
-		return false;
-	}
+		if (!Serialization::ReadData<float>(intfc, &scaleUV.x))
+		{
+			_ERROR("%s - Error loading overlay scale U", __FUNCTION__);
+			return false;
+		}
 
-	if (!Serialization::ReadData<float>(intfc, &scaleUV.y))
-	{
-		_ERROR("%s - Error loading overlay scale V", __FUNCTION__);
-		return false;
+		if (!Serialization::ReadData<float>(intfc, &scaleUV.y))
+		{
+			_ERROR("%s - Error loading overlay scale V", __FUNCTION__);
+			return false;
+		}
 	}
-		
+	
 	return true;
 }
 
@@ -501,6 +568,7 @@ void OverlayInterface::PriorityMap::Save(const F4SESerializationInterface * intf
 	UInt32 priorityCount = size();
 	Serialization::WriteData<UInt32>(intfc, &priorityCount);
 
+	// Save priority mapping
 	for(auto & slot : *this)
 	{
 		SInt32 priority = slot.first;
@@ -550,6 +618,7 @@ bool OverlayInterface::PriorityMap::Load(const F4SESerializationInterface * intf
 					{
 						emplace(priority, overlayData);
 						g_overlayInterface.m_dataMap.emplace(overlayData->uid, overlayData);
+						g_overlayInterface.m_highestUID = max(g_overlayInterface.m_highestUID, overlayData->uid);
 					}
 				}
 
@@ -568,12 +637,12 @@ bool OverlayInterface::PriorityMap::Load(const F4SESerializationInterface * intf
 
 void OverlayInterface::OverlayMap::Save(const F4SESerializationInterface * intfc, UInt32 kVersion)
 {
-	intfc->OpenRecord('OIPM', kVersion);
+	intfc->OpenRecord('OIOM', kVersion);
 
 	UInt32 numOverlays = size();
 	Serialization::WriteData<UInt32>(intfc, &numOverlays);
 
-	// Male handles
+	// Save handle mappings
 	for(auto & overlay : *this)
 	{
 		// Key
@@ -592,7 +661,7 @@ bool OverlayInterface::OverlayMap::Load(const F4SESerializationInterface * intfc
 	{
 		switch (type)
 		{
-		case 'OIPM':
+		case 'OIOM':
 			{
 
 				UInt32 overlays = 0;
@@ -658,38 +727,12 @@ bool OverlayInterface::Load(const F4SESerializationInterface * intfc, UInt32 kVe
 {
 	SimpleLocker locker(&m_overlayLock);
 
-	UInt32 type, length, version;
-	if(intfc->GetNextRecordInfo(&type, &version, &length))
-	{
-		switch (type)
-		{
-		case 'OIPM':
-			{
-				m_overlays[0].Load(intfc, false, kVersion, stringTable);
-				break;
-			}
-		default:
-			break;
-		}
-	}
-
-	if(intfc->GetNextRecordInfo(&type, &version, &length))
-	{
-		switch (type)
-		{
-		case 'OIPM':
-			{
-				m_overlays[1].Load(intfc, true, kVersion, stringTable);
-				break;
-			}
-		default:
-			break;
-		}
-	}
+	m_overlays[0].Load(intfc, false, kVersion, stringTable);
+	m_overlays[1].Load(intfc, true, kVersion, stringTable);
 
 	// Build the free index list
-	UInt32 dataSize = m_dataMap.size();
-	for(UInt32 uid = 0; uid < dataSize; uid++)
+	UInt32 dataSize = m_highestUID;
+	for(UInt32 uid = 1; uid <= dataSize; uid++)
 	{
 		auto it = m_dataMap.find(uid);
 		if(it == m_dataMap.end()) {
@@ -832,7 +875,7 @@ void F4EEUpdateOverlays::Run()
 
 			if(actor->unk300) {
 				// Detaching the node will cause the game to regenerate when UpdateEquipment is called
-				// We only need to detach armor, and armor that's even eligible for morphing
+				// We only need to detach armor, and armor that has skin
 				ActorEquipData * equipData[2];
 				equipData[0] = actor->equipData;
 				equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData : nullptr;
@@ -939,7 +982,7 @@ void F4EEOverlayUpdate::Run()
 
 					auto material = pTemplate->slotMaterial.find(slotIndex);
 					if(material != pTemplate->slotMaterial.end()) {
-						g_overlayInterface.LoadMaterialData(shape, material->second, pOverlayData);
+						g_overlayInterface.LoadMaterialData(npc, shape, material->second.first, material->second.second, pOverlayData);
 					}
 				}
 
@@ -977,7 +1020,7 @@ void OverlayInterface::LoadOverlayMods()
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
 	{
 		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
-		std::string templatesPath = std::string("Data\\F4SE\\Plugins\\F4EE\\Overlays\\") + std::string(modInfo->name) + "\\overlays.json";
+		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\Overlays\\") + std::string(modInfo->name) + "\\overlays.json";
 		LoadOverlayTemplates(templatesPath.c_str());
 	}
 }
@@ -1028,12 +1071,26 @@ bool OverlayInterface::LoadOverlayTemplates(const std::string & filePath)
 				if(item.isMember("transformable"))
 					pOverlayTemplate->transformable = item["transformable"].asBool();
 
+				if(item.isMember("tintable"))
+					pOverlayTemplate->tintable = item["tintable"].asBool();
+
 				if(item.isMember("slots"))
 				{
 					auto slots = item["slots"];
 					for(auto & slot : slots)
 					{
-						pOverlayTemplate->slotMaterial.emplace(slot["slot"].asUInt(), slot["material"].asCString());
+						std::string material = slot["material"].asString();
+						std::string extension;
+						if(material.find_last_of(".") != std::string::npos)
+							extension = material.substr(material.find_last_of(".")+1);
+
+						bool isEffect = false;
+						if(_stricmp(extension.c_str(), "bgem") == 0) {
+							isEffect = true;
+						}
+
+
+						pOverlayTemplate->slotMaterial.emplace(slot["slot"].asUInt(), std::make_pair(slot["material"].asCString(), isEffect));
 					}
 				}
 			}

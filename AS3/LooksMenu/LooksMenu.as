@@ -366,7 +366,7 @@
 			FeaturePanel_mc.Brackets_mc.BracketExtents_mc.bUseShadedBackground = true;
 			FeaturePanel_mc.Brackets_mc.BracketExtents_mc.ShadedBackgroundMethod = "Shader";
 			FeaturePanel_mc.Brackets_mc.BracketExtents_mc.ShadedBackgroundType = "normal";
-			
+						
 			Translator.Create(root);
 			
 			bodyTimer = new Timer(100);
@@ -445,9 +445,11 @@
 			
 			if(sliderData)
 			{
+				sliderData.value = event.value;
+				FeaturePanel_mc.SliderField.text = Number(sliderData.value).toFixed(3);
+				
 				if(eMode == BODY_ADVANCED_MODE)
 				{
-					sliderData.value = event.value;
 					try
 					{
 						root.f4se.plugins.F4EE.SetBodyMorph(sliderData.morph, sliderData.value);
@@ -462,7 +464,6 @@
 				else if(eMode == BODY_OVERLAY_TRANSFORM_MODE)
 				{
 					// Operates on the temp object
-					sliderData.value = event.value;
 					switch(sliderData.type) {
 						case "offset_u":
 						sliderData.object.offsetU = sliderData.value;
@@ -578,6 +579,10 @@
 			
 			buttonHint_BodyOverlaySelectMode_Transform.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE && FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.applied;
 			buttonHint_BodyOverlaySelectMode_Transform.ButtonEnabled = FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.transformable;
+			
+			var bHasSliders = eMode == BODY_ADVANCED_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE;
+			FeaturePanel_mc.SliderField.visible = bHasSliders && FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.value != undefined;
+			FeaturePanel_mc.SliderField.text = bHasSliders && FeaturePanel_mc.List_mc.selectedEntry ? Number(FeaturePanel_mc.List_mc.selectedEntry.value).toFixed(3) : "";
 			
 			buttonHint_BodyOverlayTransformMode_Accept.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
 			buttonHint_BodyOverlayTransformMode_Cancel.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
@@ -1241,6 +1246,8 @@
 						
 						UpdateButtons();
 					}
+					
+					FeaturePanel_mc.SliderField.text = FeaturePanel_mc.List_mc.selectedEntry ? Number(FeaturePanel_mc.List_mc.selectedEntry.value).toFixed(3) : "";
 				}
 				else 
 				{
@@ -1949,25 +1956,21 @@
 		}
 		
 		internal function StartTransformBodyOverlay()
-		{
-			for(var i = 0; i < FeaturePanel_mc.List_mc.entryList.length; i++)
-			{
-				if(FeaturePanel_mc.List_mc.entryList[i].applied) {
-					CurrentOverlayInfo.sid = FeaturePanel_mc.List_mc.entryList[i].id;
-					break;
-				}
-			}
+		{			
+			if(FeaturePanel_mc.List_mc.selectedEntry.applied) {
+				CurrentOverlayInfo.sid = FeaturePanel_mc.List_mc.selectedEntry.id;
 			
-			// Create temp info to store before editing
-			CurrentOverlayInfo.temp = {
-				"offsetU": CurrentOverlayInfo.object.offsetU,
-				"offsetV": CurrentOverlayInfo.object.offsetV,
-				"scaleU": CurrentOverlayInfo.object.scaleU,
-				"scaleV": CurrentOverlayInfo.object.scaleV
-			};
-	
-			CurrentOverlayInfo.template = FeaturePanel_mc.List_mc.selectedEntry.text;
-			TransformBodyOverlayMode();
+				// Create temp info to store before editing
+				CurrentOverlayInfo.temp = {
+					"offsetU": CurrentOverlayInfo.object.offsetU,
+					"offsetV": CurrentOverlayInfo.object.offsetV,
+					"scaleU": CurrentOverlayInfo.object.scaleU,
+					"scaleV": CurrentOverlayInfo.object.scaleV
+				};
+		
+				CurrentOverlayInfo.template = FeaturePanel_mc.List_mc.selectedEntry.text;
+				TransformBodyOverlayMode();
+			}
 		}
 		
 		internal function TransformBodyOverlayMode()
@@ -2236,9 +2239,7 @@
 		{
 			if (eMode == BODY_MODE && (EditMode == EDIT_CHARGEN || EditMode == EDIT_BODYMOD)) 
 			{
-				eMode = BODY_ADVANCED_MODE;
-				UpdateButtons();
-				
+				eMode = BODY_ADVANCED_MODE;				
 				var panelTitle = "$SLIDERS";
 				try
 				{
@@ -2273,6 +2274,8 @@
 				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
 				PreviousStageFocus = stage.focus;
 				stage.focus = FeaturePanel_mc.List_mc;
+				
+				UpdateButtons();
 			}
 		}
 		
@@ -2622,6 +2625,7 @@
 						if(EditMode == EDIT_CHARGEN && AllowChangeSex)
 						{
 							root.f4se.plugins.F4EE.CloneBodyMorphs();
+							root.f4se.plugins.F4EE.CloneOverlays();
 						}
 					}
 					catch(e:Error)

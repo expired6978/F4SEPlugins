@@ -65,9 +65,11 @@ namespace papyrusOverlays
 				g_overlayInterface.ReorderOverlay(actor, isFemale, uid, priority);
 			}
 
-			pOverlay.second->tintColor = color;
-			pOverlay.second->offsetUV = offsetUV;
-			pOverlay.second->scaleUV = scaleUV;
+			auto pOverlayData = pOverlay.second;
+			pOverlayData->tintColor = color;
+			pOverlayData->offsetUV = offsetUV;
+			pOverlayData->scaleUV = scaleUV;
+			pOverlayData->UpdateFlags();
 			return true;
 		}
 
@@ -150,11 +152,6 @@ namespace papyrusOverlays
 	{
 		g_overlayInterface.UpdateOverlays(actor);
 	}
-
-	/*void UpdateUID(StaticFunctionTag*, Actor * actor, UInt32 uid)
-	{
-		g_overlayInterface.UpdateOverlay(actor, uid);
-	}*/
 };
 
 void papyrusOverlays::RegisterFuncs(VirtualMachine* vm)
@@ -180,10 +177,6 @@ void papyrusOverlays::RegisterFuncs(VirtualMachine* vm)
 	vm->RegisterFunction(
 		new NativeFunction1<StaticFunctionTag, void, Actor*>("Update", "Overlays", papyrusOverlays::Update, vm));
 
-	/*vm->RegisterFunction(
-		new NativeFunction2<StaticFunctionTag, void, Actor*, UInt32>("UpdateUID", "Overlays", papyrusOverlays::UpdateUID, vm));*/
-
-
 	vm->SetFunctionFlags("Overlays", "Add", IFunction::kFunctionFlag_NoWait);
 	vm->SetFunctionFlags("Overlays", "Remove", IFunction::kFunctionFlag_NoWait);
 	vm->SetFunctionFlags("Overlays", "Set", IFunction::kFunctionFlag_NoWait);
@@ -192,5 +185,4 @@ void papyrusOverlays::RegisterFuncs(VirtualMachine* vm)
 	vm->SetFunctionFlags("Overlays", "GetAll", IFunction::kFunctionFlag_NoWait);
 
 	vm->SetFunctionFlags("Overlays", "Update", IFunction::kFunctionFlag_NoWait);
-	//vm->SetFunctionFlags("Overlays", "UpdateUID", IFunction::kFunctionFlag_NoWait);
 }

@@ -25,13 +25,16 @@
 
 #include "CharGenTint.h"
 #include "BodyMorphInterface.h"
+#include "OverlayInterface.h"
 #include "Utilities.h"
 
 extern bool g_bExportRace;
 extern std::string g_strExportRace;
 extern UInt32 g_uExportIdMin;
 extern UInt32 g_uExportIdMax;
+
 extern BodyMorphInterface g_bodyMorphInterface;
+extern OverlayInterface g_overlayInterface;
 
 extern bool g_bIgnoreTintPalettes;
 extern bool g_bIgnoreTintTextures;
@@ -209,6 +212,36 @@ DWORD CharGenInterface::SavePreset(const std::string & filePath)
 
 		root["BodyMorphs"] = morphData;
 	}
+
+	Json::Value overlayData;
+	if(g_overlayInterface.ForEachOverlay(actor, gender == 1 ? true : false, [&](SInt32 priority, const OverlayInterface::OverlayDataPtr & pOverlay)
+	{
+		Json::Value overlay;
+		overlay["template"] = pOverlay->templateName ? pOverlay->templateName->c_str() : "";
+		overlay["priority"] = priority;
+
+		if((pOverlay->flags & OverlayInterface::OverlayData::kHasTintColor) == OverlayInterface::OverlayData::kHasTintColor)
+		{
+			overlay["tint"].append(pOverlay->tintColor.r);
+			overlay["tint"].append(pOverlay->tintColor.g);
+			overlay["tint"].append(pOverlay->tintColor.b);
+			overlay["tint"].append(pOverlay->tintColor.a);
+		}
+		if((pOverlay->flags & OverlayInterface::OverlayData::kHasOffsetUV) == OverlayInterface::OverlayData::kHasOffsetUV)
+		{
+			overlay["offsetUV"].append(pOverlay->offsetUV.x);
+			overlay["offsetUV"].append(pOverlay->offsetUV.y);
+		}
+		if((pOverlay->flags & OverlayInterface::OverlayData::kHasScaleUV) == OverlayInterface::OverlayData::kHasScaleUV)
+		{
+			overlay["scaleUV"].append(pOverlay->offsetUV.x);
+			overlay["scaleUV"].append(pOverlay->offsetUV.y);
+		}
+		
+		overlayData.append(overlay);
+	})) {
+		root["Overlays"] = overlayData;
+	}
 		
 
 	std::string data = writer.write(root);
@@ -263,6 +296,8 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 	{
 		return ERROR_INVALID_TOKEN;
 	}
+
+	bool isFemale = gender == 1 ? true : false;
 
 	// Wipe the HeadPart list and replace it with the default race list
 	auto chargenData = race->chargenData[gender];
@@ -532,19 +567,66 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 		Json::Value morphData = root["BodyMorphs"];
 		auto members = morphData.getMemberNames();
 		if(members.size() > 0 || (root.isMember("BodyMorphs") && morphData.isNull())) {
-			g_bodyMorphInterface.RemoveMorphsByKeyword(actor, gender == 1 ? true : false, nullptr);
+			g_bodyMorphInterface.RemoveMorphsByKeyword(actor, isFemale, nullptr);
 		}
 
 		for(auto key : members)
 		{
 			float value = morphData[key].asFloat();
-			g_bodyMorphInterface.SetMorph(actor, gender == 1 ? true : false, key.c_str(), nullptr, value);
+			g_bodyMorphInterface.SetMorph(actor, isFemale, key.c_str(), nullptr, value);
 		}
 	}
 	catch(const std::exception& e)
 	{
 		_ERROR(e.what());
 	}
+
+	if(root.isMember("Overlays"))
+	{
+		g_overlayInterface.RemoveAll(actor, isFemale);
+
+		Json::Value overlays = root["Overlays"];
+		for(auto & overlay : overlays)
+		{
+			try
+			{
+				SInt32 priority = overlay["priority"].asInt();
+				const char * templateName = overlay["template"].asCString();
+				NiColorA color;
+				color.r = 0.0f;
+				color.g = 0.0f;
+				color.b = 0.0f;
+				color.a = 0.0f;
+				if(overlay.isMember("tint")) {
+					color.r = overlay["tint"][0].asFloat();
+					color.g = overlay["tint"][1].asFloat();
+					color.b = overlay["tint"][2].asFloat();
+					color.a = overlay["tint"][3].asFloat();
+				}
+				NiPoint2 offsetUV;
+				offsetUV.x = 0.0f;
+				offsetUV.y = 0.0f;
+				if(overlay.isMember("offsetUV")) {
+					offsetUV.x = overlay["offsetUV"][0].asFloat();
+					offsetUV.y = overlay["offsetUV"][1].asFloat();
+				}
+				NiPoint2 scaleUV;
+				scaleUV.x = 1.0f;
+				scaleUV.y = 1.0f;
+				if(overlay.isMember("scaleUV")) {
+					scaleUV.x = overlay["scaleUV"][0].asFloat();
+					scaleUV.y = overlay["scaleUV"][1].asFloat();
+				}
+
+				g_overlayInterface.AddOverlay(actor, gender == 1 ? true : false, priority, templateName, color, offsetUV, scaleUV);
+			}
+			catch(const std::exception& e)
+			{
+				_ERROR(e.what());
+			}
+		}
+	}
+	
 
 	npc->MarkChanged(0x800); // Save FaceData
 	npc->MarkChanged(0x4000); // ??
@@ -559,7 +641,7 @@ void CharGenInterface::LoadHairColorMods()
 	{
 		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
 		std::string modName = modInfo->name;
-		std::string templatesPath = std::string("Data\\F4SE\\Plugins\\F4EE\\LUTs\\") + modName + "\\haircolors.json";
+		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\LUTs\\") + modName + "\\haircolors.json";
 		LoadHairColorData(templatesPath, modInfo);
 	}
 }
@@ -570,7 +652,7 @@ void CharGenInterface::LoadTintTemplateMods()
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
 	{
 		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
-		std::string templatesPath = std::string("Data\\F4SE\\Plugins\\F4EE\\Tints\\") + std::string(modInfo->name) + "\\categories.json";
+		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\Tints\\") + std::string(modInfo->name) + "\\categories.json";
 		LoadTintCategories(templatesPath);
 	}
 
@@ -579,7 +661,7 @@ void CharGenInterface::LoadTintTemplateMods()
 	{
 		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
 					
-		std::string templatesPath = std::string("Data\\F4SE\\Plugins\\F4EE\\Tints\\") + std::string(modInfo->name) + "\\templates.json";
+		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\Tints\\") + std::string(modInfo->name) + "\\templates.json";
 		LoadTintTemplates(templatesPath);
 	}
 

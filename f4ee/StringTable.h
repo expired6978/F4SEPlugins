@@ -13,20 +13,19 @@ struct F4SESerializationInterface;
 class F4EEFixedString
 {
 public:
-	static size_t lowercase_hash(const char * str)
-	{
-		std::string xform(str);
-		std::transform(xform.begin(), xform.end(), xform.begin(), ::tolower);
-		return std::hash<std::string>()(xform);
-	}
-
-	F4EEFixedString() : m_internal() { }
-	F4EEFixedString(const char * str) : m_internal(str), m_hash(lowercase_hash(str)) { }
-	F4EEFixedString(const BSFixedString & str) : m_internal(str), m_hash(lowercase_hash(str.c_str())) { }
+	F4EEFixedString() : m_internal() { m_hash = hash_lower(m_internal.c_str(), m_internal.size()); }
+	F4EEFixedString(const char * str) : m_internal(str) { m_hash = hash_lower(m_internal.c_str(), m_internal.size()); }
+	F4EEFixedString(const BSFixedString & str) : m_internal(str) { m_hash = hash_lower(m_internal.c_str(), m_internal.size()); }
 
 	bool operator==(const F4EEFixedString& x) const
 	{
-		return m_hash == x.m_hash;
+		if(m_internal.size() != x.m_internal.size())
+			return false;
+
+		if(_stricmp(m_internal.c_str(), x.m_internal.c_str()) == 0)
+			return true;
+
+		return false;
 	}
 
 	operator BSFixedString() const { return BSFixedString(m_internal.c_str()); }
@@ -35,7 +34,24 @@ public:
 	const char * c_str() const { return operator const char *(); }
 	operator const char *() const { return m_internal.c_str(); }
 
-	size_t GetHash() const { return m_hash; }
+	size_t hash_lower(const char * str, size_t count)
+	{
+		const size_t _FNV_offset_basis = 14695981039346656037ULL;
+		const size_t _FNV_prime = 1099511628211ULL;
+
+		size_t _Val = _FNV_offset_basis;
+		for (size_t _Next = 0; _Next < count; ++_Next)
+		{	// fold in another byte
+			_Val ^= (size_t)tolower(str[_Next]);
+			_Val *= _FNV_prime;
+		}
+		return _Val;
+	}
+
+	size_t GetHash() const
+	{
+		return m_hash;
+	}
 
 protected:
 	std::string		m_internal;

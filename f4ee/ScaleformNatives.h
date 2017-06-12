@@ -104,3 +104,9 @@ class F4EEScaleform_UpdateOverlays : public GFxFunctionHandler
 public:
 	virtual void	Invoke(Args * args);
 };
+
+class F4EEScaleform_CloneOverlays : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};

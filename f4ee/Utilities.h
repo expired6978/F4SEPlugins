@@ -5,6 +5,7 @@
 #include "f4se/NiTypes.h"
 #include "StringTable.h"
 
+#include <cmath>
 #include <string>
 #include <functional>
 
@@ -58,6 +59,11 @@ protected:
 	BSResourceNiBinaryStream* fin;
 	char buf[MaxBuf];
 };
+
+template<typename T>
+static bool AreEqual(T f1, T f2) { 
+	return (std::fabs(f1 - f2) <= std::numeric_limits<T>::epsilon() * (std::max)(fabs(f1), fabs(f2)));
+}
 
 void BSReadAll(BSResourceNiBinaryStream* fin, std::string* str);
 bool VisitObjects(NiAVObject * parent, std::function<bool(NiAVObject*)> functor);

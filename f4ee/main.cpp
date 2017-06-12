@@ -431,6 +431,7 @@ bool ScaleformCallback(GFxMovieView * view, GFxValue * value)
 	RegisterFunction<F4EEScaleform_SetOverlayData>(value, view->movieRoot, "SetOverlayData");
 	RegisterFunction<F4EEScaleform_ReorderOverlay>(value, view->movieRoot, "ReorderOverlay");
 	RegisterFunction<F4EEScaleform_UpdateOverlays>(value, view->movieRoot, "UpdateOverlays");
+	RegisterFunction<F4EEScaleform_CloneOverlays>(value, view->movieRoot, "CloneOverlays");
 
 	GFxValue dispatchEvent;
 	GFxValue eventArgs[3];

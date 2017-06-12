@@ -261,3 +261,4 @@ NiNode * GetRootNode(Actor * actor, NiAVObject * object)
 
 	return rootNode;
 }
+
