@@ -62,6 +62,11 @@ namespace papyrusBodyGen
 		return VMArray<BSFixedString>(morphs);
 	}
 
+	void ClearAll(StaticFunctionTag*)
+	{
+		g_bodyMorphInterface.Revert();
+	}
+
 	void RegenerateMorphs(StaticFunctionTag*, Actor * actor, bool update)
 	{
 		if(!actor)
@@ -78,12 +83,12 @@ namespace papyrusBodyGen
 		g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale);
 
 		if(update)
-			g_bodyMorphInterface.UpdateMorphs(actor, true, true);
+			g_bodyMorphInterface.UpdateMorphs(actor);
 	}
 
 	void UpdateMorphs(StaticFunctionTag*, Actor * actor)
 	{
-		g_bodyMorphInterface.UpdateMorphs(actor, true, true);
+		g_bodyMorphInterface.UpdateMorphs(actor);
 	}
 };
 
@@ -115,4 +120,7 @@ void papyrusBodyGen::RegisterFuncs(VirtualMachine* vm)
 
 	vm->RegisterFunction(
 		new NativeFunction1<StaticFunctionTag, void, Actor*>("UpdateMorphs", "BodyGen", papyrusBodyGen::UpdateMorphs, vm));
+
+	vm->RegisterFunction(
+		new NativeFunction0<StaticFunctionTag, void>("ClearAll", "BodyGen", papyrusBodyGen::ClearAll, vm));
 }

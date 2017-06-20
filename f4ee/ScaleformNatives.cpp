@@ -14,6 +14,7 @@
 #include "StringTable.h"
 
 #include <set>
+
 extern std::set<UInt32> g_presetNPCs;
 extern CharGenInterface g_charGenInterface;
 extern BodyMorphInterface g_bodyMorphInterface;
@@ -22,21 +23,40 @@ extern StringTable g_stringTable;
 extern bool g_bEnableBodyMorphs;
 extern bool g_bEnableOverlays;
 
-inline void RegisterInteger(GFxValue * dst, const char * name, SInt32 value)
+extern F4SETaskInterface * g_task;
+
+template<typename T>
+inline void Register(GFxValue * dst, const char * name, T value)
+{
+
+}
+
+template<>
+inline void Register(GFxValue * dst, const char * name, SInt32 value)
 {
 	GFxValue	fxValue;
 	fxValue.SetInt(value);
 	dst->SetMember(name, &fxValue);
 }
 
-inline void RegisterNumber(GFxValue * dst, const char * name, double value)
+template<>
+inline void Register(GFxValue * dst, const char * name, UInt32 value)
+{
+	GFxValue	fxValue;
+	fxValue.SetUInt(value);
+	dst->SetMember(name, &fxValue);
+}
+
+template<>
+inline void Register(GFxValue * dst, const char * name, double value)
 {
 	GFxValue	fxValue;
 	fxValue.SetNumber(value);
 	dst->SetMember(name, &fxValue);
 }
 
-inline void RegisterBool(GFxValue * dst, const char * name, bool value)
+template<>
+inline void Register(GFxValue * dst, const char * name, bool value)
 {
 	GFxValue	fxValue;
 	fxValue.SetBool(value);
@@ -68,14 +88,8 @@ void F4EEScaleform_LoadPreset::Invoke(Args * args)
 	if(characterCreation) {
 		characterCreation->unk516 = 1;
 		characterCreation->unk517 = 1;
-		characterCreation->dirty = 1;
 
-		if(g_bEnableBodyMorphs) {
-			g_bodyMorphInterface.UpdateMorphs(characterCreation->actor, true, true);
-		}
-		if(g_bEnableOverlays) {
-			g_overlayInterface.UpdateOverlays(characterCreation->actor);
-		}
+		characterCreation->dirty = 1;
 	}
 
 	IMenu * menu = (*g_ui)->GetMenuByMovie(args->movie);
@@ -152,10 +166,10 @@ void F4EEScaleform_GetBodySliders::Invoke(Args * args)
 				args->movie->movieRoot->CreateObject(&sliderInfo);
 				RegisterString(&sliderInfo, args->movie->movieRoot, "name", slider->name);
 				RegisterString(&sliderInfo, args->movie->movieRoot, "morph", slider->morph);
-				RegisterNumber(&sliderInfo, "value", g_bodyMorphInterface.GetMorph(actor, gender == 1 ? true : false, slider->morph, nullptr));
-				RegisterNumber(&sliderInfo, "minimum", slider->minimum);
-				RegisterNumber(&sliderInfo, "maximum", slider->maximum);
-				RegisterNumber(&sliderInfo, "interval", slider->interval);
+				Register<double>(&sliderInfo, "value", g_bodyMorphInterface.GetMorph(actor, gender == 1 ? true : false, slider->morph, nullptr));
+				Register<double>(&sliderInfo, "minimum", slider->minimum);
+				Register<double>(&sliderInfo, "maximum", slider->maximum);
+				Register<double>(&sliderInfo, "interval", slider->interval);
 				args->result->PushBack(&sliderInfo);
 			}
 		}
@@ -194,7 +208,7 @@ void F4EEScaleform_CloneBodyMorphs::Invoke(Args * args)
 		if(actor != (*g_player) && ((bVerify && (npc == (*g_customizationDummy1) || npc == (*g_customizationDummy2))) || !bVerify)) {
 			if(g_bEnableBodyMorphs) {
 				g_bodyMorphInterface.CloneMorphs(actor, (*g_player));
-				g_bodyMorphInterface.UpdateMorphs(*g_player, true, true);
+				g_bodyMorphInterface.UpdateMorphs(*g_player);
 			}
 		}
 	}
@@ -203,8 +217,8 @@ void F4EEScaleform_CloneBodyMorphs::Invoke(Args * args)
 void F4EEScaleform_UpdateBodyMorphs::Invoke(Args * args)
 {
 	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
-	if(characterCreation) {
-		g_bodyMorphInterface.UpdateMorphs(characterCreation->actor, true, true);
+	if(characterCreation && g_bEnableBodyMorphs) {
+		g_bodyMorphInterface.UpdateMorphs(characterCreation->actor);
 	}
 }
 
@@ -287,7 +301,7 @@ void F4EEScaleform_GetExternalFiles::Invoke(Args * args)
 		RegisterString(&fileInfo, args->movie->movieRoot, "path", dirPath);
 		RegisterString(&fileInfo, args->movie->movieRoot, "name", fileData.cFileName);
 		UInt64 fileSize = (UInt64)fileData.nFileSizeHigh << 32 | fileData.nFileSizeLow;
-		RegisterNumber(&fileInfo, "size", fileSize);
+		Register<UInt32>(&fileInfo, "size", fileSize);
 		SYSTEMTIME sysTime;
 		FileTimeToSystemTime(&fileData.ftLastWriteTime, &sysTime);
 		GFxValue date;
@@ -301,7 +315,7 @@ void F4EEScaleform_GetExternalFiles::Invoke(Args * args)
 		params[6].SetNumber(sysTime.wMilliseconds);
 		args->movie->movieRoot->CreateObject(&date, "Date", params, 7);
 		fileInfo.SetMember("lastModified", &date);
-		RegisterBool(&fileInfo, "directory", dir);
+		Register<bool>(&fileInfo, "directory", dir);
 		args->result->PushBack(&fileInfo);
 	});
 
@@ -325,22 +339,22 @@ void F4EEScaleform_GetOverlays::Invoke(Args * args)
 			g_overlayInterface.ForEachOverlay(actor, isFemale, [&](SInt32 priority, const OverlayInterface::OverlayDataPtr & slider) {
 				GFxValue sliderInfo;
 				args->movie->movieRoot->CreateObject(&sliderInfo);
-				RegisterInteger(&sliderInfo, "priority", priority);
-				RegisterInteger(&sliderInfo, "uid", slider->uid);
+				Register<SInt32>(&sliderInfo, "priority", priority);
+				Register<UInt32>(&sliderInfo, "uid", slider->uid);
 				RegisterString(&sliderInfo, args->movie->movieRoot, "id", slider->templateName->c_str());
-				RegisterNumber(&sliderInfo, "red", slider->tintColor.r);
-				RegisterNumber(&sliderInfo, "green", slider->tintColor.g);
-				RegisterNumber(&sliderInfo, "blue", slider->tintColor.b);
-				RegisterNumber(&sliderInfo, "alpha", slider->tintColor.a);
-				RegisterNumber(&sliderInfo, "offsetU", slider->offsetUV.x);
-				RegisterNumber(&sliderInfo, "offsetV", slider->offsetUV.y);
-				RegisterNumber(&sliderInfo, "scaleU", slider->scaleUV.x);
-				RegisterNumber(&sliderInfo, "scaleV", slider->scaleUV.y);
+				Register<double>(&sliderInfo, "red", slider->tintColor.r);
+				Register<double>(&sliderInfo, "green", slider->tintColor.g);
+				Register<double>(&sliderInfo, "blue", slider->tintColor.b);
+				Register<double>(&sliderInfo, "alpha", slider->tintColor.a);
+				Register<double>(&sliderInfo, "offsetU", slider->offsetUV.x);
+				Register<double>(&sliderInfo, "offsetV", slider->offsetUV.y);
+				Register<double>(&sliderInfo, "scaleU", slider->scaleUV.x);
+				Register<double>(&sliderInfo, "scaleV", slider->scaleUV.y);
 
 				auto pTemplate = g_overlayInterface.GetTemplateByName(isFemale, *slider->templateName);
 				if(pTemplate) {
 					RegisterString(&sliderInfo, args->movie->movieRoot, "name", pTemplate->displayName);
-					RegisterBool(&sliderInfo, "playable", pTemplate->playable);
+					Register<bool>(&sliderInfo, "playable", pTemplate->playable);
 				}
 
 				args->result->PushBack(&sliderInfo);
@@ -380,8 +394,9 @@ void F4EEScaleform_GetOverlayTemplates::Invoke(Args * args)
 					GFxValue sliderInfo;
 					args->movie->movieRoot->CreateObject(&sliderInfo);
 					RegisterString(&sliderInfo, args->movie->movieRoot, "id", slider.first);
-					RegisterString(&sliderInfo, args->movie->movieRoot, "name", slider.second->displayName);
-					RegisterBool(&sliderInfo, "transformable", slider.second->transformable);
+					RegisterString(&sliderInfo, args->movie->movieRoot, "name", slider.second->displayName.c_str());
+					Register<bool>(&sliderInfo, "transformable", slider.second->transformable);
+					Register<bool>(&sliderInfo, "tintable", slider.second->tintable);
 					args->result->PushBack(&sliderInfo);
 				}
 			}
@@ -531,9 +546,8 @@ void F4EEScaleform_ReorderOverlay::Invoke(Args * args)
 void F4EEScaleform_UpdateOverlays::Invoke(Args * args)
 {
 	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
-	if(characterCreation) {
-		Actor * actor = characterCreation->actor;
-		g_overlayInterface.UpdateOverlays(actor);
+	if(characterCreation && g_bEnableOverlays) {
+		g_overlayInterface.UpdateOverlays(characterCreation->actor);
 	}
 }
 
@@ -554,5 +568,182 @@ void F4EEScaleform_CloneOverlays::Invoke(Args * args)
 				g_overlayInterface.UpdateOverlays(actor);
 			}
 		}
+	}
+}
+
+void F4EEScaleform_GetEquippedItems::Invoke(Args * args)
+{
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+
+		static std::unordered_map<TESForm*, std::pair<SInt32, UInt8>> stackList;
+		auto inventory = actor->inventoryList;
+		if(inventory)
+		{
+			inventory->inventoryLock.Lock();
+			for(UInt32 i = 0; i < inventory->items.count; i++)
+			{
+				SInt32 s = 0;
+				inventory->items[i].stack->Visit([&](BGSInventoryItem::Stack * stack)
+				{
+					if(stack->flags & BGSInventoryItem::Stack::kFlagEquipped) {
+						stackList.emplace(inventory->items[i].form, std::make_pair(s, stack->flags & 0xF));
+					}
+					s++;
+					return true;
+				});
+			}
+			inventory->inventoryLock.Release();
+		}
+		if(!stackList.empty())
+		{
+			args->movie->movieRoot->CreateArray(args->result);
+
+			for(auto & stackItem : stackList)
+			{
+				GFxValue equippedItem;
+				args->movie->movieRoot->CreateObject(&equippedItem);
+				Register<UInt32>(&equippedItem, "formId", stackItem.first->formID);
+				Register<UInt32>(&equippedItem, "stackIndex", stackItem.second.first);
+				Register<UInt32>(&equippedItem, "flags", stackItem.second.second);
+				args->result->PushBack(&equippedItem);
+			}	
+		}
+		else
+			args->result->SetNull();
+	}
+}
+
+void F4EEScaleform_UnequipItems::Invoke(Args * args)
+{
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+
+		// Convert the GFX data to a stack mapping
+		static std::unordered_map<TESForm*, std::pair<SInt32, UInt8>> stackList;
+		UInt32 numItems = args->args[0].GetArraySize();
+		for (UInt32 i = 0; i < numItems; i++) {
+			GFxValue element, formId, stackIndex, flags;
+			args->args[0].GetElement(i, &element);
+
+			element.GetMember("formId", &formId);
+			element.GetMember("stackIndex", &stackIndex);
+			element.GetMember("flags", &flags);			
+
+			TESForm * form = LookupFormByID(formId.GetUInt());
+			if(!form)
+				continue;
+
+			stackList.emplace(form, std::make_pair(stackIndex.GetUInt(), flags.GetUInt()));
+		}
+
+		// Traverse the inventory to unequip the specific stacks
+		auto inventory = actor->inventoryList;
+		if(inventory)
+		{
+			inventory->inventoryLock.Lock();
+
+			for(UInt32 i = 0; i < inventory->items.count; i++)
+			{
+				SInt32 s = 0;
+				auto it = stackList.find(inventory->items[i].form);
+				if(it != stackList.end())
+				{
+					inventory->items[i].stack->Visit([&](BGSInventoryItem::Stack * stack)
+					{
+						if(it->second.first == s) {
+							stack->flags &= ~0xF;
+							return false;
+						}
+
+						s++;
+						return true;
+					});
+				}
+			}
+
+			inventory->inventoryLock.Release();
+		}
+
+		if(!stackList.empty()) {
+			args->movie->movieRoot->CreateArray(args->result);
+
+			for(auto & stackItem : stackList)
+			{
+				GFxValue equippedItem;
+				args->movie->movieRoot->CreateObject(&equippedItem);
+				Register<UInt32>(&equippedItem, "formId", stackItem.first->formID);
+				Register<UInt32>(&equippedItem, "stackIndex", stackItem.second.first);
+				Register<UInt32>(&equippedItem, "flags", stackItem.second.second);
+				args->result->PushBack(&equippedItem);
+			}
+
+			g_task->AddTask(new F4EEBodyGenUpdate(actor, false));			
+		}
+		else
+			args->result->SetNull();
+	}
+}
+
+void F4EEScaleform_EquipItems::Invoke(Args * args)
+{
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+
+		// Convert the GFX data
+		static std::unordered_map<TESForm*, std::pair<SInt32, UInt8>> stackList;
+		UInt32 numItems = args->args[0].GetArraySize();
+		for (UInt32 i = 0; i < numItems; i++) {
+			GFxValue element, formId, stackIndex, flags;
+			args->args[0].GetElement(i, &element);
+			
+			element.GetMember("formId", &formId);
+			element.GetMember("stackIndex", &stackIndex);
+			element.GetMember("flags", &flags);			
+
+			TESForm * form = LookupFormByID(formId.GetUInt());
+			if(!form)
+				continue;
+
+			stackList.emplace(form, std::make_pair(stackIndex.GetUInt(), flags.GetUInt()));
+		}
+
+		// Re-equip the specified stacks
+		auto inventory = actor->inventoryList;
+		if(inventory)
+		{
+			inventory->inventoryLock.Lock();
+
+			for(UInt32 i = 0; i < inventory->items.count; i++)
+			{
+				SInt32 s = 0;
+				auto it = stackList.find(inventory->items[i].form);
+				if(it != stackList.end())
+				{
+					inventory->items[i].stack->Visit([&](BGSInventoryItem::Stack * stack)
+					{
+						if(it->second.first == s) {
+							stack->flags |= it->second.second & 0xF;
+							return false;
+						}
+
+						s++;
+						return true;
+					});
+				}
+			}
+
+			inventory->inventoryLock.Release();
+		}
+
+		if(!stackList.empty()) {
+			g_task->AddTask(new F4EEBodyGenUpdate(actor, false));
+			args->result->SetBool(true);
+		}
+		else
+			args->result->SetBool(false);
 	}
 }

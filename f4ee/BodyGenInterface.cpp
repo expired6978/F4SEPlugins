@@ -38,7 +38,7 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const std::string & filePath)
 
 		std::vector<std::string> side = std::explode(str, '=');
 		if (side.size() < 2) {
-			_ERROR("%s - Error - Template has no left-hand side.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath);
+			_ERROR("%s - Error - Template has no left-hand side.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath.c_str());
 			continue;
 		}
 
@@ -139,7 +139,7 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const std::string & filePath)
 		}
 
 		if (error.length() > 0) {
-			_ERROR("%s - Error - Could not parse morphs %s.\tLine (%d) [%s]", __FUNCTION__, error.c_str(), lineCount, filePath);
+			_ERROR("%s - Error - Could not parse morphs %s.\tLine (%d) [%s]", __FUNCTION__, error.c_str(), lineCount, filePath.c_str());
 			continue;
 		}
 
@@ -149,7 +149,7 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const std::string & filePath)
 		}
 	}
 
-	_DMESSAGE("%s - Info - Loaded %d template(s).\t[%s]", __FUNCTION__, loadedTemplates, filePath);
+	_DMESSAGE("%s - Info - Loaded %d template(s).\t[%s]", __FUNCTION__, loadedTemplates, filePath.c_str());
 	return true;
 }
 
@@ -203,7 +203,7 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 
 		std::vector<std::string> side = std::explode(str, '=');
 		if (side.size() < 2) {
-			_ERROR("%s - Error - Morph has no left-hand side.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath);
+			_ERROR("%s - Error - Morph has no left-hand side.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath.c_str());
 			continue;
 		}
 
@@ -212,7 +212,7 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 
 		std::vector<std::string> form = std::explode(lSide, '|');
 		if (form.size() < 2) {
-			_ERROR("%s - Error - Morph left side missing mod name or formID.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath);
+			_ERROR("%s - Error - Morph left side missing mod name or formID.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath.c_str());
 			continue;
 		}
 
@@ -247,7 +247,7 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 				foundRace = GetRaceByName(raceText);
 				if (foundRace == nullptr)
 				{
-					_ERROR("%s - Error - Invalid race %s specified.\tLine (%d) [%s]", __FUNCTION__, raceText.c_str(), lineCount, filePath);
+					_ERROR("%s - Error - Invalid race %s specified.\tLine (%d) [%s]", __FUNCTION__, raceText.c_str(), lineCount, filePath.c_str());
 					continue;
 				}
 				paramIndex++;
@@ -259,7 +259,7 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 		{
 			UInt8 modIndex = (*g_dataHandler)->GetLoadedModIndex(modNameText.c_str());
 			if (modIndex == -1) {
-				_WARNING("%s - Warning - Mod '%s' not a loaded mod.\tLine (%d) [%s]", __FUNCTION__, modNameText.c_str(), lineCount, filePath);
+				_WARNING("%s - Warning - Mod '%s' not a loaded mod.\tLine (%d) [%s]", __FUNCTION__, modNameText.c_str(), lineCount, filePath.c_str());
 				continue;
 			}
 
@@ -291,7 +291,7 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 					foundRace = GetRaceByName(raceText);
 					if (foundRace == nullptr)
 					{
-						_ERROR("%s - Error - Invalid race '%s' specified.\tLine (%d) [%s]", __FUNCTION__, raceText.c_str(), lineCount, filePath);
+						_ERROR("%s - Error - Invalid race '%s' specified.\tLine (%d) [%s]", __FUNCTION__, raceText.c_str(), lineCount, filePath.c_str());
 						continue;
 					}
 					paramIndex++;
@@ -303,14 +303,14 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 			{
 				UInt32 formLower = strtoul(formIdText.c_str(), NULL, 16);
 				if (formLower == 0) {
-					_ERROR("%s - Error - Invalid formID.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath);
+					_ERROR("%s - Error - Invalid formID.\tLine (%d) [%s]", __FUNCTION__, lineCount, filePath.c_str());
 					continue;
 				}
 
 				UInt32 formId = modIndex << 24 | formLower & 0xFFFFFF;
 				foundForm = LookupFormByID(formId);
 				if (!foundForm) {
-					_ERROR("%s - Error - Invalid form %08X.\tLine (%d) [%s]", __FUNCTION__, formId, lineCount, filePath);
+					_ERROR("%s - Error - Invalid form %08X.\tLine (%d) [%s]", __FUNCTION__, formId, lineCount, filePath.c_str());
 					continue;
 				}
 
@@ -346,7 +346,7 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 				}
 
 				if (!npc && !levCharacter) {
-					_ERROR("%s - Error - Invalid form %08X not an ActorBase or LeveledActor.\tLine (%d) [%s]", __FUNCTION__, foundForm->formID, lineCount, filePath);
+					_ERROR("%s - Error - Invalid form %08X not an ActorBase or LeveledActor.\tLine (%d) [%s]", __FUNCTION__, foundForm->formID, lineCount, filePath.c_str());
 					continue;
 				}
 			}
@@ -366,7 +366,7 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 				if (temp != bodyGenTemplates.end())
 					templateList.push_back(temp->second);
 				else
-					_WARNING("%s - Warning - template %s not found.\tLine (%d) [%s]", __FUNCTION__, templateName.c_str(), lineCount, filePath);
+					_WARNING("%s - Warning - template %s not found.\tLine (%d) [%s]", __FUNCTION__, templateName.c_str(), lineCount, filePath.c_str());
 			}
 
 			dataTemplates->push_back(templateList);
@@ -403,16 +403,16 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 		}
 
 		if(maleOverwrite)
-			_DMESSAGE("%s - Info - %d male NPC targets(s) overwritten.\tLine (%d) [%s]", __FUNCTION__, maleOverwrite, lineCount, filePath);
+			_DMESSAGE("%s - Info - %d male NPC targets(s) overwritten.\tLine (%d) [%s]", __FUNCTION__, maleOverwrite, lineCount, filePath.c_str());
 		if(femaleOverwrite)
-			_DMESSAGE("%s - Info - %d female NPC targets(s) overwritten.\tLine (%d) [%s]", __FUNCTION__, femaleOverwrite, lineCount, filePath);
+			_DMESSAGE("%s - Info - %d female NPC targets(s) overwritten.\tLine (%d) [%s]", __FUNCTION__, femaleOverwrite, lineCount, filePath.c_str());
 
 		maleOverwrite = 0;
 		femaleOverwrite = 0;
 	}
 
-	_DMESSAGE("%s - Info - Acquired %d male NPC target(s).\t[%s]", __FUNCTION__, maleTargets, filePath);
-	_DMESSAGE("%s - Info - Acquired %d female NPC target(s).\t[%s]", __FUNCTION__, femaleTargets, filePath);
+	_DMESSAGE("%s - Info - Acquired %d male NPC target(s).\t[%s]", __FUNCTION__, maleTargets, filePath.c_str());
+	_DMESSAGE("%s - Info - Acquired %d female NPC target(s).\t[%s]", __FUNCTION__, femaleTargets, filePath.c_str());
 	return true;
 }
 
@@ -502,13 +502,13 @@ UInt32 BodyGenInterface::EvaluateBodyMorphs(Actor * actor, bool isFemale)
 
 		// Found a matching template
 		if (morphSet != bodyGenData[gender].end()) {
-			_DMESSAGE("%s - Generating BodyMorphs for %s (%08X)", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
 			auto & templates = morphSet->second;
 			UInt32 ret = templates->Evaluate([&](const F4EEFixedString & morphName, float value)
 			{
 				g_bodyMorphInterface.SetMorph(actor, isFemale, morphName, nullptr, value);
 			});
 
+			_DMESSAGE("%s - Generated %d BodyMorphs for %s (%08X)", __FUNCTION__, ret, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
 			return ret;
 		}
 	}

@@ -110,3 +110,21 @@ class F4EEScaleform_CloneOverlays : public GFxFunctionHandler
 public:
 	virtual void	Invoke(Args * args);
 };
+
+class F4EEScaleform_GetEquippedItems : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_UnequipItems : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_EquipItems : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};

@@ -19,6 +19,7 @@
 #include "f4se/PapyrusUtilities.h"
 
 #include "json\json.h"
+#include "ActorUpdateManager.h"
 #include "Utilities.h"
 
 #include <stdio.h>
@@ -27,9 +28,10 @@
 #include <algorithm>
 
 extern OverlayInterface g_overlayInterface;
+extern ActorUpdateManager g_actorUpdateManager;
+
 extern StringTable g_stringTable;
 extern bool g_bEnableOverlays;
-extern bool g_bEnableBodyMorphs;
 extern F4SETaskInterface * g_task;
 
 NiNode * OverlayInterface::GetOverlayRoot(Actor * actor, NiNode * rootNode, bool createIfNecessary)
@@ -42,7 +44,7 @@ NiNode * OverlayInterface::GetOverlayRoot(Actor * actor, NiNode * rootNode, bool
 		rootNode->AttachChild(overlayNode, false);
 	}
 
-	return overlayNode->GetAsNiNode();
+	return overlayNode ? overlayNode->GetAsNiNode() : nullptr;
 }
 
 void OverlayInterface::DestroyOverlaySlot(Actor * actor, NiNode * overlayHolder, UInt32 slotIndex)
@@ -175,18 +177,6 @@ void OverlayInterface::LoadMaterialData(TESNPC * npc, BSTriShape * shape, const 
 	if(newShader) {
 		BSShaderMaterial * newMaterial = static_cast<BSShaderMaterial *>(newShader->shaderMaterial);
 		if(newMaterial) {
-			if(newMaterial->GetType() == BSLightingShaderMaterialBase::kType_SkinTint) {
-				BSLightingShaderMaterialSkinTint * skinTint = static_cast<BSLightingShaderMaterialSkinTint *>(newShader->shaderMaterial);
-				if(overlayData->tintColor.a > 0) {
-					skinTint->kTintColor = overlayData->tintColor;
-				} else {
-					skinTint->kTintColor.r = (float)npc->skinColor.red / 255.0f;
-					skinTint->kTintColor.g = (float)npc->skinColor.green / 255.0f;
-					skinTint->kTintColor.b = (float)npc->skinColor.blue / 255.0f;
-					skinTint->kTintColor.a = (float)npc->skinColor.alpha / 255.0f;
-				}
-			}
-
 			// Transform the UV
 			float sU, sV, oU, oV;
 			newMaterial->GetOffsetUV(&oU, &oV);
@@ -200,6 +190,31 @@ void OverlayInterface::LoadMaterialData(TESNPC * npc, BSTriShape * shape, const 
 
 			newMaterial->SetOffsetUV(oU, oV);
 			newMaterial->SetScaleUV(sU, sV);
+
+			// Alter Lighting Properties
+			if(newMaterial->GetType() == BSLightingShaderMaterialBase::kType_SkinTint && newMaterial->GetFeature() == 2) {
+				BSLightingShaderMaterialSkinTint * skinTint = static_cast<BSLightingShaderMaterialSkinTint *>(newMaterial);
+
+				if((overlayData->flags & OverlayInterface::OverlayData::kHasTintColor) == OverlayInterface::OverlayData::kHasTintColor) {
+					skinTint->kTintColor = overlayData->tintColor;
+				} else {
+					skinTint->kTintColor.r = (float)npc->skinColor.red / 255.0f;
+					skinTint->kTintColor.g = (float)npc->skinColor.green / 255.0f;
+					skinTint->kTintColor.b = (float)npc->skinColor.blue / 255.0f;
+					skinTint->kTintColor.a = (float)npc->skinColor.alpha / 255.0f;
+				}
+			}
+
+			// Alter Effect Properties
+			BSEffectShaderProperty * newEffectShader = ni_cast(newShader, BSEffectShaderProperty);
+			if(newEffectShader) {
+				if(newMaterial->GetType() == 0 && newMaterial->GetFeature() == 1) {
+					BSEffectShaderMaterial * effectMaterial = static_cast<BSEffectShaderMaterial *>(newMaterial);
+					if((overlayData->flags & OverlayInterface::OverlayData::kHasTintColor) == OverlayInterface::OverlayData::kHasTintColor) {
+						effectMaterial->kBaseColor = overlayData->tintColor;
+					}
+				}
+			}
 		}
 	}
 }
@@ -463,10 +478,10 @@ void OverlayInterface::OverlayData::Save(const F4SESerializationInterface * intf
 
 	if((flags & kHasTintColor) == kHasTintColor)
 	{
-		UInt32 a = min(0, max(tintColor.a * 255, 255));
-		UInt32 r = min(0, max(tintColor.r * 255, 255));
-		UInt32 g = min(0, max(tintColor.g * 255, 255));
-		UInt32 b = min(0, max(tintColor.b * 255, 255));
+		UInt32 a = max(0, min(tintColor.a * 255, 255));
+		UInt32 r = max(0, min(tintColor.r * 255, 255));
+		UInt32 g = max(0, min(tintColor.g * 255, 255));
+		UInt32 b = max(0, min(tintColor.b * 255, 255));
 
 		UInt32 tintARGB = (a << 24) | (r << 16) | (g << 8) | b;
 		Serialization::WriteData<UInt32>(intfc, &tintARGB);
@@ -522,10 +537,15 @@ bool OverlayInterface::OverlayData::Load(const F4SESerializationInterface * intf
 			return false;
 		}
 
-		tintColor.a = min(0, max((float)tintColor.a / 255.0f, 1.0f));
-		tintColor.r = min(0, max((float)tintColor.r / 255.0f, 1.0f));
-		tintColor.g = min(0, max((float)tintColor.g / 255.0f, 1.0f));
-		tintColor.b = min(0, max((float)tintColor.b / 255.0f, 1.0f));
+		float a = (tintARGB >> 24) & 0xFF;
+		float r = (tintARGB >> 16) & 0xFF;
+		float g = (tintARGB >> 8) & 0xFF;
+		float b = tintARGB & 0xFF;
+
+		tintColor.a = max(0, min(a / 255.0f, 1.0f));
+		tintColor.r = max(0, min(r / 255.0f, 1.0f));
+		tintColor.g = max(0, min(g / 255.0f, 1.0f));
+		tintColor.b = max(0, min(b / 255.0f, 1.0f));
 	}
 
 	if((flags & kHasOffsetUV) == kHasOffsetUV)
@@ -701,6 +721,11 @@ bool OverlayInterface::OverlayMap::Load(const F4SESerializationInterface * intfc
 						continue;
 
 					emplace(newHandle, priorityMap);
+
+					Actor * actor = (Actor*)PapyrusVM::GetObjectFromHandle(newHandle, Actor::kTypeID);
+					if(actor) {
+						g_actorUpdateManager.PushUpdate(actor);
+					}
 				}
 
 				return true;
@@ -763,67 +788,6 @@ const OverlayInterface::OverlayDataPtr OverlayInterface::GetOverlayByUID(UniqueI
 	return nullptr;
 }
 
-EventResult	OverlayInterface::ReceiveEvent(TESObjectLoadedEvent * evn, void * dispatcher)
-{
-	// Don't need to push pending updates if we have BodyMorphs enabled, those will do this for us
-	if(!g_bEnableBodyMorphs)
-	{
-		if(evn->loaded)
-		{
-			// We need to collect pending loads because these will fire before the load game event
-			TESForm * form = LookupFormByID(evn->formId);
-			if(!form)
-				return kEvent_Continue;
-
-			Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
-			if(!actor)
-				return kEvent_Continue;
-
-			TESNPC * npc =  DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
-			if(!npc)
-				return kEvent_Continue;
-
-			UInt64 gender = CALL_MEMBER_FN(npc, GetSex)();
-			bool isFemale = gender == 1 ? true : false;
-
-			if(m_loading) // We're mid-load, lets just push these to pending
-			{
-				m_pendingUpdates.insert((gender << 32) | form->formID);
-			}
-			else
-			{
-				UpdateOverlays(actor);
-			}
-		}
-	}
-
-	return kEvent_Continue;
-}
-
-EventResult	OverlayInterface::ReceiveEvent(TESLoadGameEvent * evn, void * dispatcher)
-{
-	if(m_loading)
-		m_loading = false;
-
-	// We don't need to do this if BodyMorphs are enabled, that will update for us
-	if(!g_bEnableBodyMorphs)
-	{
-		for(auto & uid : m_pendingUpdates)
-		{
-			TESForm * form = LookupFormByID(uid);
-			if(form && form->formType == Actor::kTypeID)
-			{
-				Actor * actor = static_cast<Actor*>(form);
-				UpdateOverlays(actor);
-			}
-		}
-
-		m_pendingUpdates.clear();
-	}
-	
-	return kEvent_Continue;
-}
-
 bool OverlayInterface::HasSkinChildren(NiAVObject * slot)
 {
 	return VisitObjects(slot, [&](NiAVObject * node)
@@ -855,15 +819,21 @@ void F4EEUpdateOverlays::Run()
 		Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
 		if(actor) {
 			// Delete all overlays
-			NiNode * overlayRoot = g_overlayInterface.GetOverlayRoot(actor, actor->GetActorRootNode(false), false);
-			if(overlayRoot) {
-				NiNode * parent = overlayRoot->m_parent;
-				if(parent)
-					parent->Remove(overlayRoot);
+			NiNode * rootSkeleton = actor->GetActorRootNode(false);
+			if(rootSkeleton) {
+				NiNode * overlayRoot = g_overlayInterface.GetOverlayRoot(actor, rootSkeleton, false);
+				if(overlayRoot) {
+					NiNode * parent = overlayRoot->m_parent;
+					if(parent)
+						parent->Remove(overlayRoot);
+				}
+			}
 
-				// Delete the first person Overlays
-				if(actor == (*g_player)) {
-					NiNode * overlayRoot = g_overlayInterface.GetOverlayRoot(actor, actor->GetActorRootNode(true), false);
+			// Delete the first person Overlays
+			if(actor == (*g_player)) {
+				NiNode * rootSkeleton = actor->GetActorRootNode(true);
+				if(rootSkeleton) {
+					NiNode * overlayRoot = g_overlayInterface.GetOverlayRoot(actor, rootSkeleton, false);
 					if(overlayRoot) {
 						NiNode * parent = overlayRoot->m_parent;
 						if(parent)
@@ -872,33 +842,29 @@ void F4EEUpdateOverlays::Run()
 				}
 			}
 
+			// Rebuild overlays
+			ActorEquipData * equipData[2];
+			equipData[0] = actor->equipData;
+			equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData : nullptr;
 
-			if(actor->unk300) {
-				// Detaching the node will cause the game to regenerate when UpdateEquipment is called
-				// We only need to detach armor, and armor that has skin
-				ActorEquipData * equipData[2];
-				equipData[0] = actor->equipData;
-				equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData : nullptr;
+			for(UInt32 s = 0; s < (actor == (*g_player) ? 2 : 1); s++)
+			{
+				if(!equipData[s])
+					continue;
 
-				for(UInt32 s = 0; s < (actor == (*g_player) ? 2 : 1); s++)
+				for(UInt32 i = 0; i < 31; ++i)
 				{
-					if(!equipData[s])
+					NiPointer<NiAVObject> slotNode(equipData[s]->slots[i].node);
+					if(!slotNode)
 						continue;
 
-					for(UInt32 i = 0; i < 31; ++i)
-					{
-						NiPointer<NiAVObject> slotNode(equipData[s]->slots[i].node);
-						if(!slotNode)
-							continue;
+					// See if this node has any skin candidates first
+					if(!g_overlayInterface.HasSkinChildren(slotNode))
+						continue;
 
-						// See if this node has any skin candidates first
-						if(!g_overlayInterface.HasSkinChildren(slotNode))
-							continue;
-
-						NiNode * rootNode = GetRootNode(actor, slotNode);
-						if(rootNode)
-							g_overlayInterface.UpdateOverlays(actor, rootNode, slotNode, i);
-					}
+					NiNode * rootNode = GetRootNode(actor, slotNode);
+					if(rootNode)
+						g_overlayInterface.UpdateOverlays(actor, rootNode, slotNode, i);
 				}
 			}
 		}
@@ -929,7 +895,7 @@ void F4EEOverlayUpdate::Run()
 	UInt64 gender = CALL_MEMBER_FN(npc, GetSex)();
 	bool isFemale = gender == 1 ? true : false;
 
-	if(!actor->unk300)
+	if(!actor->middleProcess)
 		return;
 
 	// Detaching the node will cause the game to regenerate when UpdateEquipment is called
@@ -1038,6 +1004,7 @@ bool OverlayInterface::LoadOverlayTemplates(const std::string & filePath)
 		Json::Value root;
 
 		if(!reader.parse(strFile, root)) {
+			_ERROR("%s - Failed to overlay file\t[%s]", __FUNCTION__, filePath.c_str());
 			return false;
 		}
 

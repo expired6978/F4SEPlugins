@@ -13,7 +13,6 @@
 		public function FeatureListEntry()
 		{
 			super();
-			return;
 		}
 
 		public override function SetEntryText(object:Object, arg2:String):*
@@ -24,10 +23,19 @@
 			colorTrans.redOffset = this.selected ? -255 : 0;
 			colorTrans.greenOffset = this.selected ? -255 : 0;
 			colorTrans.blueOffset = this.selected ? -255 : 0;
+			colorTrans.alphaOffset = 0;
 			this.EquipIcon_mc.transform.colorTransform = colorTrans;
 			this.Slider_mc.transform.colorTransform = colorTrans;
-			
+						
 			Slider_mc.visible = Slider_mc.enabled = false;
+			HSVGroup_mc.visible = HSVGroup_mc.enabled = false;
+			
+			if(object.sliderType != undefined) {
+				HSVGroup_mc.visible = HSVGroup_mc.enabled = true;
+				HSVGroup_mc.setType(object.sliderType);
+				HSVGroup_mc.setHSV(object.hsva, object.hsva[3]);
+			}
+			
 			if(object.value != undefined) {
 				Slider_mc.visible = Slider_mc.enabled = true;
 				Slider_mc.focusable = false;
@@ -49,8 +57,9 @@
 			// Bubble the received event back up
 			event.target.dispatchEvent(new SliderEvent(FeatureListEntry.VALUE_CHANGE, true, true, event.value));
 		}
-
+				
 		public var EquipIcon_mc:flash.display.MovieClip;
-		public var Slider_mc:Slider;
+		public var Slider_mc:Slider;		
+		public var HSVGroup_mc:HSVGroup;
 	}
 }

@@ -304,5 +304,17 @@
 			// > 359
 			return (a_val % a_max);
 		}
+		
+		// Input [0-255, 0-255, 0-255, 0-255] output [0-1, 0-1, 0-1, 0-1]
+		public static function normalize(a_color, a_alpha)
+		{
+			return [a_color[0] / 255.0, a_color[1] / 255.0, a_color[2] / 255.0, a_alpha / 255.0];
+		}
+		
+		// Input [0-1, 0-1, 0-1, 0-1] output [0-255, 0-255, 0-255, 0-255]
+		public static function denormalize(a_color, a_alpha)
+		{
+			return [a_color[0] * 255.0, a_color[1] * 255.0, a_color[2] * 255.0, a_alpha * 255.0];
+		}
 	}
 }

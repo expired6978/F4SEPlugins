@@ -21,6 +21,7 @@
         public static const LIST_PRESS:String="BSScrollingList::listPress";
         public static const LIST_ITEMS_CREATED:String="BSScrollingList::listItemsCreated";
         public static const PLAY_FOCUS_SOUND:String="BSScrollingList::playFocusSound";
+		public static const ENTRY_UPDATED:String="BSScrollingList::EntryUpdated";
         protected var iSelectedClipIndex:int;
         protected var iListItemsShown:uint;
         protected var uiNumListItems:uint;
@@ -428,6 +429,7 @@
             {
                 listEntry.selected = entryObject == selectedEntry;
                 listEntry.SetEntryText(entryObject, strTextOption);
+				dispatchEvent(new Mobile.ScrollList.EventWithParams(ENTRY_UPDATED, {"list": this, "entry": listEntry, "data": entryObject}, true, true));
             }
         }
 

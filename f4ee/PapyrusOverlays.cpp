@@ -88,10 +88,12 @@ namespace papyrusOverlays
 			overlay.Set("uid", uid);
 			overlay.Set("priority", pOverlay.first);
 			overlay.Set("template", templateName);
+
 			overlay.Set("red", pOverlay.second->tintColor.r);
 			overlay.Set("green", pOverlay.second->tintColor.g);
 			overlay.Set("blue", pOverlay.second->tintColor.b);
 			overlay.Set("alpha", pOverlay.second->tintColor.a);
+
 			overlay.Set("offset_u", pOverlay.second->offsetUV.x);
 			overlay.Set("offset_v", pOverlay.second->offsetUV.y);
 			overlay.Set("scale_u", pOverlay.second->scaleUV.x);
@@ -131,8 +133,8 @@ namespace papyrusOverlays
 		g_overlayInterface.ForEachOverlay(actor, isFemale, [&](SInt32 priority, const OverlayInterface::OverlayDataPtr & overlay)
 		{
 			Entry entry;
-			entry.Set("priority", priority);
 			entry.Set("uid", overlay->uid);
+			entry.Set("priority", priority);
 
 			BSFixedString templateName = overlay->templateName ? overlay->templateName->c_str() : "";
 			entry.Set("template", templateName);
@@ -142,10 +144,20 @@ namespace papyrusOverlays
 			entry.Set("blue", overlay->tintColor.b);
 			entry.Set("alpha", overlay->tintColor.a);
 
+			entry.Set("offset_u", overlay->offsetUV.x);
+			entry.Set("offset_v", overlay->offsetUV.y);
+			entry.Set("scale_u", overlay->scaleUV.x);
+			entry.Set("scale_v", overlay->scaleUV.y);
+
 			results.Push(&entry);
 		});
 
 		return results;
+	}
+
+	void ClearAll(StaticFunctionTag*)
+	{
+		g_overlayInterface.Revert();
 	}
 	
 	void Update(StaticFunctionTag*, Actor * actor)
@@ -177,12 +189,16 @@ void papyrusOverlays::RegisterFuncs(VirtualMachine* vm)
 	vm->RegisterFunction(
 		new NativeFunction1<StaticFunctionTag, void, Actor*>("Update", "Overlays", papyrusOverlays::Update, vm));
 
+	vm->RegisterFunction(
+		new NativeFunction0<StaticFunctionTag, void>("ClearAll", "Overlays", papyrusOverlays::ClearAll, vm));
+
 	vm->SetFunctionFlags("Overlays", "Add", IFunction::kFunctionFlag_NoWait);
 	vm->SetFunctionFlags("Overlays", "Remove", IFunction::kFunctionFlag_NoWait);
 	vm->SetFunctionFlags("Overlays", "Set", IFunction::kFunctionFlag_NoWait);
 	vm->SetFunctionFlags("Overlays", "Get", IFunction::kFunctionFlag_NoWait);
 	vm->SetFunctionFlags("Overlays", "RemoveAll", IFunction::kFunctionFlag_NoWait);
 	vm->SetFunctionFlags("Overlays", "GetAll", IFunction::kFunctionFlag_NoWait);
+	vm->SetFunctionFlags("Overlays", "ClearAll", IFunction::kFunctionFlag_NoWait);
 
 	vm->SetFunctionFlags("Overlays", "Update", IFunction::kFunctionFlag_NoWait);
 }

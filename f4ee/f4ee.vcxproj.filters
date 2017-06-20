@@ -10,17 +10,8 @@
     <Filter Include="f4se\scaleform">
       <UniqueIdentifier>{2e0f4733-f04e-4531-b290-3e2c57ef978e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="CharGen">
-      <UniqueIdentifier>{039fb571-0b1c-4e75-bbdd-e94e5f9f2602}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Scaleform">
-      <UniqueIdentifier>{d8634c0c-cf2a-4d52-a449-0667a63f67d3}</UniqueIdentifier>
-    </Filter>
     <Filter Include="f4se\netimmerse">
       <UniqueIdentifier>{4144c1f9-8e81-413a-a62a-652d5655bf62}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="BodyGen">
-      <UniqueIdentifier>{dd6d2364-ddbb-410f-837a-dde69edd1e67}</UniqueIdentifier>
     </Filter>
     <Filter Include="f4se\papyrus">
       <UniqueIdentifier>{e7d9da7a-224f-49ec-b1a0-ab3e921c013e}</UniqueIdentifier>
@@ -33,6 +24,24 @@
     </Filter>
     <Filter Include="utils">
       <UniqueIdentifier>{ecfe6d48-4232-4286-904f-21d8d879ebb6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interfaces">
+      <UniqueIdentifier>{6ceb776b-ddb6-4837-add0-260eeabbbb0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interfaces\Overlays">
+      <UniqueIdentifier>{30f087be-bb8e-4d23-8420-2666278ddb4f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interfaces\BodyGen">
+      <UniqueIdentifier>{dd6d2364-ddbb-410f-837a-dde69edd1e67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interfaces\CharGen">
+      <UniqueIdentifier>{039fb571-0b1c-4e75-bbdd-e94e5f9f2602}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interfaces\Scaleform">
+      <UniqueIdentifier>{d8634c0c-cf2a-4d52-a449-0667a63f67d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interfaces\Updater">
+      <UniqueIdentifier>{2f5f416a-69c3-4778-a7a7-1a03d21439aa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -107,7 +116,7 @@
       <Filter>f4se\api</Filter>
     </ClCompile>
     <ClCompile Include="ScaleformNatives.cpp">
-      <Filter>Scaleform</Filter>
+      <Filter>Interfaces\Scaleform</Filter>
     </ClCompile>
     <ClCompile Include="..\f4se\GameInput.cpp">
       <Filter>f4se\api</Filter>
@@ -116,7 +125,7 @@
       <Filter>f4se\api</Filter>
     </ClCompile>
     <ClCompile Include="CharGenTint.cpp">
-      <Filter>CharGen</Filter>
+      <Filter>Interfaces\CharGen</Filter>
     </ClCompile>
     <ClCompile Include="..\f4se\NiExtraData.cpp">
       <Filter>f4se\netimmerse</Filter>
@@ -175,12 +184,6 @@
     <ClCompile Include="..\f4se\GameExtraData.cpp">
       <Filter>f4se\api</Filter>
     </ClCompile>
-    <ClCompile Include="StringTable.cpp">
-      <Filter>BodyGen</Filter>
-    </ClCompile>
-    <ClCompile Include="Utilities.cpp">
-      <Filter>BodyGen</Filter>
-    </ClCompile>
     <ClCompile Include="..\f4se\PapyrusUtilities.cpp">
       <Filter>f4se\papyrus\vm</Filter>
     </ClCompile>
@@ -191,19 +194,31 @@
       <Filter>utils</Filter>
     </ClCompile>
     <ClCompile Include="BodyMorphInterface.cpp">
-      <Filter>BodyGen</Filter>
+      <Filter>Interfaces\BodyGen</Filter>
     </ClCompile>
     <ClCompile Include="CharGenInterface.cpp">
-      <Filter>CharGen</Filter>
+      <Filter>Interfaces\CharGen</Filter>
     </ClCompile>
     <ClCompile Include="BodyGenInterface.cpp">
-      <Filter>BodyGen</Filter>
-    </ClCompile>
-    <ClCompile Include="OverlayInterface.cpp">
-      <Filter>BodyGen</Filter>
+      <Filter>Interfaces\BodyGen</Filter>
     </ClCompile>
     <ClCompile Include="PapyrusOverlays.cpp">
       <Filter>f4se\papyrus\functions</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameFormComponents.cpp">
+      <Filter>f4se\api</Filter>
+    </ClCompile>
+    <ClCompile Include="Utilities.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="StringTable.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="OverlayInterface.cpp">
+      <Filter>Interfaces\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="ActorUpdateManager.cpp">
+      <Filter>Interfaces\Updater</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -263,7 +278,7 @@
       <Filter>f4se\api</Filter>
     </ClInclude>
     <ClInclude Include="ScaleformNatives.h">
-      <Filter>Scaleform</Filter>
+      <Filter>Interfaces\Scaleform</Filter>
     </ClInclude>
     <ClInclude Include="..\f4se\GameInput.h">
       <Filter>f4se\api</Filter>
@@ -272,7 +287,7 @@
       <Filter>f4se\api</Filter>
     </ClInclude>
     <ClInclude Include="CharGenTint.h">
-      <Filter>CharGen</Filter>
+      <Filter>Interfaces\CharGen</Filter>
     </ClInclude>
     <ClInclude Include="..\f4se\NiExtraData.h">
       <Filter>f4se\netimmerse</Filter>
@@ -331,12 +346,6 @@
     <ClInclude Include="..\f4se\GameExtraData.h">
       <Filter>f4se\api</Filter>
     </ClInclude>
-    <ClInclude Include="StringTable.h">
-      <Filter>BodyGen</Filter>
-    </ClInclude>
-    <ClInclude Include="Utilities.h">
-      <Filter>BodyGen</Filter>
-    </ClInclude>
     <ClInclude Include="..\f4se\PapyrusUtilities.h">
       <Filter>f4se\papyrus\vm</Filter>
     </ClInclude>
@@ -356,19 +365,31 @@
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="BodyMorphInterface.h">
-      <Filter>BodyGen</Filter>
+      <Filter>Interfaces\BodyGen</Filter>
     </ClInclude>
     <ClInclude Include="CharGenInterface.h">
-      <Filter>CharGen</Filter>
+      <Filter>Interfaces\CharGen</Filter>
     </ClInclude>
     <ClInclude Include="BodyGenInterface.h">
-      <Filter>BodyGen</Filter>
-    </ClInclude>
-    <ClInclude Include="OverlayInterface.h">
-      <Filter>BodyGen</Filter>
+      <Filter>Interfaces\BodyGen</Filter>
     </ClInclude>
     <ClInclude Include="PapyrusOverlays.h">
       <Filter>f4se\papyrus\functions</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameFormComponents.h">
+      <Filter>f4se\api</Filter>
+    </ClInclude>
+    <ClInclude Include="Utilities.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="StringTable.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="OverlayInterface.h">
+      <Filter>Interfaces\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="ActorUpdateManager.h">
+      <Filter>Interfaces\Updater</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

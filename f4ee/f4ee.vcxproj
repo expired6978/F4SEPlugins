@@ -125,6 +125,7 @@
     <ClCompile Include="..\f4se\GameCustomization.cpp" />
     <ClCompile Include="..\f4se\GameData.cpp" />
     <ClCompile Include="..\f4se\GameExtraData.cpp" />
+    <ClCompile Include="..\f4se\GameFormComponents.cpp" />
     <ClCompile Include="..\f4se\GameForms.cpp" />
     <ClCompile Include="..\f4se\GameInput.cpp" />
     <ClCompile Include="..\f4se\GameMenus.cpp" />
@@ -157,6 +158,7 @@
     <ClCompile Include="..\f4se\ScaleformTranslator.cpp" />
     <ClCompile Include="..\f4se\ScaleformTypes.cpp" />
     <ClCompile Include="..\f4se\ScaleformValue.cpp" />
+    <ClCompile Include="ActorUpdateManager.cpp" />
     <ClCompile Include="BodyGenInterface.cpp" />
     <ClCompile Include="BodyMorphInterface.cpp" />
     <ClCompile Include="CharGenInterface.cpp" />
@@ -179,6 +181,7 @@
     <ClInclude Include="..\f4se\GameCustomization.h" />
     <ClInclude Include="..\f4se\GameData.h" />
     <ClInclude Include="..\f4se\GameExtraData.h" />
+    <ClInclude Include="..\f4se\GameFormComponents.h" />
     <ClInclude Include="..\f4se\GameForms.h" />
     <ClInclude Include="..\f4se\GameInput.h" />
     <ClInclude Include="..\f4se\GameMenus.h" />
@@ -211,6 +214,7 @@
     <ClInclude Include="..\f4se\ScaleformTranslator.h" />
     <ClInclude Include="..\f4se\ScaleformTypes.h" />
     <ClInclude Include="..\f4se\ScaleformValue.h" />
+    <ClInclude Include="ActorUpdateManager.h" />
     <ClInclude Include="BodyGenInterface.h" />
     <ClInclude Include="BodyMorphInterface.h" />
     <ClInclude Include="CharGenInterface.h" />

@@ -75,7 +75,7 @@ typedef std::shared_ptr<TriShapePackedVertexData> TriShapePackedVertexDataPtr;
 class BodyMorphMap : public std::unordered_map<F4EEFixedString, TriShapeVertexDataPtr>
 {
 public:
-	virtual TriShapeVertexDataPtr GetVertexData(const F4EEFixedString & name);
+	TriShapeVertexDataPtr GetVertexData(const F4EEFixedString & name);
 
 protected:
 	SimpleLock	m_morphLock;
@@ -91,7 +91,7 @@ public:
 		memoryUsage = sizeof(TriShapeMap);
 		accessed = 0;
 	}
-	virtual BodyMorphMapPtr GetMorphData(const F4EEFixedString & name);
+	BodyMorphMapPtr GetMorphData(const F4EEFixedString & name);
 
 	SimpleLock	m_morphLock;
 	UInt32 memoryUsage;
@@ -126,8 +126,8 @@ typedef std::shared_ptr<UserValues> UserValuesPtr;
 class MorphValueMap : public std::unordered_map<StringTableItem, UserValuesPtr>
 {
 public:
-	virtual void Save(const F4SESerializationInterface * intfc, UInt32 kVersion);
-	virtual bool Load(const F4SESerializationInterface * intfc, UInt32 kVersion, const std::unordered_map<UInt32, StringTableItem> & stringTable);
+	void Save(const F4SESerializationInterface * intfc, UInt32 kVersion);
+	bool Load(const F4SESerializationInterface * intfc, UInt32 kVersion, const std::unordered_map<UInt32, StringTableItem> & stringTable);
 
 	void SetMorph(const BSFixedString &morph, BGSKeyword * keyword, float value);
 	float GetMorph(const BSFixedString & morph, BGSKeyword * keyword);
@@ -151,7 +151,7 @@ typedef std::shared_ptr<MorphValueMap> MorphValueMapPtr;
 class BodySlider
 {
 public:
-	virtual bool Parse(const Json::Value & entry);
+	bool Parse(const Json::Value & entry);
 
 	F4EEFixedString	morph;
 	F4EEFixedString	name;
@@ -177,14 +177,13 @@ typedef std::shared_ptr<MorphableShape> MorphableShapePtr;
 class F4EEBodyGenUpdate : public ITaskDelegate
 {
 public:
-	F4EEBodyGenUpdate(TESForm * form, bool doEquipment, bool doQueue);
+	F4EEBodyGenUpdate(TESForm * form, bool doDetach);
 	virtual ~F4EEBodyGenUpdate() { };
 	virtual void Run() override;
 
 protected:
 	UInt32					m_formId;
-	bool					m_doEquipment;
-	bool					m_doQueue;
+	bool					m_doDetach;
 };
 
 class BodyMorphProcessor : public BSModelDB::BSModelProcessor
@@ -205,12 +204,8 @@ class BodyMorphInterface :	public BSTEventSink<TESObjectLoadedEvent>,
 							public BSTEventSink<TESInitScriptEvent>
 {
 public:
-	BodyMorphInterface() : m_totalMemory(0), m_memoryLimit(0x80000000LL), m_loading(false) { } // 2GB
+	BodyMorphInterface() : m_totalMemory(0), m_memoryLimit(0x80000000LL) { } // 2GB
 	
-	virtual	EventResult	ReceiveEvent(TESObjectLoadedEvent * evn, void * dispatcher);
-	virtual	EventResult	ReceiveEvent(TESLoadGameEvent * evn, void * dispatcher);
-	virtual	EventResult	ReceiveEvent(TESInitScriptEvent * evn, void * dispatcher);
-
 	enum
 	{
 		kSerializationVersion = 1,
@@ -224,6 +219,7 @@ public:
 	virtual void ClearBodyGenSliders();
 
 	virtual bool LoadBodyGenSliders(const std::string & filePath);
+
 	virtual void ForEachSlider(UInt8 gender, std::function<void(const BodySliderPtr & slider)> func);
 
 	virtual TriShapeMapPtr GetTrishapeMap(const char * relativePath);
@@ -244,15 +240,13 @@ public:
 	virtual void GetMorphableShapes(NiAVObject * node, std::vector<MorphableShapePtr> & shapes);
 	virtual bool ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNode);
 	virtual bool ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morphableShape);
-	virtual bool UpdateMorphs(Actor * actor, bool doEquipment, bool doQueue);
+	virtual bool UpdateMorphs(Actor * actor);
 
 	bool IsNodeMorphable(NiAVObject * rootNode);
 
 	void ShrinkMorphCache();
 	void SetCacheLimit(UInt64 limit);
 	void SetModelProcessor();
-	void SetLoading(bool loading) { m_loading = loading; };
-	void ResolvePendingMorphs();
 
 	template<typename T>
 	UInt64 GetHandleFromObject(T * src)
@@ -267,11 +261,6 @@ public:
 	}
 
 private:
-	SimpleLock											m_pendingLock;
-	bool												m_loading;			// True when the game is loading, false when the cell has loaded
-	std::unordered_set<UInt64>							m_pendingMorphs;	// Stores the pending actors while loading (Populated while loading, erased during load, remaining actors get new morphs, cleared after)
-	std::unordered_set<UInt64>							m_pendingUpdates;	// Stores the actors for update
-
 	SimpleLock											m_morphLock;
 	std::unordered_map<UInt64, MorphValueMapPtr>		m_morphMap[2];
 

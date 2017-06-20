@@ -5,10 +5,6 @@
 	import flash.geom.*;
 	import flash.ui.*;
 	import utils.ColorFunctions;
-	import ColorSlider.AlphaTrack;
-	import ColorSlider.ColorTrack;
-	import ColorSlider.SaturationTrack;
-	import ColorSlider.ValueTrack;
 	import Shared.AS3.BSUIComponent;
 	
 	public class HSVGroup extends MovieClip
@@ -18,12 +14,17 @@
 		public var vSlider: Option_Scrollbar;
 		public var aSlider: Option_Scrollbar;
 		
-		private var _currentColor: Number;
+		public static const COLOR_CHANGED:String="HSVGroup::ColorChanged";
+		
+		private var _currentColor: Array;
 		private var _alphaValue: Number;
+		
+		private var _hsv:Array;
 	
 		public function HSVGroup()
 		{
 			super();
+			
 			hSlider.MinValue = 0;
 			hSlider.MaxValue = 360;
 			hSlider.StepSize = 1;
@@ -41,36 +42,92 @@
 			aSlider.StepSize = 1;
 			
 			setupGradients();
-			setColor(0xFF25FF, 0xFF);
+			setColor([0, 0, 0], 0);
 
-			addEventListener(Option_Scrollbar.VALUE_CHANGE, onValueChange);
+			hSlider.addEventListener(Option_Scrollbar.VALUE_CHANGE, onValueChange);
+			sSlider.addEventListener(Option_Scrollbar.VALUE_CHANGE, onValueChange);
+			vSlider.addEventListener(Option_Scrollbar.VALUE_CHANGE, onValueChange);
+			aSlider.addEventListener(Option_Scrollbar.VALUE_CHANGE, onValueChange);
 		}
-				
-		public function setColor(a_color: Number, a_alpha: Number)
+		
+		public function setType(a_type)
 		{
-			var alphaNormal = (a_alpha / 255) * 100;
-			_hsv = ColorFunctions.hexToHsv(a_color);
-			var satRGB: Number = ColorFunctions.hsvToHex([_hsv[0], 100, _hsv[2]]);
-			var valRGB: Number = ColorFunctions.hsvToHex([_hsv[0], _hsv[1], 100]);
-	
-			/*hSlider.Track_mc.trackWhite.alpha = (100 - _hsv[1]) / 100; //hue.white
-			hSlider.Track_mc.trackBlack.alpha = (100 - _hsv[2]) / 100; //hue.black
-			sSlider.Track_mc.trackBlack.alpha = (100 - _hsv[2]) / 100; //sat.black
-			vSlider.Track_mc.trackWhite.alpha = (100 - _hsv[1]) / 100; //val.white*/
+			hSlider.visible = hSlider.enabled = false;
+			sSlider.visible = sSlider.enabled = false;
+			vSlider.visible = vSlider.enabled = false;
+			aSlider.visible = aSlider.enabled = false;
+			switch(a_type) {
+				case "Hue":
+					hSlider.visible = hSlider.enabled = true;
+					break;
+				case "Saturation":
+					sSlider.visible = sSlider.enabled = true;
+					break;
+				case "Value":
+					vSlider.visible = vSlider.enabled = true;
+					break;
+				case "Alpha":
+					aSlider.visible = aSlider.enabled = true;
+					break;
+				default:
+					break;
+			}
+		}
+		
+		public function setHSV(a_hsv:Array, a_alpha:Number)
+		{
+			var alphaHex:Number = (a_alpha * 255.0) / 100.0;
+			_hsv = [a_hsv[0], a_hsv[1], a_hsv[2]];
+
+			var satRGB: Array = ColorFunctions.hsvToRgb([_hsv[0], 100, _hsv[2]]);
+			var valRGB: Array = ColorFunctions.hsvToRgb([_hsv[0], _hsv[1], 100]);
+			var colRGB: Array = ColorFunctions.hsvToRgb([_hsv[0], _hsv[1], _hsv[2]]);
 			
 			hSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
 			hSlider.Track_mc.trackWhite.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 255, 255, 255, (100 - _hsv[1]) * 2.55);
 			hSlider.Track_mc.trackBlack.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 0, 0, 0, (100 - _hsv[2]) * 2.55);
 			
-			sSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (satRGB & 0xFF0000) >>> 16, (satRGB & 0x00FF00) >>> 8, (satRGB & 0xFF), 255);
+			sSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, satRGB[0], satRGB[1], satRGB[2], 255);
 			sSlider.Track_mc.trackWhite.transform.colorTransform = new ColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
 			sSlider.Track_mc.trackBlack.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 0, 0, 0, (100 - _hsv[2]) * 2.55);
 			
-			vSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (valRGB & 0xFF0000) >>> 16, (valRGB & 0x00FF00) >>> 8, (valRGB & 0xFF), 255);
+			vSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, valRGB[0], valRGB[1], valRGB[2], 255);
 			vSlider.Track_mc.trackWhite.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 255, 255, 255, (100 - _hsv[1]) * 2.55);
 			vSlider.Track_mc.trackBlack.transform.colorTransform = new ColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
 			
-			aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (a_color & 0xFF0000) >>> 16, (a_color & 0x00FF00) >>> 8, (a_color & 0xFF), a_alpha);
+			aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, colRGB[0], colRGB[1], colRGB[2], alphaHex);
+			aSlider.Track_mc.trackAlpha.transform.colorTransform = new ColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
+			
+			hSlider.value = _hsv[0];
+			sSlider.value = _hsv[1];
+			vSlider.value = _hsv[2];
+			aSlider.value = a_alpha;
+			
+			_currentColor = colRGB;
+			_alphaValue = alphaHex;
+		}
+				
+		public function setColor(a_color: Array, a_alpha: Number)
+		{
+			var alphaNormal = (a_alpha / 255) * 100;
+			
+			_hsv = ColorFunctions.rgbToHsv(a_color);
+			var satRGB: Array = ColorFunctions.hsvToRgb([_hsv[0], 100, _hsv[2]]);
+			var valRGB: Array = ColorFunctions.hsvToRgb([_hsv[0], _hsv[1], 100]);
+							
+			hSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
+			hSlider.Track_mc.trackWhite.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 255, 255, 255, (100 - _hsv[1]) * 2.55);
+			hSlider.Track_mc.trackBlack.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 0, 0, 0, (100 - _hsv[2]) * 2.55);
+			
+			sSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, satRGB[0], satRGB[1], satRGB[2], 255);
+			sSlider.Track_mc.trackWhite.transform.colorTransform = new ColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
+			sSlider.Track_mc.trackBlack.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 0, 0, 0, (100 - _hsv[2]) * 2.55);
+			
+			vSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, valRGB[0], valRGB[1], valRGB[2], 255);
+			vSlider.Track_mc.trackWhite.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 255, 255, 255, (100 - _hsv[1]) * 2.55);
+			vSlider.Track_mc.trackBlack.transform.colorTransform = new ColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
+			
+			aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, a_color[0], a_color[1], a_color[2], a_alpha);
 			aSlider.Track_mc.trackAlpha.transform.colorTransform = new ColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
 			
 			hSlider.value = _hsv[0];
@@ -84,62 +141,63 @@
 		
 		public function onValueChange(event:flash.events.Event)
 		{
-			var newRGB: Number;
-			var valRGB: Number;
-			var satRGB: Number;
+			var newRGB: Array;
+			var valRGB: Array;
+			var satRGB: Array;
+						
 			if(event.target == hSlider) {
 				var newHue: Number = event.target.value;
 				_hsv[0] = newHue;
 		
-				newRGB = ColorFunctions.hsvToHex(_hsv);
-				satRGB = ColorFunctions.hsvToHex([_hsv[0], 100, _hsv[2]]);
-				valRGB = ColorFunctions.hsvToHex([_hsv[0], _hsv[1], 100]);
+				newRGB = ColorFunctions.hsvToRgb(_hsv);
+				satRGB = ColorFunctions.hsvToRgb([_hsv[0], 100, _hsv[2]]);
+				valRGB = ColorFunctions.hsvToRgb([_hsv[0], _hsv[1], 100]);
 				
-				sSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (satRGB & 0xFF0000) >>> 16, (satRGB & 0x00FF00) >>> 8, (satRGB & 0xFF), 255);
-				vSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (valRGB & 0xFF0000) >>> 16, (valRGB & 0x00FF00) >>> 8, (valRGB & 0xFF), 255);
-				aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (newRGB & 0xFF0000) >>> 16, (newRGB & 0x00FF00) >>> 8, (newRGB & 0xFF), _alphaValue);
+				sSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, newRGB[0], newRGB[1], newRGB[2]);
+				vSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, valRGB[0], valRGB[1], valRGB[2], 255);
+				aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, newRGB[0], newRGB[1], newRGB[2], _alphaValue);
 				_currentColor = newRGB;
 			} else if(event.target == sSlider) {
 				var newSat: Number = event.target.value;
 				_hsv[1] = newSat;
 		
-				newRGB = ColorFunctions.hsvToHex(_hsv);
-				valRGB = ColorFunctions.hsvToHex([_hsv[0], _hsv[1], 100]);
-		
-				//hSlider.Track_mc.trackWhite.alpha = (100 - _hsv[1]) / 100; //hue.white
-				//vSlider.Track_mc.trackWhite.alpha = (100 - _hsv[1]) / 100; //val.white
+				newRGB = ColorFunctions.hsvToRgb(_hsv);
+				valRGB = ColorFunctions.hsvToRgb([_hsv[0], _hsv[1], 100]);
 				
 				hSlider.Track_mc.trackWhite.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 255, 255, 255, (100 - _hsv[1]) * 2.55);
 				vSlider.Track_mc.trackWhite.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 255, 255, 255, (100 - _hsv[1]) * 2.55);
 				
-				vSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (valRGB & 0xFF0000) >>> 16, (valRGB & 0x00FF00) >>> 8, (valRGB & 0xFF), 255);
-				aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (newRGB & 0xFF0000) >>> 16, (newRGB & 0x00FF00) >>> 8, (newRGB & 0xFF), _alphaValue);
+				vSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, valRGB[0], valRGB[1], valRGB[2], 255);
+				aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, newRGB[0], newRGB[1], newRGB[2], _alphaValue);
 				_currentColor = newRGB;
 			} else if(event.target == vSlider) {
 				var newVal: Number = event.target.value;
 				_hsv[2] = newVal;
 		
-				newRGB = ColorFunctions.hsvToHex(_hsv);
-				satRGB = ColorFunctions.hsvToHex([_hsv[0], 100, _hsv[2]]);
-		
-				//hSlider.Track_mc.trackBlack.alpha = (100 - _hsv[2]) / 100; //hue.black
-				//sSlider.Track_mc.trackBlack.alpha = (100 - _hsv[2]) / 100; //sat.black
+				newRGB = ColorFunctions.hsvToRgb(_hsv);
+				satRGB = ColorFunctions.hsvToRgb([_hsv[0], 100, _hsv[2]]);
 				
 				hSlider.Track_mc.trackBlack.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 0, 0, 0, (100 - _hsv[2]) * 2.55);
 				sSlider.Track_mc.trackBlack.transform.colorTransform = new ColorTransform(0, 0, 0, 0, 0, 0, 0, (100 - _hsv[2]) * 2.55);
 		
-				sSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (satRGB & 0xFF0000) >>> 16, (satRGB & 0x00FF00) >>> 8, (satRGB & 0xFF), 255);
-				aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (newRGB & 0xFF0000) >>> 16, (newRGB & 0x00FF00) >>> 8, (newRGB & 0xFF), _alphaValue);
+				sSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, satRGB[0], satRGB[1], satRGB[2], 255);
+				aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, newRGB[0], newRGB[1], newRGB[2], _alphaValue);
 				_currentColor = newRGB;
 			} else if(event.target == aSlider) {
 				var newAlpha = event.target.value;
-				newRGB = ColorFunctions.hsvToHex(_hsv);
+				newRGB = ColorFunctions.hsvToRgb(_hsv);
 				var alphaValue = (newAlpha / 100) * 255;
 				
-				aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, (newRGB & 0xFF0000) >>> 16, (newRGB & 0x00FF00) >>> 8, (newRGB & 0xFF), alphaValue);
+				aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, newRGB[0], newRGB[1], newRGB[2], alphaValue);
 				_currentColor = newRGB;
 				_alphaValue = alphaValue;
 			}
+			
+			var colorRGB = _currentColor;
+			var colorNorm = ColorFunctions.normalize(_currentColor, _alphaValue);
+			var hsva = [_hsv[0], _hsv[1], _hsv[2], (_alphaValue / 255.0) * 100];
+						
+			dispatchEvent(new HSVEvent(COLOR_CHANGED, colorNorm, hsva, true, true));
 		}
 		
 		  /* PRIVATE FUNCTIONS */

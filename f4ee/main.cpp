@@ -13,6 +13,7 @@
 #include "BodyMorphInterface.h"
 #include "BodyGenInterface.h"
 #include "OverlayInterface.h"
+#include "ActorUpdateManager.h"
 #include "Utilities.h"
 
 #include "PapyrusBodyGen.h"
@@ -35,6 +36,7 @@ BodyGenInterface g_bodyGenInterface;
 BodyMorphInterface g_bodyMorphInterface;
 OverlayInterface g_overlayInterface;
 StringTable g_stringTable;
+ActorUpdateManager g_actorUpdateManager;
 
 IDebugLog	gLog;
 
@@ -211,10 +213,7 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 	{
 	case F4SEMessagingInterface::kMessage_PreLoadGame:
 		{
-			if(g_bEnableBodyMorphs)
-				g_bodyMorphInterface.SetLoading(true);
-			if(g_bEnableOverlays)
-				g_overlayInterface.SetLoading(true);
+			g_actorUpdateManager.SetLoading(true);
 		}
 		break;
 	case F4SEMessagingInterface::kMessage_GameLoaded:
@@ -222,19 +221,9 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 			if(g_bEnableModelPreprocessor)
 				g_bodyMorphInterface.SetModelProcessor();
 
-			if(g_bEnableBodygen) {
-				GetEventDispatcher<TESInitScriptEvent>()->AddEventSink(&g_bodyMorphInterface);
-			}
-
-			if(g_bEnableBodyMorphs) {
-				GetEventDispatcher<TESLoadGameEvent>()->AddEventSink(&g_bodyMorphInterface);
-				GetEventDispatcher<TESObjectLoadedEvent>()->AddEventSink(&g_bodyMorphInterface);
-			}
-
-			if(g_bEnableOverlays) {
-				GetEventDispatcher<TESLoadGameEvent>()->AddEventSink(&g_overlayInterface);
-				GetEventDispatcher<TESObjectLoadedEvent>()->AddEventSink(&g_overlayInterface);
-			}
+			GetEventDispatcher<TESInitScriptEvent>()->AddEventSink(&g_actorUpdateManager);
+			GetEventDispatcher<TESLoadGameEvent>()->AddEventSink(&g_actorUpdateManager);
+			GetEventDispatcher<TESObjectLoadedEvent>()->AddEventSink(&g_actorUpdateManager);
 		}
 		break;
 	case F4SEMessagingInterface::kMessage_GameDataReady:
@@ -293,6 +282,7 @@ void F4EESerialization_Revert(const F4SESerializationInterface * intfc)
 	g_bodyMorphInterface.Revert();
 	g_overlayInterface.Revert();
 	g_stringTable.Revert();
+	g_actorUpdateManager.Revert();
 }
 
 
@@ -324,7 +314,7 @@ void F4EESerialization_Load(const F4SESerializationInterface * intfc)
 		}
 	}
 
-	g_bodyMorphInterface.ResolvePendingMorphs();
+	g_actorUpdateManager.ResolvePendingBodyGen();
 }
 
 extern "C"
@@ -432,6 +422,10 @@ bool ScaleformCallback(GFxMovieView * view, GFxValue * value)
 	RegisterFunction<F4EEScaleform_ReorderOverlay>(value, view->movieRoot, "ReorderOverlay");
 	RegisterFunction<F4EEScaleform_UpdateOverlays>(value, view->movieRoot, "UpdateOverlays");
 	RegisterFunction<F4EEScaleform_CloneOverlays>(value, view->movieRoot, "CloneOverlays");
+
+	RegisterFunction<F4EEScaleform_GetEquippedItems>(value, view->movieRoot, "GetEquippedItems");
+	RegisterFunction<F4EEScaleform_UnequipItems>(value, view->movieRoot, "UnequipItems");
+	RegisterFunction<F4EEScaleform_EquipItems>(value, view->movieRoot, "EquipItems");
 
 	GFxValue dispatchEvent;
 	GFxValue eventArgs[3];

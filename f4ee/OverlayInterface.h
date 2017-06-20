@@ -47,10 +47,7 @@ class OverlayInterface : public BSTEventSink<TESObjectLoadedEvent>,
 						 public BSTEventSink<TESLoadGameEvent>
 {
 public:
-	OverlayInterface() : m_loading(false), m_highestUID(0) { }
-
-	virtual	EventResult	ReceiveEvent(TESObjectLoadedEvent * evn, void * dispatcher);
-	virtual	EventResult	ReceiveEvent(TESLoadGameEvent * evn, void * dispatcher);
+	OverlayInterface() : m_highestUID(0) { }
 
 	typedef UInt32 UniqueID;
 
@@ -155,7 +152,7 @@ public:
 		m_overlayTemplates[0].clear();
 		m_overlayTemplates[1].clear();
 	}
-	bool LoadOverlayTemplates(const std::string & filePath);
+	virtual bool LoadOverlayTemplates(const std::string & filePath);
 
 	virtual UniqueID AddOverlay(Actor * actor, bool isFemale, SInt32 priority, const F4EEFixedString & templateName, const NiColorA & tintColor, const NiPoint2 & offsetUV, const NiPoint2 & scaleUV);
 	virtual bool RemoveOverlay(Actor * actor, bool isFemale, UniqueID uid);
@@ -172,12 +169,12 @@ public:
 
 	virtual void CloneOverlays(Actor * source, Actor * target);
 
-	UniqueID GetNextUID();
+	virtual UniqueID GetNextUID();
 
-	NiNode * GetOverlayRoot(Actor * actor, NiNode * rootNode, bool createIfNecessary = true);
+	virtual NiNode * GetOverlayRoot(Actor * actor, NiNode * rootNode, bool createIfNecessary = true);
 
-	const OverlayTemplatePtr GetTemplateByName(bool isFemale, const F4EEFixedString& name);
-	const OverlayDataPtr GetOverlayByUID(UniqueID uid);
+	virtual const OverlayTemplatePtr GetTemplateByName(bool isFemale, const F4EEFixedString& name);
+	virtual const OverlayDataPtr GetOverlayByUID(UniqueID uid);
 
 	std::pair<SInt32, OverlayDataPtr> GetActorOverlayByUID(Actor * actor, bool isFemale, UniqueID uid);
 
@@ -187,15 +184,10 @@ public:
 	void DestroyOverlaySlot(Actor * actor, NiNode * overlayHolder, UInt32 slotIndex);
 	bool UpdateOverlays(Actor * actor, NiNode * rootNode, NiAVObject * object, UInt32 slotIndex);
 
-	void SetLoading(bool loading) { m_loading = true; }
-
 protected:
 	friend class OverlayTemplate;
 	friend class PriorityMap;
 	friend class OverlayData;
-
-	bool						m_loading;
-	std::unordered_set<UInt64>	m_pendingUpdates;	// Stores the actors for update
 
 	SimpleLock												m_overlayLock;
 	OverlayMap												m_overlays[2];

@@ -581,10 +581,9 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 		_ERROR(e.what());
 	}
 
+	g_overlayInterface.RemoveAll(actor, isFemale);
 	if(root.isMember("Overlays"))
 	{
-		g_overlayInterface.RemoveAll(actor, isFemale);
-
 		Json::Value overlays = root["Overlays"];
 		for(auto & overlay : overlays)
 		{
@@ -629,7 +628,7 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 	
 
 	npc->MarkChanged(0x800); // Save FaceData
-	npc->MarkChanged(0x4000); // ??
+	npc->MarkChanged(0x4000); // Save weights
 
 	return ERROR_SUCCESS;
 }

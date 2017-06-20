@@ -1,6 +1,7 @@
 #include "BodyMorphInterface.h"
 #include "BodyGenInterface.h"
 #include "OverlayInterface.h"
+#include "ActorUpdateManager.h"
 
 #include "f4se/GameData.h"
 #include "f4se/GameStreams.h"
@@ -26,11 +27,11 @@
 extern BodyGenInterface g_bodyGenInterface;
 extern BodyMorphInterface g_bodyMorphInterface;
 extern OverlayInterface g_overlayInterface;
+extern ActorUpdateManager g_actorUpdateManager;
 
 extern StringTable g_stringTable;
 extern bool g_bEnableBodyMorphs;
 extern bool g_bEnableOverlays;
-extern bool g_bUseTaskInterface;
 extern bool g_bParallelShapes;
 extern F4SETaskInterface * g_task;
 
@@ -346,6 +347,7 @@ bool BodyMorphInterface::LoadBodyGenSliders(const std::string & filePath)
 		Json::Value root;
 
 		if(!reader.parse(strFile, root)) {
+			_ERROR("%s - Failed to parse slider file\t[%s]", __FUNCTION__, filePath.c_str());
 			return false;
 		}
 
@@ -449,11 +451,10 @@ void BodyMorphInterface::GetMorphableShapes(NiAVObject * rootNode, std::vector<M
 	});
 }
 
-F4EEBodyGenUpdate::F4EEBodyGenUpdate(TESForm * form, bool doEquipment, bool doQueue)
+F4EEBodyGenUpdate::F4EEBodyGenUpdate(TESForm * form, bool doDetach)
 {
 	m_formId = form ? form->formID : 0;
-	m_doEquipment = doEquipment;
-	m_doQueue = doQueue;
+	m_doDetach = doDetach;
 }
 
 void F4EEBodyGenUpdate::Run()
@@ -462,49 +463,52 @@ void F4EEBodyGenUpdate::Run()
 	if(form) {
 		Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
 		if(actor) {
-			if(actor->unk300) {
 #ifdef _DEBUG_MOPRHING
 				_MESSAGE("%s - Activating Update for %s (%08X)", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
 #endif
 				// Detaching the node will cause the game to regenerate when UpdateEquipment is called
 				// We only need to detach armor, and armor that's even eligible for morphing
-				ActorEquipData * equipData[2];
-				equipData[0] = actor->equipData;
-				equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData : nullptr;
-
-				for(UInt32 s = 0; s < (actor == (*g_player) ? 2 : 1); s++)
+				if(m_doDetach)
 				{
-					if(equipData[s])
-					{
-						for(UInt32 i = 0; i < 31; ++i)
-						{
-							NiPointer<NiAVObject> slotNode(equipData[s]->slots[i].node);
-							if(slotNode && g_bodyMorphInterface.IsNodeMorphable(slotNode))
-							{
-								NiPointer<NiNode> parent(slotNode->m_parent);
-								if(parent) {
-									if(g_bEnableOverlays) {
-										NiNode * rootNode = GetRootNode(actor, slotNode);
-										if(rootNode) {
-											NiNode * overlayRoot = g_overlayInterface.GetOverlayRoot(actor, rootNode);
-											if(overlayRoot)
-												g_overlayInterface.DestroyOverlaySlot(actor, overlayRoot, i);
-										}
-									}
+					ActorEquipData * equipData[2];
+					equipData[0] = actor->equipData;
+					equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData : nullptr;
 
-									parent->Remove(slotNode);
+					for(UInt32 s = 0; s < (actor == (*g_player) ? 2 : 1); s++)
+					{
+						if(equipData[s])
+						{
+							for(UInt32 i = 0; i < 31; ++i)
+							{
+								NiPointer<NiAVObject> slotNode(equipData[s]->slots[i].node);
+								if(slotNode && g_bodyMorphInterface.IsNodeMorphable(slotNode))
+								{
+									NiPointer<NiNode> parent(slotNode->m_parent);
+									if(parent) {
+										// Tear off any related overlays
+										if(g_bEnableOverlays) {
+											NiNode * rootNode = GetRootNode(actor, slotNode);
+											if(rootNode) {
+												NiNode * overlayRoot = g_overlayInterface.GetOverlayRoot(actor, rootNode);
+												if(overlayRoot)
+													g_overlayInterface.DestroyOverlaySlot(actor, overlayRoot, i);
+											}
+										}
+
+										parent->Remove(slotNode);
+									}
 								}
 							}
 						}
 					}
 				}
 
-				//CALL_MEMBER_FN(actor, QueueUpdate)(m_doEquipment, 0, m_doQueue, 0xC);
-				CALL_MEMBER_FN(actor->unk300, UpdateEquipment)(actor, 0x11);
-			}
+				auto middleProcess = actor->middleProcess;
+				if(middleProcess) 
+					CALL_MEMBER_FN(middleProcess, UpdateEquipment)(actor, 0x11);
 #ifdef _DEBUG_MOPRHING
-			else
-				_MESSAGE("%s - Skipping Update for %s (%08X) no equipData", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
+				else
+					_MESSAGE("%s - Skipping Update for %s (%08X) no middle process", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
 #endif
 		}
 	}
@@ -633,13 +637,13 @@ bool BodyMorphInterface::ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNod
 	return true;
 }
 
-bool BodyMorphInterface::UpdateMorphs(Actor * actor, bool doEquipment, bool doQueue)
+bool BodyMorphInterface::UpdateMorphs(Actor * actor)
 {
 	if(!actor)
 			return false;
 
 	if(g_task)
-		g_task->AddTask(new F4EEBodyGenUpdate(actor, doEquipment, doQueue));
+		g_task->AddTask(new F4EEBodyGenUpdate(actor, true));
 
 	return true;
 }
@@ -1103,9 +1107,7 @@ bool BodyMorphInterface::Load(const F4SESerializationInterface * intfc, bool isF
 
 		Actor * actor = GetObjectFromHandle<Actor>(newHandle);
 		if(actor) {
-			UInt64 updateHandle = (isFemale ? 1LL << 32 : 0) | actor->formID;
-			m_pendingMorphs.erase(updateHandle);
-			m_pendingUpdates.emplace(actor->formID);
+			g_actorUpdateManager.PushUpdate(actor);
 		}
 	}
 
@@ -1170,121 +1172,4 @@ void BodyMorphProcessor::Process(BSModelDB::ModelData * modelData, const char * 
 
 	if(m_oldProcessor)
 		m_oldProcessor->Process(modelData, modelName, root, typeOut);
-}
-
-EventResult	BodyMorphInterface::ReceiveEvent(TESObjectLoadedEvent * evn, void * dispatcher)
-{
-	if(evn->loaded)
-	{
-		// We need to collect pending loads because these will fire before the load game event
-		TESForm * form = LookupFormByID(evn->formId);
-		if(!form)
-			return kEvent_Continue;
-
-		Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
-		if(!actor)
-			return kEvent_Continue;
-
-		TESNPC * npc =  DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
-		if(!npc)
-			return kEvent_Continue;
-
-		UInt64 gender = CALL_MEMBER_FN(npc, GetSex)();
-		bool isFemale = gender == 1 ? true : false;
-
-		m_pendingLock.Lock();
-		if(m_loading) // We're mid-load, lets just push these to pending
-		{
-			m_pendingMorphs.insert((gender << 32) | form->formID);
-		}
-		else
-		{
-			// We've loaded the game, we can just generate and apply morphs if we don't already have any and we meet the outlined criteria for generation
-			auto morphMap = GetMorphMap(actor, isFemale);
-			if(!morphMap)
-			{
-				g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale);
-			}
-			morphMap = GetMorphMap(actor, isFemale);
-			if(morphMap)
-				UpdateMorphs(actor, true, true);
-		}
-		m_pendingLock.Release();
-	}
-
-	return kEvent_Continue;
-};
-
-EventResult	BodyMorphInterface::ReceiveEvent(TESInitScriptEvent * evn, void * dispatcher)
-{
-	// We need to collect pending loads because these will fire before the load game event
-	Actor * actor = DYNAMIC_CAST(evn->reference, TESForm, Actor);
-	if(!actor)
-		return kEvent_Continue;
-
-	TESNPC * npc =  DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
-	if(!npc)
-		return kEvent_Continue;
-
-	UInt64 gender = CALL_MEMBER_FN(npc, GetSex)();
-	bool isFemale = gender == 1 ? true : false;
-
-	if(!m_loading)
-	{
-		// We've spawned a new Reference, can we morph it?
-		auto morphMap = GetMorphMap(actor, isFemale);
-		if(!morphMap)
-		{
-			if(g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale))
-				UpdateMorphs(actor, true, true);
-		}
-	}
-	return kEvent_Continue;
-}
-
-void BodyMorphInterface::ResolvePendingMorphs()
-{
-	m_pendingLock.Lock();
-	for(auto & uid : m_pendingMorphs)
-	{
-		UInt8 gender = uid >> 32;
-		UInt32 formID = uid & 0xFFFFFFFF;
-		bool isFemale = gender == 1 ? true : false;
-
-		TESForm * form = LookupFormByID(formID);
-		if(form && form->formType == Actor::kTypeID)
-		{
-			Actor * actor = static_cast<Actor*>(form);
-			auto morphMap = GetMorphMap(actor, isFemale);
-			if(!morphMap)
-			{
-				if(g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale))
-					m_pendingUpdates.emplace(formID);
-			}
-		}
-	}
-	m_pendingMorphs.clear();
-	m_pendingLock.Release();
-}
-
-EventResult BodyMorphInterface::ReceiveEvent(TESLoadGameEvent * evn, void * dispatcher)
-{
-	if(m_loading)
-		m_loading = false;
-
-	m_pendingLock.Lock();
-	for(auto & uid : m_pendingUpdates)
-	{
-		TESForm * form = LookupFormByID(uid);
-		if(form && form->formType == Actor::kTypeID)
-		{
-			Actor * actor = static_cast<Actor*>(form);
-			UpdateMorphs(actor, true, true);
-		}
-	}
-
-	m_pendingUpdates.clear();
-	m_pendingLock.Release();
-
-	return kEvent_Continue;
 }

@@ -16,13 +16,15 @@
 	import scaleform.clik.events.InputEvent;
 	import scaleform.clik.ui.InputDetails;
 	import utils.Translator;
+	import Mobile.ScrollList.EventWithParams;
+	import utils.ColorFunctions;
 	
 	public dynamic class LooksMenu extends Shared.IMenu
 	{
 		internal const AllModeInputMap:Object={"Done":0, "Accept":1, "Cancel":2, "XButton":3, "YButton":4, "LTrigger":5, "RTrigger":6, "LShoulder":7, "RShoulder":8, "Left":9, "Right":10, "Up":11, "Down":12};
 		internal const StartModeInputMapKBM:Object={"Done":0, "F":1, "B":2, "Accept":3, "X":4, "KeyLeft":5, "KeyRight":6, "R":7};
 		internal const FaceHairModeInputMap:Object={"Done":0, "Accept":1, "Cancel":2, "T":3, "C":4};
-		internal const BodyModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "T":3, "XButton":3, "R": 4, "YButton": 4};
+		internal const BodyModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "T":3, "XButton":3, "R": 4, "YButton": 4, "C": 5, "LShoulder":5};
 		internal const SculptModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "KeyDown":9, "KeyUp":10, "KeyLeft":7, "KeyRight":8};
 		internal const FeatureModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "Space":3, "R":4, "KeyLeft":7, "KeyRight":8};
 		internal const PresetModeInputMap:Object={"Done":0, "Accept":1, "Cancel":2, "X":3, "YButton":3};
@@ -34,7 +36,7 @@
 		internal const InputMapA:Array=[StartModeInputMapController, FaceHairModeInputMap, BodyModeInputMap, SculptModeInputMap, FaceHairModeInputMap, FeatureModeInputMap, FeatureCategoryModeInputMap, PresetModeInputMap, undefined, BodyAdvancedModeInputMap, BodyOverlayModeInputMap, BodyOverlaySelectModeInputMap, BodyOverlayTransformModeInputMap];
 		internal const StartModeFunctionsReleased:Array=[ConfirmCloseMenu, FaceMode, BodyMode, ExtrasMode, ChangeSex, CharacterPresetLeft, CharacterPresetRight, PresetMode, undefined, undefined, undefined, undefined, undefined];
 		internal const FaceModeFunctionsReleased:Array=[ConfirmCloseMenu, SculptMode, StartMode, TypeMode, ColorMode, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
-		internal const BodyModeFunctionsReleased:Array=[undefined, AcceptChanges, CancelChanges, BodyAdvancedMode, BodyOverlayMode, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
+		internal const BodyModeFunctionsReleased:Array=[undefined, AcceptChanges, CancelChanges, BodyAdvancedMode, BodyOverlayMode, ToggleClothes, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
 		internal const SculptModeFunctionsReleased:Array=[undefined, AcceptChanges, CancelChanges, undefined, undefined, undefined, undefined, SculptModeRotateLeft, SculptModeRotateRight, SculptModeShrink, SculptModeEnlarge, SculptModeOut, SculptModeIn];
 		internal const HairModeFunctionsReleased:Array=[ConfirmCloseMenu, StyleMode, StartMode, TypeMode, ColorMode, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
 		internal const FeatureModeFunctionsReleased:Array=[undefined, undefined, CancelChanges, FeaturesApply, undefined, undefined, undefined, FeatureModeLBumper, FeatureModeRBumper, undefined, undefined, undefined, undefined];
@@ -207,6 +209,8 @@
 		protected var buttonHint_BodyOverlayTransformMode_Cancel:Shared.AS3.BSButtonHintData;
 		protected var buttonHint_BodyOverlayTransformMode_Value:Shared.AS3.BSButtonHintData;
 		
+		protected var buttonHint_BodyMode_ToggleClothes:Shared.AS3.BSButtonHintData;
+		
 		internal var CurrentSelectedExtra:uint=0;		
 		public static var GlobalTintColors:Array=[1.0, 0.0, 1.0, 1.0];
 		internal var CurrentSelectedBoneID:uint=4294967295;
@@ -214,10 +218,20 @@
 		internal var buttonStatesV:__AS3__.vec.Vector.<Boolean>;
 		internal var _bodyDirty:Boolean=false;
 		internal var bodyTimer:Timer;
-		internal var CurrentOverlayInfo:Object = {"id": "", "uid": uint(0), "template": "", "sid": "", "object": {"offsetU": 0, "offsetV": 0, "scaleU": 1, "scaleV": 1}, "temp": {"offsetU": 0, "offsetV": 0, "scaleU": 1, "scaleV": 1} };
+		internal var presetTimer:Timer;
+		internal var CurrentOverlayInfo:Object = {
+			"id": "", 
+			"uid": uint(0), 
+			"template": null, 
+			"sid": "", 
+			"object": {"offsetU": 0, "offsetV": 0, "scaleU": 1, "scaleV": 1, "red":0, "green":0, "blue":0, "alpha": 0}, 
+			"temp": {"offsetU": 0, "offsetV": 0, "scaleU": 1, "scaleV": 1, "red":0, "green":0, "blue":0, "alpha": 0}
+		};
 		internal var overlayTemplates:Array = null;
 		internal var overlayTimer:Timer;
 		internal var _overlayDirty:Boolean=false;
+		public var EquippedClothes:Array = null;
+		public var UIColor: ColorTransform;
 		
 		public function LooksMenu()
 		{
@@ -257,7 +271,7 @@
 			
 			this.buttonHint_BodyOverlayMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptBodyOverlayChanges);
 			this.buttonHint_BodyOverlayMode_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.CancelBodyOverlayChanges);
-			this.buttonHint_BodyOverlayMode_Order = new Shared.AS3.BSButtonHintData("$ORDER", "A", "PSN_L2", "Xenon_L2", 1, this.MoveBodyOverlayUp);
+			this.buttonHint_BodyOverlayMode_Order = new Shared.AS3.BSButtonHintData("$ORDER", "A", "_DPad_Left", "_DPad_Left", 1, this.MoveBodyOverlayUp);
 			this.buttonHint_BodyOverlayMode_Add = new Shared.AS3.BSButtonHintData("$ADD", "R", "PSN_Y", "Xenon_Y", 1, this.AddBodyOverlay);
 			this.buttonHint_BodyOverlayMode_Edit = new Shared.AS3.BSButtonHintData("$EDIT", "X", "PSN_X", "Xenon_X", 1, this.EditBodyOverlay);
 			this.buttonHint_BodyMode_Overlays = new Shared.AS3.BSButtonHintData("$OVERLAYS", "R", "PSN_Y", "Xenon_Y", 1, this.BodyOverlayMode);
@@ -269,7 +283,9 @@
 			
 			this.buttonHint_BodyOverlayTransformMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptBodyOverlayTransformChanges);
 			this.buttonHint_BodyOverlayTransformMode_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.CancelBodyOverlayTransformChanges);
-			this.buttonHint_BodyOverlayTransformMode_Value = new Shared.AS3.BSButtonHintData("$VALUE", "A", "PSN_L2", "Xenon_L2", 1, this.DecrementBodySlider);
+			this.buttonHint_BodyOverlayTransformMode_Value = new Shared.AS3.BSButtonHintData("$VALUE", "A", "_DPad_Left", "_DPad_Left", 1, this.DecrementBodySlider);
+			
+			this.buttonHint_BodyMode_ToggleClothes = new Shared.AS3.BSButtonHintData("$CLOTHES", "C", "PSN_L2", "Xenon_L2", 1, this.ToggleClothes);
 			
 			this.FacialBoneRegions = new Array();
 			this.ControlAxes = [this.X_AXIS, this.Y_AXIS, this.X_ROT_AXIS, this.X_SCALE_AXIS, this.Z_AXIS];
@@ -282,6 +298,8 @@
 			addEventListener(flash.events.KeyboardEvent.KEY_DOWN, onKeyDown);
 			addEventListener(Shared.AS3.BSScrollingList.SELECTION_CHANGE, onFeatureSelectionChange);
 			addEventListener(Shared.AS3.BSScrollingList.ITEM_PRESS, onFeatureSelected);
+			addEventListener(Shared.AS3.BSScrollingList.ENTRY_UPDATED, onEntryUpdated);
+			
 			this.WeightTriangle_mc.WeightTriangleHitArea_mc.addEventListener(flash.events.MouseEvent.MOUSE_DOWN, onWeightTriangleChange);
 			this.WeightTriangle_mc.WeightTriangleHitArea_mc.addEventListener(flash.events.MouseEvent.MOUSE_MOVE, onWeightTriangleChange);
 			this.buttonHint_StartMode_Preset.SetSecondaryButtons("D", "PSN_R2", "Xenon_R2");
@@ -296,9 +314,9 @@
 			this.buttonHint_FeatureMode_Modifier.secondaryButtonCallback = this.FeatureModeLBumper;
 			this.buttonHint_BodyAdvancedMode_Value.SetSecondaryButtons("D", "PSN_R2", "Xenon_R2");
 			this.buttonHint_BodyAdvancedMode_Value.secondaryButtonCallback = this.IncrementBodySlider;
-			this.buttonHint_BodyOverlayMode_Order.SetSecondaryButtons("D", "PSN_R2", "Xenon_R2");
+			this.buttonHint_BodyOverlayMode_Order.SetSecondaryButtons("D", "_DPad_Right", "_DPad_Right");
 			this.buttonHint_BodyOverlayMode_Order.secondaryButtonCallback = this.MoveBodyOverlayDown;
-			this.buttonHint_BodyOverlayTransformMode_Value.SetSecondaryButtons("D", "PSN_R2", "Xenon_R2");
+			this.buttonHint_BodyOverlayTransformMode_Value.SetSecondaryButtons("D", "_DPad_Right", "_DPad_Right");
 			this.buttonHint_BodyOverlayTransformMode_Value.secondaryButtonCallback = this.IncrementBodySlider;
 			this._buttonHintDataV = new Vector.<Shared.AS3.BSButtonHintData>();
 			this._buttonHintDataV.push(this.buttonHint_StartMode_BodyPreset);
@@ -353,6 +371,8 @@
 			this._buttonHintDataV.push(this.buttonHint_BodyOverlayTransformMode_Cancel);
 			this._buttonHintDataV.push(this.buttonHint_BodyOverlayTransformMode_Value);
 			
+			this._buttonHintDataV.push(this.buttonHint_BodyMode_ToggleClothes);
+			
 			this.ButtonHintBar_mc.SetButtonHintData(this._buttonHintDataV);
 			this.UpdateButtons();
 			this.bInitialized = true;
@@ -375,61 +395,120 @@
 			overlayTimer = new Timer(100);
 			overlayTimer.addEventListener(TimerEvent.TIMER, onOverlayTimer);
 			
+			presetTimer = new Timer(500);
+			presetTimer.addEventListener(TimerEvent.TIMER, onPresetTimer);
+			
 			root.addEventListener("F4EE::Initialized", onF4EEInitialized);
 			root.addEventListener(FeatureListEntry.VALUE_CHANGE, onSliderChanged);
+			addEventListener(HSVGroup.COLOR_CHANGED, onColorChanged);
 		}
 		
 		public function onApplyColorChange(r, g, b, multiplier): Array
 		{
-			return [r,g,b,multiplier];
+			//return [r,g,b,multiplier];
 			
-			/*
+
 			var rint:uint = r * 255;
 			var gint:uint = g * 255;
 			var bint:uint = b * 255;
 			var mint:uint = multiplier * 255;
 			try 
 			{
-				var ct: ColorTransform = new ColorTransform(0.0, 0.0, 0.0, 1.0, rint, gint, bint, mint);
-				
-				WeightTriangle_mc.CurrentWeightTick_mc.transform.colorTransform = ct;
-				WeightTriangle_mc.Triangle_mc.transform.colorTransform = ct;
-				LoadingSpinner_mc.transform.colorTransform = ct;
-				ButtonHintBar_mc.ButtonBracket_Left_mc.transform.colorTransform = ct;
-				ButtonHintBar_mc.ButtonBracket_Right_mc.transform.colorTransform = ct;
-				Cursor_mc.transform.colorTransform = ct;
-				
-				FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.colorTransform = ct;
-				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.colorTransform = ct;
-				FeaturePanel_mc.Brackets_mc.UpperLeftCorner_mc.colorTransform = ct;
-				FeaturePanel_mc.Brackets_mc.LowerBracket_mc.colorTransform = ct;
-				
-				FeaturePanel_mc.List_mc.ScrollUp.colorTransform = ct;
-				FeaturePanel_mc.List_mc.ScrollDown.colorTransform = ct;
-				
+				var ct: ColorTransform = new ColorTransform(0.0, 0.0, 0.0, 1.0, rint, gint, bint, 0);
+				UIColor = ct;
 				var textColor: uint = (mint << 24) | (rint << 16) | (gint << 8) | bint;
-				FacePartLabel_tf.textColor = textColor;
-				WeightTriangle_mc.Large_tf.textColor = textColor;
-				WeightTriangle_mc.Thin_tf.textColor = textColor;
-				WeightTriangle_mc.Muscular_tf.textColor = textColor;
-				FeaturePanel_mc.Brackets_mc.Label_tf.textColor = textColor;
 				
-				for(var i = 0; i < ButtonHintBar_mc.ButtonPoolV.length; i++)
-				{
-					ButtonHintBar_mc.ButtonPoolV[i].textField_tf.textColor = textColor;
-					ButtonHintBar_mc.ButtonPoolV[i].IconHolderInstance.IconAnimInstance.Icon_tf.textColor = textColor;
-					ButtonHintBar_mc.ButtonPoolV[i].SecondaryIconHolderInstance.IconAnimInstance.Icon_tf.textColor = textColor;
-					if(ButtonHintBar_mc.ButtonPoolV[i].DynamicMovieClip) {
-						ButtonHintBar_mc.ButtonPoolV[i].DynamicMovieClip.transform.colorTransform = ct;
-					}
-				}
+				WeightTriangle_mc.transform.colorTransform = ct;
+				LoadingSpinner_mc.transform.colorTransform = ct;
+				Cursor_mc.transform.colorTransform = ct;
+				FeaturePanel_mc.Brackets_mc.transform.colorTransform = ct;				
+				FeaturePanel_mc.List_mc.ScrollUp.transform.colorTransform = ct;
+				FeaturePanel_mc.List_mc.ScrollDown.transform.colorTransform = ct;
+				PresetInput_mc.transform.colorTransform = ct;
+				FacePartLabel_tf.textColor = textColor;
+				FeaturePanel_mc.SliderField.textColor = textColor;
+				ButtonHintBar_mc.transform.colorTransform = ct;
 			}
 			catch (e:Error)
 			{
 
 			};
 
-			return [1.0, 1.0, 1.0, 1.0];*/
+			return [1.0, 1.0, 1.0, 1.0];
+		}
+		
+		public function onEntryUpdated(event:Mobile.ScrollList.EventWithParams)
+		{
+			if(UIColor) {
+				var params = event.params;
+				if(!params.entry.selected) {
+					var textColor: uint = (UIColor.alphaOffset << 24) | (UIColor.redOffset << 16) | (UIColor.greenOffset << 8) | UIColor.blueOffset;
+					
+					params.entry.textField.textColor = textColor;
+					params.entry.EquipIcon_mc.transform.colorTransform = UIColor;
+					
+					var ct2: ColorTransform = new ColorTransform(0.0, 0.0, 0.0, 1.0, UIColor.redOffset, UIColor.greenOffset, UIColor.blueOffset, 0);
+					params.entry.Slider_mc.transform.colorTransform = ct2;
+					
+					params.entry.border.transform.colorTransform = null;
+					params.entry.border.alpha = 0;
+				} else {
+					params.entry.border.transform.colorTransform = UIColor;
+				}
+				
+				var colorTrans:ColorTransform;
+				if(params.entry.selected) {
+					colorTrans = new ColorTransform();
+					colorTrans.redOffset = -255;
+					colorTrans.greenOffset = -255;
+					colorTrans.blueOffset = -255;
+					colorTrans.alphaOffset = 0;
+				} else {
+					colorTrans = UIColor;
+				}
+				
+				var sliders = [params.entry.HSVGroup_mc.hSlider,
+							   params.entry.HSVGroup_mc.sSlider,
+							   params.entry.HSVGroup_mc.vSlider,
+							   params.entry.HSVGroup_mc.aSlider];
+				
+				for(var i = 0; i < sliders.length; i++) {
+					sliders[i].TrackBorder_mc.transform.colorTransform = colorTrans;
+					sliders[i].LeftArrow_mc.transform.colorTransform = colorTrans;
+					sliders[i].RightArrow_mc.transform.colorTransform = colorTrans;
+					sliders[i].Thumb_mc.transform.colorTransform = colorTrans;
+				}
+			}
+		}
+		
+		public function onColorChanged(event:HSVEvent)
+		{
+			if(eMode == BODY_OVERLAY_TRANSFORM_MODE)
+			{
+				CurrentOverlayInfo.temp.red = event.rgba[0];
+				CurrentOverlayInfo.temp.green = event.rgba[1];
+				CurrentOverlayInfo.temp.blue = event.rgba[2];
+				CurrentOverlayInfo.temp.alpha = event.rgba[3];
+				
+				for(var i = 0; i < FeaturePanel_mc.List_mc.entryList.length; i++)
+				{
+					if(FeaturePanel_mc.List_mc.entryList[i].sliderType) {
+						FeaturePanel_mc.List_mc.entryList[i].hsva = event.hsva;
+						FeaturePanel_mc.List_mc.UpdateEntry(FeaturePanel_mc.List_mc.entryList[i]);
+					}
+				}
+				
+				try
+				{
+					root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, CurrentOverlayInfo.temp);
+					_overlayDirty = true;
+				}
+				catch(e:Error)
+				{
+						
+				}
+				overlayTimer.start();
+			}
 		}
 		
 		public function onF4EEInitialized(event:flash.events.Event)
@@ -575,18 +654,23 @@
 			buttonHint_BodyOverlaySelectMode_Accept.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE;
 			buttonHint_BodyOverlaySelectMode_Cancel.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE;
 			buttonHint_BodyOverlaySelectMode_Edit.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE;
+			buttonHint_BodyOverlaySelectMode_Edit.ButtonEnabled = eMode == BODY_OVERLAY_SELECT_MODE;
 			buttonHint_BodyOverlaySelectMode_Edit.ButtonText = "$SELECT";
 			
-			buttonHint_BodyOverlaySelectMode_Transform.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE && FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.applied;
-			buttonHint_BodyOverlaySelectMode_Transform.ButtonEnabled = FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.transformable;
+			var selectedEntry = FeaturePanel_mc.List_mc.selectedEntry;
+			
+			buttonHint_BodyOverlaySelectMode_Transform.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE && selectedEntry && selectedEntry.applied;
+			buttonHint_BodyOverlaySelectMode_Transform.ButtonEnabled = selectedEntry && (selectedEntry.transformable || selectedEntry.tintable);
 			
 			var bHasSliders = eMode == BODY_ADVANCED_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE;
-			FeaturePanel_mc.SliderField.visible = bHasSliders && FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.value != undefined;
-			FeaturePanel_mc.SliderField.text = bHasSliders && FeaturePanel_mc.List_mc.selectedEntry ? Number(FeaturePanel_mc.List_mc.selectedEntry.value).toFixed(3) : "";
+			FeaturePanel_mc.SliderField.visible = bHasSliders && selectedEntry && selectedEntry.value != undefined;
+			FeaturePanel_mc.SliderField.text = bHasSliders && selectedEntry ? Number(selectedEntry.value).toFixed(3) : "";
 			
 			buttonHint_BodyOverlayTransformMode_Accept.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
 			buttonHint_BodyOverlayTransformMode_Cancel.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
 			buttonHint_BodyOverlayTransformMode_Value.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
+			
+			buttonHint_BodyMode_ToggleClothes.ButtonVisible = eMode == BODY_MODE && bInitialized && bExtensionsInitialized;
 			
 			PresetInput_mc.visible = PresetInput_mc.enabled = eMode == PRESET_NAME_MODE;
 			
@@ -1217,7 +1301,11 @@
 									"offsetU": 0.0,
 									"offsetV": 0.0,
 									"scaleU": 1.0,
-									"scaleV": 1.0
+									"scaleV": 1.0,
+									"red": 0.0,
+									"green": 0.0,
+									"blue": 0.0,
+									"alpha": 0.0
 								};
 								
 								// If we're selecting the applied item, apply its transform rather than none
@@ -1232,7 +1320,11 @@
 										"offsetU": transformData.offsetU,
 										"offsetV": transformData.offsetV,
 										"scaleU": transformData.scaleU,
-										"scaleV": transformData.scaleV
+										"scaleV": transformData.scaleV,
+										"red": transformData.red,
+										"green": transformData.green,
+										"blue": transformData.blue,
+										"alpha": transformData.alpha
 									}
 								);
 								_overlayDirty = true;
@@ -1749,7 +1841,11 @@
 					"offsetU": 0.0,
 					"offsetV": 0.0,
 					"scaleU": 1.0,
-					"scaleV": 1.0
+					"scaleV": 1.0,
+					"red": 0.0,
+					"green": 0.0,
+					"blue": 0.0,
+					"alpha": 0.0
 				};
 				root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, {"template": ""});
 				_overlayDirty = true;
@@ -1778,7 +1874,11 @@
 					"offsetU": selectedEntry.offsetU,
 					"offsetV": selectedEntry.offsetV,
 					"scaleU": selectedEntry.scaleU,
-					"scaleV": selectedEntry.scaleV
+					"scaleV": selectedEntry.scaleV,
+					"red": selectedEntry.red,
+					"green": selectedEntry.green,
+					"blue": selectedEntry.blue,
+					"alpha": selectedEntry.alpha
 				};
 				BodyOverlaySelectMode();
 			}
@@ -1856,7 +1956,11 @@
 								"offsetU": CurrentOverlayInfo.object.offsetU,
 								"offsetV": CurrentOverlayInfo.object.offsetV,
 								"scaleU": CurrentOverlayInfo.object.scaleU,
-								"scaleV": CurrentOverlayInfo.object.scaleV
+								"scaleV": CurrentOverlayInfo.object.scaleV,
+								"red": CurrentOverlayInfo.object.red,
+								"green": CurrentOverlayInfo.object.green,
+								"blue": CurrentOverlayInfo.object.blue,
+								"alpha": CurrentOverlayInfo.object.alpha
 							}
 						);
 					}
@@ -1891,7 +1995,11 @@
 								"offsetU": CurrentOverlayInfo.object.offsetU,
 								"offsetV": CurrentOverlayInfo.object.offsetV,
 								"scaleU": CurrentOverlayInfo.object.scaleU,
-								"scaleV": CurrentOverlayInfo.object.scaleV
+								"scaleV": CurrentOverlayInfo.object.scaleV,
+								"red": CurrentOverlayInfo.object.red,
+								"green": CurrentOverlayInfo.object.green,
+								"blue": CurrentOverlayInfo.object.blue,
+								"alpha": CurrentOverlayInfo.object.alpha
 							}
 						);
 					}
@@ -1929,7 +2037,11 @@
 					"offsetU": 0.0,
 					"offsetV": 0.0,
 					"scaleU": 1.0,
-					"scaleV": 1.0
+					"scaleV": 1.0,
+					"red": 0.0,
+					"green": 0.0,
+					"blue": 0.0,
+					"alpha": 0.0
 				};
 			}
 			
@@ -1941,7 +2053,11 @@
 						"offsetU": CurrentOverlayInfo.object.offsetU,
 						"offsetV": CurrentOverlayInfo.object.offsetV,
 						"scaleU": CurrentOverlayInfo.object.scaleU,
-						"scaleV": CurrentOverlayInfo.object.scaleV
+						"scaleV": CurrentOverlayInfo.object.scaleV,
+						"red": CurrentOverlayInfo.object.red,
+						"green": CurrentOverlayInfo.object.green,
+						"blue": CurrentOverlayInfo.object.blue,
+						"alpha": CurrentOverlayInfo.object.alpha
 					}
 				);
 				_overlayDirty = true;
@@ -1956,78 +2072,130 @@
 		}
 		
 		internal function StartTransformBodyOverlay()
-		{			
-			if(FeaturePanel_mc.List_mc.selectedEntry.applied) {
-				CurrentOverlayInfo.sid = FeaturePanel_mc.List_mc.selectedEntry.id;
+		{
+			var selectedEntry = FeaturePanel_mc.List_mc.selectedEntry;
+			if(selectedEntry && selectedEntry.applied) {
+				CurrentOverlayInfo.sid = selectedEntry.id;
 			
 				// Create temp info to store before editing
 				CurrentOverlayInfo.temp = {
 					"offsetU": CurrentOverlayInfo.object.offsetU,
 					"offsetV": CurrentOverlayInfo.object.offsetV,
 					"scaleU": CurrentOverlayInfo.object.scaleU,
-					"scaleV": CurrentOverlayInfo.object.scaleV
+					"scaleV": CurrentOverlayInfo.object.scaleV,
+					"red": CurrentOverlayInfo.object.red,
+					"green": CurrentOverlayInfo.object.green,
+					"blue": CurrentOverlayInfo.object.blue,
+					"alpha": CurrentOverlayInfo.object.alpha
 				};
 		
-				CurrentOverlayInfo.template = FeaturePanel_mc.List_mc.selectedEntry.text;
+				CurrentOverlayInfo.template = selectedEntry;
 				TransformBodyOverlayMode();
 			}
 		}
 		
 		internal function TransformBodyOverlayMode()
 		{
-			if (eMode == BODY_OVERLAY_SELECT_MODE && FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.transformable && (EditMode == EDIT_CHARGEN || EditMode == EDIT_BODYMOD)) 
+			if (eMode == BODY_OVERLAY_SELECT_MODE && CurrentOverlayInfo.template && (CurrentOverlayInfo.template.transformable || CurrentOverlayInfo.template.tintable) && (EditMode == EDIT_CHARGEN || EditMode == EDIT_BODYMOD)) 
 			{
 				eMode = BODY_OVERLAY_TRANSFORM_MODE;
 
-				var panelTitle = CurrentOverlayInfo.template;
+				var panelTitle = CurrentOverlayInfo.template.text;
 				
 				FeaturePanel_mc.List_mc.entryList = null;
 				
-				FeaturePanel_mc.List_mc.entryList.push(
-					{
-						"text": "$Offset X", 
-						"type": "offset_u",
-						"min": -2.0, 
-						"max": 2.0, 
-						"value": CurrentOverlayInfo.temp.offsetU, 
-						"interval": 0.001,
-						"object": CurrentOverlayInfo.temp
-					}
-				);
-				FeaturePanel_mc.List_mc.entryList.push(
-					{
-						"text": "$Offset Y", 
-						"type": "offset_v",
-						"min": -2.0, 
-						"max": 2.0, 
-						"value": CurrentOverlayInfo.temp.offsetV, 
-						"interval": 0.001,
-						"object": CurrentOverlayInfo.temp
-					}
-				);
-				FeaturePanel_mc.List_mc.entryList.push(
-					{
-						"text": "$Scale X", 
-						"type": "scale_u",
-						"min": -2.0, 
-						"max": 2.0, 
-						"value": CurrentOverlayInfo.temp.scaleU, 
-						"interval": 0.001,
-						"object": CurrentOverlayInfo.temp
-					}
-				);
-				FeaturePanel_mc.List_mc.entryList.push(
-					{
-						"text": "$Scale Y", 
-						"type": "scale_v",
-						"min": -2.0, 
-						"max": 2.0, 
-						"value": CurrentOverlayInfo.temp.scaleV, 
-						"interval": 0.001,
-						"object": CurrentOverlayInfo.temp
-					}
-				);
+				if(CurrentOverlayInfo.template.transformable)
+				{
+					FeaturePanel_mc.List_mc.entryList.push(
+						{
+							"text": "$Offset X", 
+							"type": "offset_u",
+							"min": -2.0, 
+							"max": 2.0, 
+							"value": CurrentOverlayInfo.temp.offsetU, 
+							"interval": 0.001,
+							"object": CurrentOverlayInfo.temp
+						}
+					);
+					FeaturePanel_mc.List_mc.entryList.push(
+						{
+							"text": "$Offset Y", 
+							"type": "offset_v",
+							"min": -2.0, 
+							"max": 2.0, 
+							"value": CurrentOverlayInfo.temp.offsetV, 
+							"interval": 0.001,
+							"object": CurrentOverlayInfo.temp
+						}
+					);
+					FeaturePanel_mc.List_mc.entryList.push(
+						{
+							"text": "$Scale X", 
+							"type": "scale_u",
+							"min": -2.0, 
+							"max": 2.0, 
+							"value": CurrentOverlayInfo.temp.scaleU, 
+							"interval": 0.001,
+							"object": CurrentOverlayInfo.temp
+						}
+					);
+					FeaturePanel_mc.List_mc.entryList.push(
+						{
+							"text": "$Scale Y", 
+							"type": "scale_v",
+							"min": -2.0, 
+							"max": 2.0, 
+							"value": CurrentOverlayInfo.temp.scaleV, 
+							"interval": 0.001,
+							"object": CurrentOverlayInfo.temp
+						}
+					);
+				}
 				
+				if(CurrentOverlayInfo.template.tintable) {
+										
+					var rgba:Array = ColorFunctions.denormalize([CurrentOverlayInfo.temp.red, CurrentOverlayInfo.temp.green, CurrentOverlayInfo.temp.blue], CurrentOverlayInfo.temp.alpha);
+					var hsva:Array = ColorFunctions.rgbToHsv(rgba);
+					hsva.push(Number(rgba[3] * 100.0) / 255.0);
+										
+					FeaturePanel_mc.List_mc.entryList.push(
+						{
+							"text": "$Hue", 
+							"sliderType": "Hue",
+							"type": "color",
+							"hsva": hsva,
+							"object": CurrentOverlayInfo.temp
+						}
+					);
+					FeaturePanel_mc.List_mc.entryList.push(
+						{
+							"text": "$Saturation", 
+							"sliderType": "Saturation",
+							"type": "color",
+							"hsva": hsva,
+							"object": CurrentOverlayInfo.temp
+						}
+					);
+					FeaturePanel_mc.List_mc.entryList.push(
+						{
+							"text": "$Value", 
+							"sliderType": "Value",
+							"type": "color",
+							"hsva": hsva,
+							"object": CurrentOverlayInfo.temp
+						}
+					);
+					FeaturePanel_mc.List_mc.entryList.push(
+						{
+							"text": "$Alpha", 
+							"sliderType": "Alpha",
+							"type": "color",
+							"hsva": hsva,
+							"object": CurrentOverlayInfo.temp
+						}
+					);
+				}
+								
 				FeatureListChangeLock++;
 				FeaturePanel_mc.List_mc.InvalidateData();
 				FeatureListChangeLock--;
@@ -2035,7 +2203,7 @@
 				Shared.GlobalFunc.SetText(FeaturePanel_mc.Brackets_mc.Label_tf, panelTitle, false, true);
 				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x = FeaturePanel_mc.Brackets_mc.Label_tf.x + FeaturePanel_mc.Brackets_mc.Label_tf.textWidth + 5;
 				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
-				
+								
 				PreviousStageFocus = stage.focus;
 				stage.focus = FeaturePanel_mc.List_mc;
 				
@@ -2050,6 +2218,10 @@
 			CurrentOverlayInfo.object.offsetV = CurrentOverlayInfo.temp.offsetV;
 			CurrentOverlayInfo.object.scaleU = CurrentOverlayInfo.temp.scaleU;
 			CurrentOverlayInfo.object.scaleV = CurrentOverlayInfo.temp.scaleV;
+			CurrentOverlayInfo.object.red = CurrentOverlayInfo.temp.red;
+			CurrentOverlayInfo.object.green = CurrentOverlayInfo.temp.green;
+			CurrentOverlayInfo.object.blue = CurrentOverlayInfo.temp.blue;
+			CurrentOverlayInfo.object.alpha = CurrentOverlayInfo.temp.alpha;
 			
 			PreviousMode(true);
 		}
@@ -2057,18 +2229,49 @@
 		internal function CancelBodyOverlayTransformChanges():*
 		{
 			// Revert to real values
-			root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, 
-				{
-					"offsetU": CurrentOverlayInfo.object.offsetU,
-					"offsetV": CurrentOverlayInfo.object.offsetV,
-					"scaleU": CurrentOverlayInfo.object.scaleU,
-					"scaleV": CurrentOverlayInfo.object.scaleV
-				}
-			);
-			_overlayDirty = true;
-			overlayTimer.start();
+			try
+			{
+				root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, 
+					{
+						"offsetU": CurrentOverlayInfo.object.offsetU,
+						"offsetV": CurrentOverlayInfo.object.offsetV,
+						"scaleU": CurrentOverlayInfo.object.scaleU,
+						"scaleV": CurrentOverlayInfo.object.scaleV,
+						"red": CurrentOverlayInfo.object.red,
+						"green": CurrentOverlayInfo.object.green,
+						"blue": CurrentOverlayInfo.object.blue,
+						"alpha": CurrentOverlayInfo.object.alpha
+					}
+				);
+				_overlayDirty = true;
+				overlayTimer.start();
+			}
+			catch(e:Error)
+			{
+				
+			}
 			
 			PreviousMode(false);
+		}
+		
+		internal function ToggleClothes()
+		{
+			// Revert to real values
+			try
+			{
+				if(!EquippedClothes) {
+					EquippedClothes = root.f4se.plugins.F4EE.GetEquippedItems();
+					root.f4se.plugins.F4EE.UnequipItems(EquippedClothes);
+				} else {
+					root.f4se.plugins.F4EE.EquipItems(EquippedClothes);
+					EquippedClothes = null;
+				}
+				
+			}
+			catch(e:Error)
+			{
+				
+			}
 		}
 
 		public function SculptModeLStickMouse(x_axis:Number, y_axis:Number):*
@@ -2235,6 +2438,21 @@
 			}
 		}
 		
+		internal function onPresetTimer(e:TimerEvent)
+		{
+			try
+			{
+				root.f4se.plugins.F4EE.UpdateBodyMorphs();
+				root.f4se.plugins.F4EE.UpdateOverlays();
+			}
+			catch(e:Error)
+			{
+				
+			}
+			
+			presetTimer.stop();
+		}
+		
 		internal function BodyAdvancedMode():*
 		{
 			if (eMode == BODY_MODE && (EditMode == EDIT_CHARGEN || EditMode == EDIT_BODYMOD)) 
@@ -2262,7 +2480,7 @@
 				}
 				catch(e:Error)
 				{
-					trace("Failed to populate list");
+					trace("Failed to populate BodyAdvanced list");
 				}
 								
 				FeatureListChangeLock++;
@@ -2307,7 +2525,7 @@
 			}
 			catch(e:Error)
 			{
-				trace("Failed to populate list: " + e);
+				trace("Failed to populate Overlay list: " + e);
 			}
 			
 			return result;
@@ -2326,14 +2544,15 @@
 							"text": templates[i].name, 
 							"id": templates[i].id, 
 							"applied": false, 
-							"transformable": templates[i].transformable
+							"transformable": templates[i].transformable,
+							"tintable": templates[i].tintable
 						}
 					);
 				}
 			}
 			catch(e:Error)
 			{
-				trace("Failed to populate list: " + e);
+				trace("Failed to populate Overlay template list: " + e);
 			}
 						
 			return result;
@@ -2352,9 +2571,7 @@
 			Shared.GlobalFunc.SetText(FeaturePanel_mc.Brackets_mc.Label_tf, panelTitle, false, true);
 			FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x = FeaturePanel_mc.Brackets_mc.Label_tf.x + FeaturePanel_mc.Brackets_mc.Label_tf.textWidth + 5;
 			FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
-			PreviousStageFocus = stage.focus;
 			stage.focus = FeaturePanel_mc.List_mc;
-			
 			UpdateButtons();
 		}
 		
@@ -2389,9 +2606,7 @@
 			Shared.GlobalFunc.SetText(FeaturePanel_mc.Brackets_mc.Label_tf, panelTitle, false, true);
 			FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x = FeaturePanel_mc.Brackets_mc.Label_tf.x + FeaturePanel_mc.Brackets_mc.Label_tf.textWidth + 5;
 			FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
-			PreviousStageFocus = stage.focus;
 			stage.focus = FeaturePanel_mc.List_mc;
-			
 			UpdateButtons();
 		}
 		
@@ -2426,7 +2641,7 @@
 				}
 				catch(e:Error)
 				{
-					trace("Failed to populate list");
+					trace("Failed to populate Preset list");
 				}
 								
 				FeatureListChangeLock++;
@@ -2445,7 +2660,16 @@
 		{
 			var selectedIndex = FeaturePanel_mc.List_mc.selectedIndex;
 			if(selectedIndex >= 0) {
-				root.f4se.plugins.F4EE.LoadPreset(FeaturePanel_mc.List_mc.entryList[selectedIndex].path);
+				try
+				{
+					root.f4se.plugins.F4EE.LoadPreset(FeaturePanel_mc.List_mc.entryList[selectedIndex].path);
+					presetTimer.reset();
+					presetTimer.start();
+				}
+				catch(e:Error)
+				{
+					
+				}
 			}
 		}
 		
@@ -2556,7 +2780,7 @@
 			}
 			catch(e:Error)
 			{
-				trace("Failed to populate list");
+				trace("Failed to populate Face list");
 			}
 							
 			FeatureListChangeLock++;
@@ -2727,6 +2951,17 @@
 				{
 					if (BGSCodeObj.EndBodyEdit()) 
 					{
+						try
+						{
+							if(EquippedClothes) {
+								root.f4se.plugins.F4EE.EquipItems(EquippedClothes);
+								EquippedClothes = null;
+							}
+						}
+						catch(e:Error)
+						{
+							
+						}
 						BGSCodeObj.NotifyForWittyBanter(BANTER_GENERAL);
 						menuMode = START_MODE;
 					}
@@ -2750,16 +2985,15 @@
 				case BODY_OVERLAY_SELECT_MODE:
 				{
 					menuMode = BODY_OVERLAY_MODE;
-					PopulateBodyOverlays();					
-					stage.focus = PreviousStageFocus;
+					PopulateBodyOverlays();
 					break;
 				}
 				
 				case BODY_OVERLAY_TRANSFORM_MODE:
 				{
 					menuMode = BODY_OVERLAY_SELECT_MODE;
+					CurrentOverlayInfo.template = null;
 					PopulateBodyOverlayTemplates();
-					stage.focus = PreviousStageFocus;
 					break;
 				}
 				
