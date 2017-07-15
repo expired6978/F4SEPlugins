@@ -19,6 +19,7 @@ public:
 	virtual	EventResult	ReceiveEvent(TESLoadGameEvent * evn, void * dispatcher) override;
 	virtual	EventResult	ReceiveEvent(TESInitScriptEvent * evn, void * dispatcher) override;
 
+	virtual void Flush();
 	virtual void PushUpdate(Actor * actor);
 	virtual void Revert();
 

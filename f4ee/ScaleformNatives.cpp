@@ -11,17 +11,22 @@
 #include "CharGenInterface.h"
 #include "BodyMorphInterface.h"
 #include "OverlayInterface.h"
+#include "SkinInterface.h"
 #include "StringTable.h"
 
 #include <set>
 
 extern std::set<UInt32> g_presetNPCs;
+
 extern CharGenInterface g_charGenInterface;
 extern BodyMorphInterface g_bodyMorphInterface;
 extern OverlayInterface g_overlayInterface;
+extern SkinInterface	g_skinInterface;
+
 extern StringTable g_stringTable;
 extern bool g_bEnableBodyMorphs;
 extern bool g_bEnableOverlays;
+extern bool g_bEnableSkinOverrides;
 
 extern F4SETaskInterface * g_task;
 
@@ -745,5 +750,388 @@ void F4EEScaleform_EquipItems::Invoke(Args * args)
 		}
 		else
 			args->result->SetBool(false);
+	}
+}
+
+void F4EEScaleform_GetSkinOverrides::Invoke(Args * args)
+{
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(npc) {
+			UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
+
+			args->movie->movieRoot->CreateArray(args->result);
+
+			std::vector<std::pair<F4EEFixedString, SkinTemplatePtr>> skins;
+
+			g_skinInterface.ForEachSkinTemplate([&](const F4EEFixedString & name, const SkinTemplatePtr & pTemplate) {
+				if(pTemplate->gender == 2 || pTemplate->gender == gender)
+				{
+					skins.push_back(std::make_pair(name, pTemplate));
+				}
+			});
+
+			std::sort(skins.begin(), skins.end(), [&](const std::pair<F4EEFixedString, SkinTemplatePtr> & a, const std::pair<F4EEFixedString, SkinTemplatePtr> & b)
+			{
+				if(a.second->sort == b.second->sort)
+					return std::string(a.second->name.c_str()) < std::string(b.second->name.c_str());
+				else
+					return a.second->sort < b.second->sort;
+			});
+
+			for(auto & skin : skins)
+			{
+				GFxValue templateEntry;
+				args->movie->movieRoot->CreateObject(&templateEntry);
+				RegisterString(&templateEntry, args->movie->movieRoot, "id", skin.first.c_str());
+				RegisterString(&templateEntry, args->movie->movieRoot, "name", skin.second->name.c_str());
+				args->result->PushBack(&templateEntry);
+			}
+		}
+	}
+}
+
+void F4EEScaleform_GetSkinOverride::Invoke(Args * args)
+{
+	F4EEFixedString res;
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+
+		res = g_skinInterface.GetSkinOverride(actor);
+	}
+
+	args->movie->movieRoot->CreateString(args->result, res.c_str());
+}
+
+void F4EEScaleform_SetSkinOverride::Invoke(Args * args)
+{
+	bool res = false;
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(npc) {
+			UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
+			bool isFemale = gender == 1 ? true : false;
+
+			std::string skinOverride = args->args[0].GetString();
+			if(skinOverride.length() == 0)
+				res = g_skinInterface.RemoveSkinOverride(actor);
+			else
+				res = g_skinInterface.AddSkinOverride(actor, skinOverride, isFemale);
+		}
+	}
+	args->result->SetBool(res);
+}
+
+void F4EEScaleform_UpdateSkinOverride::Invoke(Args * args)
+{
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation && g_bEnableSkinOverrides) {
+		g_skinInterface.UpdateSkinOverride(characterCreation->actor, true);
+	}
+}
+
+void F4EEScaleform_CloneSkinOverride::Invoke(Args * args)
+{
+	bool bVerify = true;
+	if(args->numArgs >= 1) {
+		bVerify = args->args[0].GetBool(); // Used to verify whether the target is the starting character's dummy actor
+	}
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation) {
+		Actor * actor = characterCreation->actor;
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+
+		if(actor != (*g_player) && ((bVerify && (npc == (*g_customizationDummy1) || npc == (*g_customizationDummy2))) || !bVerify)) {
+			if(g_bEnableSkinOverrides) {
+				g_skinInterface.CloneSkinOverride(actor, (*g_player));
+				g_skinInterface.UpdateSkinOverride(actor, true);
+			}
+		}
+	}
+}
+
+
+void F4EEScaleform_GetSkinColor::Invoke(Args * args)
+{
+	ASSERT(args->numArgs >= 1);
+
+	UInt32 currentIndex = args->args[0].GetUInt();
+
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation)
+	{
+		TESNPC * npc = characterCreation->npc;
+		if(npc)
+		{
+			auto skinTemplate = static_cast<BGSCharacterTint::Template::Palette *>(characterCreation->skinTint);
+			if(skinTemplate) {
+				BGSCharacterTint::Template::Palette::ColorData * colorData = nullptr;
+				if(currentIndex < skinTemplate->colors.count) {
+					colorData = &skinTemplate->colors.entries[currentIndex];
+				}
+
+				tArray<BGSCharacterTint::Entry*> * charTints = nullptr;
+				if(characterCreation->actor == (*g_player))
+					charTints = (*g_player)->tints;
+				else
+					charTints = npc->tints;
+
+				BGSCharacterTint::PaletteEntry * skinEntry = nullptr;
+				if(charTints) {
+					for(UInt32 i = 0; i < charTints->count; ++i)
+					{
+						BGSCharacterTint::Entry * tintEntry;
+						charTints->GetNthItem(i, tintEntry);
+						if(tintEntry->tintIndex == skinTemplate->templateIndex) {
+							skinEntry = (BGSCharacterTint::PaletteEntry *)Runtime_DynamicCast(tintEntry, RTTI_BGSCharacterTint__Entry, RTTI_BGSCharacterTint__PaletteEntry);
+							break;
+						}
+					}
+				}
+
+				double red = 0.0, green = 0.0, blue = 0.0, alpha = 100.0;
+				if(skinEntry) {
+					red = (double)skinEntry->color.channel.red / 255.0;
+					green = (double)skinEntry->color.channel.green / 255.0;
+					blue = (double)skinEntry->color.channel.blue / 255.0;
+					alpha = (double)skinEntry->percent / 100.0;
+				} else if(colorData) {
+					BGSColorForm * colorForm = colorData->colorForm;
+					if(colorForm) {
+						red = (double)colorForm->color.channels.r / 255.0;
+						green = (double)colorForm->color.channels.g / 255.0;
+						blue = (double)colorForm->color.channels.b / 255.0;
+					}
+					alpha = colorData->alpha;
+				}
+
+				args->movie->movieRoot->CreateObject(args->result);
+				Register<double>(args->result, "red", red);
+				Register<double>(args->result, "green", green);
+				Register<double>(args->result, "blue", blue);
+				Register<double>(args->result, "alpha", alpha);
+			}
+		}
+	}
+}
+
+
+void F4EEScaleform_SetSkinColor::Invoke(Args * args)
+{
+	ASSERT(args->numArgs >= 1);
+
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation)
+	{
+		TESNPC * npc = characterCreation->npc;
+		if(npc)
+		{
+			auto skinTemplate = static_cast<BGSCharacterTint::Template::Palette *>(characterCreation->skinTint);
+			if(skinTemplate) {
+				tArray<BGSCharacterTint::Entry*> * charTints = nullptr;
+				if(characterCreation->actor == (*g_player))
+					charTints = (*g_player)->tints;
+				else
+					charTints = npc->tints;
+
+				BGSCharacterTint::PaletteEntry * skinEntry = nullptr;
+				if(charTints) {
+					for(UInt32 i = 0; i < charTints->count; ++i)
+					{
+						BGSCharacterTint::Entry * tintEntry;
+						charTints->GetNthItem(i, tintEntry);
+						if(tintEntry->tintIndex == skinTemplate->templateIndex) {
+							skinEntry = (BGSCharacterTint::PaletteEntry *)Runtime_DynamicCast(tintEntry, RTTI_BGSCharacterTint__Entry, RTTI_BGSCharacterTint__PaletteEntry);
+							break;
+						}
+					}
+
+					if(!skinEntry) {
+						skinEntry = static_cast<BGSCharacterTint::PaletteEntry *>(CreateCharacterTintEntry(((UInt32)skinTemplate->templateIndex << 16) | BGSCharacterTint::Entry::kTypePalette));
+						charTints->Push(skinEntry);
+					}
+				}
+
+				
+
+				if(skinEntry) {
+					GFxValue red, green, blue, alpha;
+					if(args->args[0].HasMember("red")) {
+						args->args[0].GetMember("red", &red);
+
+						skinEntry->color.channel.red = red.GetNumber() * 255.0;
+					}
+					if(args->args[0].HasMember("green")) {
+						args->args[0].GetMember("green", &green);
+
+						skinEntry->color.channel.green = green.GetNumber() * 255.0;
+					}
+					if(args->args[0].HasMember("blue")) {
+						args->args[0].GetMember("blue", &blue);
+
+						skinEntry->color.channel.blue = blue.GetNumber() * 255.0;
+					}
+					if(args->args[0].HasMember("alpha")) {
+						args->args[0].GetMember("alpha", &alpha);
+
+						skinEntry->percent = alpha.GetNumber() * 100.0;
+					}
+
+					npc->MarkChanged(0x800);
+
+					characterCreation->unk517 = 1;
+					characterCreation->dirty = 1;
+				}
+			}
+		}
+	}
+}
+
+void F4EEScaleform_GetExtraColor::Invoke(Args * args)
+{
+	ASSERT(args->numArgs >= 2);
+
+	UInt32 extraGroup = args->args[0].GetUInt();
+	UInt32 selectedExtra = args->args[1].GetUInt();
+
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation)
+	{
+		TESNPC * npc = characterCreation->npc;
+		if(npc)
+		{
+			tArray<BGSCharacterTint::Template::Entry*> * templates;
+			characterCreation->details.GetNthItem(extraGroup, templates);
+
+			BGSCharacterTint::Template::Entry* pTemplate = nullptr;
+			if(templates)
+				templates->GetNthItem(selectedExtra, pTemplate);
+
+			BGSCharacterTint::Template::Palette* pPaletteTemplate = (BGSCharacterTint::Template::Palette*)Runtime_DynamicCast(pTemplate, RTTI_BGSCharacterTint__Template__Entry, RTTI_BGSCharacterTint__Template__Palette);
+			if(pPaletteTemplate)
+			{
+				BGSCharacterTint::Template::Palette::ColorData * colorData = pPaletteTemplate->colors.count > 1 ? &pPaletteTemplate->colors.entries[1] : nullptr;
+
+				tArray<BGSCharacterTint::Entry*> * charTints = nullptr;
+				if(characterCreation->actor == (*g_player))
+					charTints = (*g_player)->tints;
+				else
+					charTints = npc->tints;
+
+				BGSCharacterTint::PaletteEntry * extraEntry = nullptr;
+				if(charTints) {
+					for(UInt32 i = 0; i < charTints->count; ++i)
+					{
+						BGSCharacterTint::Entry * tintEntry;
+						charTints->GetNthItem(i, tintEntry);
+						if(tintEntry->tintIndex == pPaletteTemplate->templateIndex) {
+							extraEntry = (BGSCharacterTint::PaletteEntry *)Runtime_DynamicCast(tintEntry, RTTI_BGSCharacterTint__Entry, RTTI_BGSCharacterTint__PaletteEntry);
+							break;
+						}
+					}
+				}
+
+				double red = 0.0, green = 0.0, blue = 0.0, alpha = 100.0;
+				if(extraEntry) {
+					red = (double)extraEntry->color.channel.red / 255.0;
+					green = (double)extraEntry->color.channel.green / 255.0;
+					blue = (double)extraEntry->color.channel.blue / 255.0;
+					alpha = (double)extraEntry->percent / 100.0;
+				} else if(colorData) {
+					BGSColorForm * colorForm = colorData->colorForm;
+					if(colorForm) {
+						red = (double)colorForm->color.channels.r / 255.0;
+						green = (double)colorForm->color.channels.g / 255.0;
+						blue = (double)colorForm->color.channels.b / 255.0;
+					}
+					alpha = colorData->alpha;
+				}
+
+				args->movie->movieRoot->CreateObject(args->result);
+				Register<double>(args->result, "red", red);
+				Register<double>(args->result, "green", green);
+				Register<double>(args->result, "blue", blue);
+				Register<double>(args->result, "alpha", alpha);
+			}
+		}
+	}
+}
+
+void F4EEScaleform_SetExtraColor::Invoke(Args * args)
+{
+	ASSERT(args->numArgs >= 2);
+
+	UInt32 extraGroup = args->args[0].GetUInt();
+	UInt32 selectedExtra = args->args[1].GetUInt();
+
+	CharacterCreation * characterCreation = g_characterCreation[*g_characterIndex];
+	if(characterCreation)
+	{
+		TESNPC * npc = characterCreation->npc;
+		if(npc)
+		{
+			auto pTemplate = characterCreation->details.entries[extraGroup]->entries[selectedExtra];
+			if(pTemplate)
+			{
+				tArray<BGSCharacterTint::Entry*> * charTints = nullptr;
+				if(characterCreation->actor == (*g_player))
+					charTints = (*g_player)->tints;
+				else
+					charTints = npc->tints;
+
+				BGSCharacterTint::PaletteEntry * extraEntry = nullptr;
+				if(charTints) {
+					for(UInt32 i = 0; i < charTints->count; ++i)
+					{
+						BGSCharacterTint::Entry * tintEntry;
+						charTints->GetNthItem(i, tintEntry);
+						if(tintEntry->tintIndex == pTemplate->templateIndex) {
+							extraEntry = (BGSCharacterTint::PaletteEntry *)Runtime_DynamicCast(tintEntry, RTTI_BGSCharacterTint__Entry, RTTI_BGSCharacterTint__PaletteEntry);
+							break;
+						}
+					}
+
+					if(!extraEntry) {
+						extraEntry = static_cast<BGSCharacterTint::PaletteEntry *>(CreateCharacterTintEntry(((UInt32)pTemplate->templateIndex << 16) | BGSCharacterTint::Entry::kTypePalette));
+						charTints->Push(extraEntry);
+					}
+				}
+
+				if(extraEntry) {
+					GFxValue red, green, blue, alpha;
+					if(args->args[2].HasMember("red")) {
+						args->args[2].GetMember("red", &red);
+
+						extraEntry->color.channel.red = red.GetNumber() * 255.0;
+					}
+					if(args->args[2].HasMember("green")) {
+						args->args[2].GetMember("green", &green);
+
+						extraEntry->color.channel.green = green.GetNumber() * 255.0;
+					}
+					if(args->args[2].HasMember("blue")) {
+						args->args[2].GetMember("blue", &blue);
+
+						extraEntry->color.channel.blue = blue.GetNumber() * 255.0;
+					}
+					if(args->args[2].HasMember("alpha")) {
+						args->args[2].GetMember("alpha", &alpha);
+
+						extraEntry->percent = alpha.GetNumber() * 100.0;
+					}
+
+					npc->MarkChanged(0x800);
+
+					characterCreation->unk517 = 1;
+					characterCreation->dirty = 1;
+				}
+			}
+		}
 	}
 }

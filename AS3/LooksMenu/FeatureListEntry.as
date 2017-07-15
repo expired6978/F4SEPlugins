@@ -30,10 +30,13 @@
 			Slider_mc.visible = Slider_mc.enabled = false;
 			HSVGroup_mc.visible = HSVGroup_mc.enabled = false;
 			
+			textField.width = 220;
+			
 			if(object.sliderType != undefined) {
 				HSVGroup_mc.visible = HSVGroup_mc.enabled = true;
 				HSVGroup_mc.setType(object.sliderType);
 				HSVGroup_mc.setHSV(object.hsva, object.hsva[3]);
+				textField.width = 65;
 			}
 			
 			if(object.value != undefined) {
@@ -49,6 +52,7 @@
 				Slider_mc.offsetRight = 20;
 				Slider_mc["data"] = object;
 				Slider_mc.addEventListener(SliderEvent.VALUE_CHANGE, onSliderChanged);
+				textField.width = 70;
 			}
 		}
 		

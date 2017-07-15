@@ -36,6 +36,15 @@
 			addEventListener(flash.events.MouseEvent.CLICK, onClick);
 			Thumb_mc.addEventListener(flash.events.MouseEvent.MOUSE_DOWN, onThumbMouseDown);
 		}
+		
+        public function get maximum():Number { return fMaxValue; }
+        public function set maximum(value:Number):void { fMaxValue = value; }
+
+        public function get minimum():Number { return fMinValue; }
+        public function set minimum(value:Number):void { fMinValue = value; }
+		
+		public function get snapInterval():Number { return fStepSize; }
+        public function set snapInterval(value:Number):void { fStepSize = value; }
 
 		public function get MinValue():Number
 		{
@@ -67,40 +76,48 @@
 			fStepSize = arg1;
 
 		}
+		
+		public function get position():Number
+		{
+			return fValue;
+		}
+        public function set position(value:Number):void
+		{
+			fValue = Math.min(Math.max(value, this.fMinValue), this.fMaxValue);
+			var xOffset = (fValue - fMinValue) / (fMaxValue - fMinValue);
+			Thumb_mc.x = fMinThumbX + xOffset * (fMaxThumbX - fMinThumbX);
+		}
 
 		public function get value():Number
 		{
 			return fValue;
 		}
 
-		public function set value(arg1:Number):*
+		public function set value(val:Number):*
 		{
-			this.fValue = Math.min(Math.max(arg1, this.fMinValue), this.fMaxValue);
-			var loc1:*=(this.fValue - this.fMinValue) / (this.fMaxValue - this.fMinValue);
-			this.Thumb_mc.x = this.fMinThumbX + loc1 * (this.fMaxThumbX - this.fMinThumbX);
+			position = val;
+			dispatchEvent(new flash.events.Event(VALUE_CHANGE, true, true));
 		}
 
 		public function Decrement():*
 		{
-			this.value = this.value - this.fStepSize;
-			dispatchEvent(new flash.events.Event(VALUE_CHANGE, true, true));
+			value = value - fStepSize;
 		}
 
 		public function Increment():*
 		{
-			this.value = this.value + this.fStepSize;
-			dispatchEvent(new flash.events.Event(VALUE_CHANGE, true, true));
+			value = value + fStepSize;
 		}
 
 		public function HandleKeyboardInput(arg1:flash.events.KeyboardEvent):*
 		{
 			if (arg1.keyCode == flash.ui.Keyboard.LEFT && this.value > 0) 
 			{
-				this.Decrement();
+				Decrement();
 			}
 			else if (arg1.keyCode == flash.ui.Keyboard.RIGHT && this.value < 1) 
 			{
-				this.Increment();
+				Increment();
 			}
 		}
 
@@ -121,35 +138,34 @@
 				}
 				else 
 				{
-					this.Increment();
+					Increment();
 				}
 			}
 			else 
 			{
-				this.Decrement();
+				Decrement();
 			}
 		}
 
 		internal function onThumbMouseDown(arg1:flash.events.MouseEvent):*
 		{
-			this.Thumb_mc.startDrag(false, new flash.geom.Rectangle(0, this.Thumb_mc.y, this.fMaxThumbX, 0));
-			stage.addEventListener(flash.events.MouseEvent.MOUSE_UP, this.onThumbMouseUp);
-			stage.addEventListener(flash.events.MouseEvent.MOUSE_MOVE, this.onThumbMouseMove);
+			Thumb_mc.startDrag(false, new flash.geom.Rectangle(0, Thumb_mc.y, fMaxThumbX, 0));
+			stage.addEventListener(flash.events.MouseEvent.MOUSE_UP, onThumbMouseUp);
+			stage.addEventListener(flash.events.MouseEvent.MOUSE_MOVE, onThumbMouseMove);
 		}
 
 		internal function onThumbMouseMove(event:flash.events.MouseEvent):*
 		{
 			var thumbX = Thumb_mc.x - fMinThumbX;
-			this.value = thumbX / (fMaxThumbX - fMinThumbX) * (fMaxValue - fMinValue);
-			dispatchEvent(new flash.events.Event(VALUE_CHANGE, true, true));
+			value = thumbX / (fMaxThumbX - fMinThumbX) * (fMaxValue - fMinValue);
 		}
 
 		internal function onThumbMouseUp(arg1:flash.events.MouseEvent):*
 		{
 			value = value;
-			this.Thumb_mc.stopDrag();
-			stage.removeEventListener(flash.events.MouseEvent.MOUSE_UP, this.onThumbMouseUp);
-			stage.removeEventListener(flash.events.MouseEvent.MOUSE_MOVE, this.onThumbMouseMove);
+			Thumb_mc.stopDrag();
+			stage.removeEventListener(flash.events.MouseEvent.MOUSE_UP, onThumbMouseUp);
+			stage.removeEventListener(flash.events.MouseEvent.MOUSE_MOVE, onThumbMouseMove);
 		}
 	}
 }

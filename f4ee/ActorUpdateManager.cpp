@@ -2,6 +2,7 @@
 #include "BodyGenInterface.h"
 #include "BodyMorphInterface.h"
 #include "OverlayInterface.h"
+#include "SkinInterface.h"
 
 #include "f4se/GameRTTI.h"
 #include "f4se/GameObjects.h"
@@ -10,10 +11,12 @@
 extern BodyGenInterface		g_bodyGenInterface;
 extern BodyMorphInterface	g_bodyMorphInterface;
 extern OverlayInterface		g_overlayInterface;
+extern SkinInterface		g_skinInterface;
 
 extern bool g_bEnableBodygen;
 extern bool g_bEnableBodyMorphs;
 extern bool g_bEnableOverlays;
+extern bool g_bEnableSkinOverrides;
 
 EventResult	ActorUpdateManager::ReceiveEvent(TESObjectLoadedEvent * evn, void * dispatcher)
 {
@@ -48,6 +51,10 @@ EventResult	ActorUpdateManager::ReceiveEvent(TESObjectLoadedEvent * evn, void * 
 			{
 				if(g_bodyGenInterface.EvaluateBodyMorphs(actor, isFemale))
 					morphMap = g_bodyMorphInterface.GetMorphMap(actor, isFemale);
+			}
+			if(g_bEnableSkinOverrides)
+			{
+				g_skinInterface.UpdateSkinOverride(actor, false);
 			}
 			if(morphMap && g_bEnableBodyMorphs)
 			{
@@ -130,6 +137,12 @@ EventResult ActorUpdateManager::ReceiveEvent(TESLoadGameEvent * evn, void * disp
 	if(m_loading)
 		m_loading = false;
 
+	Flush();
+	return kEvent_Continue;
+}
+
+void ActorUpdateManager::Flush()
+{
 	m_pendingLock.Lock();
 	for(auto & uid : m_pendingUpdates)
 	{
@@ -137,6 +150,8 @@ EventResult ActorUpdateManager::ReceiveEvent(TESLoadGameEvent * evn, void * disp
 		if(form && form->formType == Actor::kTypeID)
 		{
 			Actor * actor = static_cast<Actor*>(form);
+			if(g_bEnableSkinOverrides)
+				g_skinInterface.UpdateSkinOverride(actor, false); // Load game doesnt need to update skin
 			if(g_bEnableBodyMorphs)
 				g_bodyMorphInterface.UpdateMorphs(actor);
 			if(g_bEnableOverlays)
@@ -146,8 +161,6 @@ EventResult ActorUpdateManager::ReceiveEvent(TESLoadGameEvent * evn, void * disp
 
 	m_pendingUpdates.clear();
 	m_pendingLock.Release();
-
-	return kEvent_Continue;
 }
 
 void ActorUpdateManager::PushUpdate(Actor * actor)

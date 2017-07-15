@@ -18,6 +18,9 @@
 #include "f4se/PluginAPI.h"
 #include "Utilities.h"
 
+#include "common/IDirectoryIterator.h"
+#include <set>
+
 #include <regex>
 #include <algorithm>
 #include <ppl.h>
@@ -62,7 +65,7 @@ bool TriShapeFullVertexData::ApplyMorph(UInt16 vertCount, NiPoint3 * vertices, f
 			vertices[vertexIndex].z += vertexDiff->z * factor;
 		}
 		else if(!outOfBounds) { // Prevent spam
-			_DMESSAGE("%s - Vertex (%d/%d) out of bounds X:%f Y:%f Z:%f", __FUNCTION__, vertexIndex, vertCount, vertexDiff->x, vertexDiff->y, vertexDiff->z);
+			_WARNING("%s - Vertex (%d/%d) out of bounds X:%f Y:%f Z:%f", __FUNCTION__, vertexIndex, vertCount, vertexDiff->x, vertexDiff->y, vertexDiff->z);
 			outOfBounds = true;
 		}
 	}
@@ -92,7 +95,7 @@ bool TriShapePackedVertexData::ApplyMorph(UInt16 vertCount, NiPoint3 * vertices,
 			vertices[vertexIndex].z += zDelta * factor;
 		}
 		else if(!outOfBounds) { // Prevent spam
-			_DMESSAGE("%s - Vertex (%d/%d) out of bounds X:%f Y:%f Z:%f", __FUNCTION__, vertexIndex, vertCount, xDelta, yDelta, zDelta);
+			_WARNING("%s - Vertex (%d/%d) out of bounds X:%f Y:%f Z:%f", __FUNCTION__, vertexIndex, vertCount, xDelta, yDelta, zDelta);
 			outOfBounds = true;
 		}
 	}
@@ -288,7 +291,7 @@ TriShapeMapPtr BodyMorphInterface::GetTrishapeMap(const char * relativePath)
 
 		m_totalMemory += trishapeMap->memoryUsage;
 
-		_DMESSAGE("%s - Info - Loaded %s (%s) (Cache: %s / %s)", __FUNCTION__, relativePath, bytes_to_string(trishapeMap->memoryUsage).c_str(), bytes_to_string(m_totalMemory).c_str(), bytes_to_string(m_memoryLimit).c_str());
+		_VMESSAGE("%s - Info - Loaded %s (%s) (Cache: %s / %s)", __FUNCTION__, relativePath, bytes_to_string(trishapeMap->memoryUsage).c_str(), bytes_to_string(m_totalMemory).c_str(), bytes_to_string(m_memoryLimit).c_str());
 		return trishapeMap;
 	}
 	else
@@ -327,11 +330,31 @@ void BodyMorphInterface::SetCacheLimit(UInt64 limit)
 
 void BodyMorphInterface::LoadBodyGenSliderMods()
 {
+	std::string sliderPath("F4SE\\Plugins\\F4EE\\Sliders\\");
+
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
 	{
 		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
-		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\Sliders\\") + std::string(modInfo->name) + "\\sliders.json";
+		std::string templatesPath = sliderPath + std::string(modInfo->name) + "\\sliders.json";
 		LoadBodyGenSliders(templatesPath);
+	}
+
+	std::string loosePath("Data\\");
+	loosePath += sliderPath;
+	loosePath += "Loose";
+
+	std::set<std::string> templates;
+
+	for(IDirectoryIterator iter(loosePath.c_str(), "*.json"); !iter.Done(); iter.Next())
+	{
+		std::string	path = iter.GetFullPath();
+		std::transform(path.begin(), path.begin(), path.end(), ::tolower);
+		templates.insert(path);
+	}
+
+	for(auto & slider : templates)
+	{
+		LoadBodyGenSliders(slider);
 	}
 }
 
@@ -364,7 +387,7 @@ bool BodyMorphInterface::LoadBodyGenSliders(const std::string & filePath)
 			}
 		}
 
-		_DMESSAGE("%s - Info - Loaded %d slider(s).\t[%s]", __FUNCTION__, totalSliders, filePath.c_str());
+		_MESSAGE("%s - Info - Loaded %d slider(s).\t[%s]", __FUNCTION__, totalSliders, filePath.c_str());
 	}
 
 	return true;
@@ -495,7 +518,7 @@ void F4EEBodyGenUpdate::Run()
 											}
 										}
 
-										parent->Remove(slotNode);
+										parent->RemoveChild(slotNode);
 									}
 								}
 							}
@@ -594,7 +617,7 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 
 				bool outOfBounds = morph->ApplyMorph(geometry->numVertices, (NiPoint3*)&verts.at(0), effectiveValue);
 				if(outOfBounds) {
-					_DMESSAGE("BodyMorphInterface::ApplyMorphsToShape - Shape: %s Morph: %s contained out of bounds vertices\t[%s]", morphableShape->shapeName.c_str(), actorMorph.first->c_str(), morphableShape->morphPath.c_str());
+					_WARNING("BodyMorphInterface::ApplyMorphsToShape - Shape: %s Morph: %s contained out of bounds vertices\t[%s]", morphableShape->shapeName.c_str(), actorMorph.first->c_str(), morphableShape->morphPath.c_str());
 				}
 			}
 		});
@@ -663,8 +686,7 @@ MorphValueMapPtr BodyMorphInterface::GetMorphMap(Actor * actor, bool isFemale)
 {
 	SimpleLocker locker(&m_morphLock);
 
-	UInt64 handle = GetHandleFromObject(actor);
-	auto it = m_morphMap[isFemale ? 1 : 0].find(handle);
+	auto it = m_morphMap[isFemale ? 1 : 0].find(actor ? actor->formID : 0);
 	if(it != m_morphMap[isFemale ? 1 : 0].end()) {
 		return it->second;
 	}
@@ -679,13 +701,11 @@ void BodyMorphInterface::SetMorph(Actor * actor, bool isFemale, const BSFixedStr
 
 	SimpleLocker locker(&m_morphLock);
 
-	UInt64 handle = GetHandleFromObject(actor);
-
 	MorphValueMapPtr morphMap = nullptr;
-	auto it = m_morphMap[isFemale ? 1 : 0].find(handle);
+	auto it = m_morphMap[isFemale ? 1 : 0].find(actor ? actor->formID : 0);
 	if(it == m_morphMap[isFemale ? 1 : 0].end()) {
 		morphMap = std::make_shared<MorphValueMap>();
-		m_morphMap[isFemale ? 1 : 0].emplace(handle, morphMap);
+		m_morphMap[isFemale ? 1 : 0].emplace(actor ? actor->formID : 0, morphMap);
 	}
 	else
 		morphMap = it->second;
@@ -700,9 +720,7 @@ void BodyMorphInterface::GetKeywords(Actor * actor, bool isFemale, const BSFixed
 
 	SimpleLocker locker(&m_morphLock);
 
-	UInt64 handle = GetHandleFromObject(actor);
-
-	auto it = m_morphMap[isFemale ? 1 : 0].find(handle);
+	auto it = m_morphMap[isFemale ? 1 : 0].find(actor ? actor->formID : 0);
 	if(it != m_morphMap[isFemale ? 1 : 0].end()) {
 		it->second->GetKeywords(morph, keywords);
 	}
@@ -715,9 +733,7 @@ void BodyMorphInterface::GetMorphs(Actor * actor, bool isFemale, std::vector<BSF
 
 	SimpleLocker locker(&m_morphLock);
 
-	UInt64 handle = GetHandleFromObject(actor);
-
-	auto it = m_morphMap[isFemale ? 1 : 0].find(handle);
+	auto it = m_morphMap[isFemale ? 1 : 0].find(actor ? actor->formID : 0);
 	if(it != m_morphMap[isFemale ? 1 : 0].end()) {
 		for(auto & morph : *it->second) {
 			morphs.push_back(morph.first->c_str());
@@ -732,9 +748,7 @@ void BodyMorphInterface::RemoveMorphsByName(Actor * actor, bool isFemale, const 
 
 	SimpleLocker locker(&m_morphLock);
 
-	UInt64 handle = GetHandleFromObject(actor);
-
-	auto it = m_morphMap[isFemale ? 1 : 0].find(handle);
+	auto it = m_morphMap[isFemale ? 1 : 0].find(actor ? actor->formID : 0);
 	if(it != m_morphMap[isFemale ? 1 : 0].end()) {
 		it->second->RemoveMorphsByName(morph);
 	}
@@ -747,9 +761,7 @@ void BodyMorphInterface::RemoveMorphsByKeyword(Actor * actor, bool isFemale, BGS
 
 	SimpleLocker locker(&m_morphLock);
 
-	UInt64 handle = GetHandleFromObject(actor);
-
-	auto it = m_morphMap[isFemale ? 1 : 0].find(handle);
+	auto it = m_morphMap[isFemale ? 1 : 0].find(actor ? actor->formID : 0);
 	if(it != m_morphMap[isFemale ? 1 : 0].end()) {
 		it->second->RemoveMorphsByKeyword(keyword);
 	}	
@@ -761,8 +773,7 @@ void BodyMorphInterface::ClearMorphs(Actor * actor, bool isFemale)
 		return;
 
 	SimpleLocker locker(&m_morphLock);
-	UInt64 handle = GetHandleFromObject(actor);
-	auto it = m_morphMap[isFemale ? 1 : 0].find(handle);
+	auto it = m_morphMap[isFemale ? 1 : 0].find(actor ? actor->formID : 0);
 	if(it != m_morphMap[isFemale ? 1 : 0].end()) {
 		m_morphMap[isFemale ? 1 : 0].erase(it);
 	}
@@ -773,18 +784,15 @@ void BodyMorphInterface::CloneMorphs(Actor * source, Actor * target)
 	if(!source || !target)
 		return;
 
-	SimpleLocker locker(&m_morphLock);
-	UInt64 handleSrc = GetHandleFromObject(source);
-	UInt64 handleDst = GetHandleFromObject(target);
-	
+	SimpleLocker locker(&m_morphLock);	
 	bool isFemale = false;
 	TESNPC * npc = DYNAMIC_CAST(source->baseForm, TESForm, TESNPC);
 	if(npc)
 		isFemale = CALL_MEMBER_FN(npc, GetSex)() == 1 ? true : false;
 
-	auto it = m_morphMap[isFemale ? 1 : 0].find(handleSrc);
+	auto it = m_morphMap[isFemale ? 1 : 0].find(source->formID);
 	if(it != m_morphMap[isFemale ? 1 : 0].end()) {
-		m_morphMap[isFemale ? 1 : 0][handleDst] = it->second;
+		m_morphMap[isFemale ? 1 : 0][target->formID] = it->second;
 	}
 }
 
@@ -792,10 +800,8 @@ float BodyMorphInterface::GetMorph(Actor * actor, bool isFemale, const BSFixedSt
 {
 	SimpleLocker locker(&m_morphLock);
 
-	UInt64 handle = GetHandleFromObject(actor);
-
 	MorphValueMapPtr morphMap = nullptr;
-	auto it = m_morphMap[isFemale ? 1 : 0].find(handle);
+	auto it = m_morphMap[isFemale ? 1 : 0].find(actor ? actor->formID : 0);
 	if(it != m_morphMap[isFemale ? 1 : 0].end())
 		return it->second->GetMorph(morph, keyword);
 
@@ -805,9 +811,7 @@ float BodyMorphInterface::GetMorph(Actor * actor, bool isFemale, const BSFixedSt
 float UserValues::GetValue(BGSKeyword * keyword)
 {
 	SimpleLocker locker(&m_morphLock);
-
-	UInt64 handle = g_bodyMorphInterface.GetHandleFromObject(keyword);
-	auto it = find(handle);
+	auto it = find(keyword ? keyword->formID : 0);
 	if(it != end()) {
 		return it->second;
 	}
@@ -819,24 +823,23 @@ void UserValues::SetValue(BGSKeyword * keyword, float value)
 {
 	SimpleLocker locker(&m_morphLock);
 
-	UInt64 handle = g_bodyMorphInterface.GetHandleFromObject(keyword);
+	UInt32 formId = keyword ? keyword->formID : 0;
 
 	// Erase the value if it isn't present at all
 	if(value == 0.0f) {
-		auto it = find(handle);
+		auto it = find(formId);
 		if(it != end()) {
 			erase(it);
 		}
 	} else {
-		(*this)[handle] = value;
+		(*this)[formId] = value;
 	}
 }
 
 void UserValues::RemoveKeyword(BGSKeyword * keyword)
 {
 	SimpleLocker locker(&m_morphLock);
-	UInt64 handle = g_bodyMorphInterface.GetHandleFromObject(keyword);
-	auto it = find(handle);
+	auto it = find(keyword ? keyword->formID : 0);
 	if(it != end()) {
 		erase(it);
 	}
@@ -889,8 +892,7 @@ void MorphValueMap::GetKeywords(const BSFixedString & morph, std::vector<BGSKeyw
 	auto it = find(g_stringTable.GetString(morph));
 	if(it != end()) {
 		for(auto & kwds : *it->second) {
-			BGSKeyword * keyword = g_bodyMorphInterface.GetObjectFromHandle<BGSKeyword>(kwds.first);
-			keywords.push_back(keyword);
+			keywords.push_back((BGSKeyword*)LookupFormByID(kwds.first));
 		}
 	}
 }
@@ -924,7 +926,7 @@ void BodyMorphInterface::Save(const F4SESerializationInterface * intfc, UInt32 k
 		intfc->OpenRecord('MRPM', kVersion);
 
 		// Key
-		WriteData<UInt64>(intfc, &morph.first);
+		WriteData<UInt32>(intfc, &morph.first);
 
 #ifdef _DEBUG_SERIALIZATION
 		_MESSAGE("%s - Saving Male Morph Handle %016llX", __FUNCTION__, morph.first);
@@ -940,7 +942,7 @@ void BodyMorphInterface::Save(const F4SESerializationInterface * intfc, UInt32 k
 		intfc->OpenRecord('MRPH', kVersion);
 
 		// Key
-		WriteData<UInt64>(intfc, &morph.first);
+		WriteData<UInt32>(intfc, &morph.first);
 
 #ifdef _DEBUG_SERIALIZATION
 		_MESSAGE("%s - Saving Female Morph Handle %016llX", __FUNCTION__, morph.first);
@@ -973,7 +975,7 @@ void MorphValueMap::Save(const F4SESerializationInterface * intfc, UInt32 kVersi
 
 		for (auto & keys : *morph.second)
 		{
-			WriteData<UInt64>(intfc, &keys.first);
+			WriteData<UInt32>(intfc, &keys.first);
 			WriteData<float>(intfc, &keys.second);
 		}
 	}
@@ -1023,11 +1025,23 @@ bool MorphValueMap::Load(const F4SESerializationInterface * intfc, UInt32 kVersi
 					UserValuesPtr userValues = std::make_shared<UserValues>();
 					for (UInt32 k = 0; k < numKeys; k++)
 					{
-						UInt64 handle;
-						if (!ReadData<UInt64>(intfc, &handle))
+						UInt64 handle = 0;
+						UInt32 formId = 0;
+						if(version >= BodyMorphInterface::kVersion2)
 						{
-							_ERROR("%s - Error loading morph key handle", __FUNCTION__);
-							return false;
+							if (!ReadData<UInt32>(intfc, &formId))
+							{
+								_ERROR("%s - Error loading morph keyword formId", __FUNCTION__);
+								return false;
+							}
+						}
+						else if(version >= BodyMorphInterface::kVersion1)
+						{
+							if (!ReadData<UInt64>(intfc, &handle))
+							{
+								_ERROR("%s - Error loading morph keyword handle", __FUNCTION__);
+								return false;
+							}
 						}
 
 						float value;
@@ -1041,12 +1055,32 @@ bool MorphValueMap::Load(const F4SESerializationInterface * intfc, UInt32 kVersi
 							continue;
 
 						UInt64 newHandle = 0;
+						UInt32 newFormId = 0;
 
-						// Skip if handle is no longer valid.
-						if (!intfc->ResolveHandle(handle, &newHandle))
-							continue;
+						if(version >= BodyMorphInterface::kVersion2)
+						{
+							// Skip if handle is no longer valid.
+							if (!intfc->ResolveFormId(formId, &newFormId))
+								continue;
+						}
+						else if(version >= BodyMorphInterface::kVersion1)
+						{
+							// Skip if handle is no longer valid.
+							if (!intfc->ResolveHandle(handle, &newHandle))
+								continue;
+						}
 
-						userValues->emplace(newHandle, value);
+						BGSKeyword * keyword = nullptr;
+						if(version >= BodyMorphInterface::kVersion2)
+						{
+							keyword = DYNAMIC_CAST(LookupFormByID(newFormId), TESForm, BGSKeyword);
+						}
+						else if(version >= BodyMorphInterface::kVersion1)
+						{
+							keyword = (BGSKeyword*)PapyrusVM::GetObjectFromHandle(newHandle, BGSKeyword::kTypeID);
+						}
+
+						userValues->emplace(keyword ? keyword->formID : 0, value);
 					}
 
 					if(userValues->empty())
@@ -1070,18 +1104,30 @@ bool MorphValueMap::Load(const F4SESerializationInterface * intfc, UInt32 kVersi
 	return true;
 }
 
-bool BodyMorphInterface::Load(const F4SESerializationInterface * intfc, bool isFemale, UInt32 kVersion, const std::unordered_map<UInt32, StringTableItem> & stringTable)
+bool BodyMorphInterface::Load(const F4SESerializationInterface * intfc, bool isFemale, UInt32 version, const std::unordered_map<UInt32, StringTableItem> & stringTable)
 {
-	UInt64 handle;
-	// Key
-	if (!ReadData<UInt64>(intfc, &handle))
+
+	UInt64 handle = 0;
+	UInt32 formId = 0;
+	if(version >= kVersion2)
 	{
-		_ERROR("%s - Error loading actor key", __FUNCTION__);
-		return false;
+		if (!ReadData<UInt32>(intfc, &formId))
+		{
+			_ERROR("%s - Error loading actor formId", __FUNCTION__);
+			return false;
+		}
+	}
+	else if(version >= kVersion1)
+	{
+		if (!ReadData<UInt64>(intfc, &handle))
+		{
+			_ERROR("%s - Error loading actor handle", __FUNCTION__);
+			return false;
+		}
 	}
 
 	MorphValueMapPtr morphValueMap = std::make_shared<MorphValueMap>();
-	if (!morphValueMap->Load(intfc, kVersion, stringTable))
+	if (!morphValueMap->Load(intfc, version, stringTable))
 	{
 		_ERROR("%s - Error loading value map for actor %016llX", __FUNCTION__, handle);
 		return false;
@@ -1092,21 +1138,40 @@ bool BodyMorphInterface::Load(const F4SESerializationInterface * intfc, bool isF
 	if(g_bEnableBodyMorphs)
 	{
 		UInt64 newHandle = 0;
+		UInt32 newFormId = 0;
 
-		// Skip if handle is no longer valid.
-		if (!intfc->ResolveHandle(handle, &newHandle))
-			return true;
+		if(version >= kVersion2)
+		{
+			// Skip if handle is no longer valid.
+			if (!intfc->ResolveFormId(formId, &newFormId))
+				return true;
+		}
+		else if(version >= kVersion1)
+		{
+			// Skip if handle is no longer valid.
+			if (!intfc->ResolveHandle(handle, &newHandle))
+				return true;
+		}
 
 		if(morphValueMap->empty())
 			return true;
-	
-		m_morphLock.Lock();
-		m_morphMap[isFemale ? 1 : 0].emplace(newHandle, morphValueMap);
-		m_morphLock.Release();
 
+		Actor * actor = nullptr;
+		if(version >= kVersion2)
+		{
+			actor = DYNAMIC_CAST(LookupFormByID(newFormId), TESForm, Actor);
+		}
+		else if(version >= kVersion1)
+		{
+			actor = (Actor*)PapyrusVM::GetObjectFromHandle(newHandle, Actor::kTypeID);
+		}
 
-		Actor * actor = GetObjectFromHandle<Actor>(newHandle);
-		if(actor) {
+		if(actor)
+		{
+			m_morphLock.Lock();
+			m_morphMap[isFemale ? 1 : 0].emplace(actor->formID, morphValueMap);
+			m_morphLock.Release();
+
 			g_actorUpdateManager.PushUpdate(actor);
 		}
 	}

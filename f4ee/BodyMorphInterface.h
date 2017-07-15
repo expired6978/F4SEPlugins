@@ -101,7 +101,7 @@ typedef std::shared_ptr<TriShapeMap> TriShapeMapPtr;
 
 
 // Maps keyword to value
-class UserValues : public std::unordered_map<UInt64, float>
+class UserValues : public std::unordered_map<UInt32, float>
 {
 public:
 	float GetValue(BGSKeyword * keyword);
@@ -208,7 +208,9 @@ public:
 	
 	enum
 	{
-		kSerializationVersion = 1,
+		kVersion1 = 1,
+		kVersion2 = 2,
+		kSerializationVersion = kVersion2,
 	};
 
 	virtual void Save(const F4SESerializationInterface * intfc, UInt32 kVersion);
@@ -248,21 +250,9 @@ public:
 	void SetCacheLimit(UInt64 limit);
 	void SetModelProcessor();
 
-	template<typename T>
-	UInt64 GetHandleFromObject(T * src)
-	{
-		return PapyrusVM::GetHandleFromObject((T*)src, T::kTypeID);
-	}
-
-	template<typename T>
-	T * GetObjectFromHandle(UInt64 handle)
-	{
-		return (T*)PapyrusVM::GetObjectFromHandle(handle, T::kTypeID);
-	}
-
 private:
 	SimpleLock											m_morphLock;
-	std::unordered_map<UInt64, MorphValueMapPtr>		m_morphMap[2];
+	std::unordered_map<UInt32, MorphValueMapPtr>		m_morphMap[2];
 
 	SimpleLock											m_morphCacheLock;
 	std::unordered_map<F4EEFixedString, TriShapeMapPtr>	m_morphCache;

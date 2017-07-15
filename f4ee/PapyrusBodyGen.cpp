@@ -15,11 +15,13 @@
 
 #include "BodyMorphInterface.h"
 #include "BodyGenInterface.h"
+#include "SkinInterface.h"
 
 #include "f4se/GameObjects.h"
 
 extern BodyMorphInterface g_bodyMorphInterface;
 extern BodyGenInterface g_bodyGenInterface;
+extern SkinInterface g_skinInterface;
 
 namespace papyrusBodyGen
 {
@@ -90,6 +92,42 @@ namespace papyrusBodyGen
 	{
 		g_bodyMorphInterface.UpdateMorphs(actor);
 	}
+
+	bool SetSkinOverride(StaticFunctionTag*, Actor * actor, BSFixedString id)
+	{
+		if(!actor)
+			return false;
+
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(!npc)
+			return false;
+
+		UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
+		bool isFemale = gender == 1 ? true : false;
+
+		bool ret = g_skinInterface.AddSkinOverride(actor, id, isFemale);
+		if(ret)
+			g_skinInterface.UpdateSkinOverride(actor, true);
+		return ret;
+	}
+
+	bool RemoveSkinOverride(StaticFunctionTag*, Actor * actor)
+	{
+		if(!actor)
+			return false;
+
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(!npc)
+			return false;
+
+		UInt8 gender = CALL_MEMBER_FN(npc, GetSex)();
+		bool isFemale = gender == 1 ? true : false;
+
+		bool ret = g_skinInterface.RemoveSkinOverride(actor);
+		if(ret)
+			g_skinInterface.UpdateSkinOverride(actor, true);
+		return ret;
+	}
 };
 
 void papyrusBodyGen::RegisterFuncs(VirtualMachine* vm)
@@ -123,4 +161,10 @@ void papyrusBodyGen::RegisterFuncs(VirtualMachine* vm)
 
 	vm->RegisterFunction(
 		new NativeFunction0<StaticFunctionTag, void>("ClearAll", "BodyGen", papyrusBodyGen::ClearAll, vm));
+
+	vm->RegisterFunction(
+		new NativeFunction2<StaticFunctionTag, bool, Actor*, BSFixedString>("SetSkinOverride", "BodyGen", papyrusBodyGen::SetSkinOverride, vm));
+
+	vm->RegisterFunction(
+		new NativeFunction1<StaticFunctionTag, bool, Actor*>("RemoveSkinOverride", "BodyGen", papyrusBodyGen::RemoveSkinOverride, vm));
 }

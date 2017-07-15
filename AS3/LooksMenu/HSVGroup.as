@@ -25,20 +25,20 @@
 		{
 			super();
 			
-			hSlider.MinValue = 0;
-			hSlider.MaxValue = 360;
+			hSlider.minimum = 0;
+			hSlider.maximum = 360;
 			hSlider.StepSize = 1;
 	
-			sSlider.MinValue = 0;
-			sSlider.MaxValue = 100;
+			sSlider.minimum = 0;
+			sSlider.maximum = 100;
 			sSlider.StepSize = 1;
 	
-			vSlider.MinValue = 0;
-			vSlider.MaxValue = 100;
+			vSlider.minimum = 0;
+			vSlider.maximum = 100;
 			vSlider.StepSize = 1;
 			
-			aSlider.MinValue = 0;
-			aSlider.MaxValue = 100;
+			aSlider.minimum = 0;
+			aSlider.maximum = 100;
 			aSlider.StepSize = 1;
 			
 			setupGradients();
@@ -98,10 +98,10 @@
 			aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, colRGB[0], colRGB[1], colRGB[2], alphaHex);
 			aSlider.Track_mc.trackAlpha.transform.colorTransform = new ColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
 			
-			hSlider.value = _hsv[0];
-			sSlider.value = _hsv[1];
-			vSlider.value = _hsv[2];
-			aSlider.value = a_alpha;
+			hSlider.position = _hsv[0];
+			sSlider.position = _hsv[1];
+			vSlider.position = _hsv[2];
+			aSlider.position = a_alpha;
 			
 			_currentColor = colRGB;
 			_alphaValue = alphaHex;
@@ -130,10 +130,10 @@
 			aSlider.Track_mc.trackColor.transform.colorTransform = new ColorTransform(0, 0, 0, 0, a_color[0], a_color[1], a_color[2], a_alpha);
 			aSlider.Track_mc.trackAlpha.transform.colorTransform = new ColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
 			
-			hSlider.value = _hsv[0];
-			sSlider.value = _hsv[1];
-			vSlider.value = _hsv[2];
-			aSlider.value = alphaNormal;
+			hSlider.position = _hsv[0];
+			sSlider.position = _hsv[1];
+			vSlider.position = _hsv[2];
+			aSlider.position = alphaNormal;
 			
 			_currentColor = a_color;
 			_alphaValue = a_alpha;

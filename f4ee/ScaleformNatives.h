@@ -128,3 +128,57 @@ class F4EEScaleform_EquipItems : public GFxFunctionHandler
 public:
 	virtual void	Invoke(Args * args);
 };
+
+class F4EEScaleform_GetSkinOverrides : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_GetSkinOverride : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_SetSkinOverride : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_UpdateSkinOverride : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_CloneSkinOverride : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_GetSkinColor : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_SetSkinColor : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_GetExtraColor : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};
+
+class F4EEScaleform_SetExtraColor : public GFxFunctionHandler
+{
+public:
+	virtual void	Invoke(Args * args);
+};

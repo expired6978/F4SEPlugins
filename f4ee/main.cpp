@@ -14,6 +14,7 @@
 #include "BodyGenInterface.h"
 #include "OverlayInterface.h"
 #include "ActorUpdateManager.h"
+#include "SkinInterface.h"
 #include "Utilities.h"
 
 #include "PapyrusBodyGen.h"
@@ -36,6 +37,7 @@ BodyGenInterface g_bodyGenInterface;
 BodyMorphInterface g_bodyMorphInterface;
 OverlayInterface g_overlayInterface;
 StringTable g_stringTable;
+SkinInterface g_skinInterface;
 ActorUpdateManager g_actorUpdateManager;
 
 IDebugLog	gLog;
@@ -52,9 +54,10 @@ ICriticalSection	s_loadLock;
 UInt32 g_f4seVersion;
 
 bool g_bExportRace = false;
-bool g_bEnableBodygen = false;
-bool g_bEnableBodyMorphs = false;
-bool g_bEnableOverlays = false;
+bool g_bEnableBodygen = true;
+bool g_bEnableBodyMorphs = true;
+bool g_bEnableOverlays = true;
+bool g_bEnableSkinOverrides = true;
 bool g_bParallelShapes = false;
 bool g_bEnableTintExtensions = true;
 bool g_bIgnoreTintPalettes = false;
@@ -245,6 +248,9 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 				if(g_bEnableOverlays) {
 					g_overlayInterface.LoadOverlayMods();
 				}
+				if(g_bEnableSkinOverrides) {
+					g_skinInterface.LoadSkinMods();
+				}
 				if(g_bExtendedLUTs) {
 					g_charGenInterface.LoadHairColorMods();
 				}
@@ -266,6 +272,9 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 				if(g_bEnableOverlays) {
 					g_overlayInterface.ClearMods();
 				}
+				if(g_bEnableSkinOverrides) {
+					g_skinInterface.ClearMods();
+				}
 				if(g_bExtendedLUTs) {
 					g_charGenInterface.ClearHairColorMods();
 				}
@@ -281,6 +290,7 @@ void F4EESerialization_Revert(const F4SESerializationInterface * intfc)
 {
 	g_bodyMorphInterface.Revert();
 	g_overlayInterface.Revert();
+	g_skinInterface.Revert();
 	g_stringTable.Revert();
 	g_actorUpdateManager.Revert();
 }
@@ -291,6 +301,7 @@ void F4EESerialization_Save(const F4SESerializationInterface * intfc)
 	g_stringTable.Save(intfc, StringTable::kSerializationVersion);
 	g_bodyMorphInterface.Save(intfc, BodyMorphInterface::kSerializationVersion);
 	g_overlayInterface.Save(intfc, OverlayInterface::kSerializationVersion);
+	g_skinInterface.Save(intfc, SkinInterface::kSerializationVersion);
 }
 
 void F4EESerialization_Load(const F4SESerializationInterface * intfc)
@@ -307,14 +318,16 @@ void F4EESerialization_Load(const F4SESerializationInterface * intfc)
 			case 'MRPH':	g_bodyMorphInterface.Load(intfc, true, version, stringTable);		break;	// Female Morphs
 			case 'MRPM':	g_bodyMorphInterface.Load(intfc, false, version, stringTable);		break;	// Male Morphs
 			case 'OVRL':	g_overlayInterface.Load(intfc, version, stringTable);			break;	// Female Overlays
+			case 'SOVR':	g_skinInterface.Load(intfc, version, stringTable);				break;
 			default:
-				_MESSAGE("unhandled type %08X (%.4s)", type, &type);
+				_ERROR("unhandled type %08X (%.4s)", type, &type);
 				error = true;
 				break;
 		}
 	}
 
 	g_actorUpdateManager.ResolvePendingBodyGen();
+	g_actorUpdateManager.Flush(); // In case the load game came first for whatever reason
 }
 
 extern "C"
@@ -328,7 +341,7 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 
 	if (logLevel >= 0)
 		gLog.OpenRelative(CSIDL_MYDOCUMENTS, "\\My Games\\Fallout4\\F4SE\\f4ee.log");
-	_DMESSAGE("f4ee");
+	_DMESSAGE("f4ee - log level %d", logLevel);
 
 	g_f4seVersion = f4se->f4seVersion;
 
@@ -426,6 +439,18 @@ bool ScaleformCallback(GFxMovieView * view, GFxValue * value)
 	RegisterFunction<F4EEScaleform_GetEquippedItems>(value, view->movieRoot, "GetEquippedItems");
 	RegisterFunction<F4EEScaleform_UnequipItems>(value, view->movieRoot, "UnequipItems");
 	RegisterFunction<F4EEScaleform_EquipItems>(value, view->movieRoot, "EquipItems");
+
+	RegisterFunction<F4EEScaleform_GetSkinOverrides>(value, view->movieRoot, "GetSkinOverrides");
+	RegisterFunction<F4EEScaleform_GetSkinOverride>(value, view->movieRoot, "GetSkinOverride");
+	RegisterFunction<F4EEScaleform_SetSkinOverride>(value, view->movieRoot, "SetSkinOverride");
+	RegisterFunction<F4EEScaleform_UpdateSkinOverride>(value, view->movieRoot, "UpdateSkinOverride");
+	RegisterFunction<F4EEScaleform_CloneSkinOverride>(value, view->movieRoot, "CloneSkinOverride");
+
+	RegisterFunction<F4EEScaleform_GetSkinColor>(value, view->movieRoot, "GetSkinColor");
+	RegisterFunction<F4EEScaleform_SetSkinColor>(value, view->movieRoot, "SetSkinColor");
+	RegisterFunction<F4EEScaleform_GetExtraColor>(value, view->movieRoot, "GetExtraColor");
+	RegisterFunction<F4EEScaleform_SetExtraColor>(value, view->movieRoot, "SetExtraColor");
+
 
 	GFxValue dispatchEvent;
 	GFxValue eventArgs[3];
@@ -533,6 +558,8 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 	F4EEGetConfigValue("Debug", "uExportIdMax", &g_uExportIdMax);
 
 	F4EEGetConfigValue("Global", "bEnableModelPreprocessor", &g_bEnableModelPreprocessor);
+
+	F4EEGetConfigValue("Skin", "bEnableSkinOverrides", &g_bEnableSkinOverrides);
 
 	F4EEGetConfigValue("Overlays", "bEnableOverlays", &g_bEnableOverlays);
 

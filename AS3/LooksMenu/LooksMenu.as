@@ -24,29 +24,33 @@
 		internal const AllModeInputMap:Object={"Done":0, "Accept":1, "Cancel":2, "XButton":3, "YButton":4, "LTrigger":5, "RTrigger":6, "LShoulder":7, "RShoulder":8, "Left":9, "Right":10, "Up":11, "Down":12};
 		internal const StartModeInputMapKBM:Object={"Done":0, "F":1, "B":2, "Accept":3, "X":4, "KeyLeft":5, "KeyRight":6, "R":7};
 		internal const FaceHairModeInputMap:Object={"Done":0, "Accept":1, "Cancel":2, "T":3, "C":4};
-		internal const BodyModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "T":3, "XButton":3, "R": 4, "YButton": 4, "C": 5, "LShoulder":5};
+		internal const BodyModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "T":3, "XButton":3, "R": 4, "YButton": 4, "C": 5, "LShoulder":5, "Q": 6, "RShoulder":6};
 		internal const SculptModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "KeyDown":9, "KeyUp":10, "KeyLeft":7, "KeyRight":8};
-		internal const FeatureModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "Space":3, "R":4, "KeyLeft":7, "KeyRight":8};
+		internal const FeatureModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "Space":3, "R":4, "KeyLeft":7, "KeyRight":8, "C": 9, "YButton":9};
 		internal const PresetModeInputMap:Object={"Done":0, "Accept":1, "Cancel":2, "X":3, "YButton":3};
 		internal const FeatureCategoryModeInputMap:Object={"Accept":1, "Cancel":2, "R":4};
 		internal const BodyAdvancedModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "KeyLeft":3, "KeyRight":4, "Left":3, "Right":4, "37":3, "39":4, "LTrigger":5, "RTrigger":6, "LShoulder":7, "RShoulder":8};
+		internal const BodySkinModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "Space": 3, "YButton": 3};
 		internal const BodyOverlayModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "KeyLeft":3, "KeyRight":4, "Left":3, "Right":4, "37":3, "39":4, "YButton": 5, "R": 5, "XButton": 6, "X": 6};
 		internal const BodyOverlaySelectModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "Space": 3, "YButton": 3, "X": 4, "XButton": 4};
 		internal const BodyOverlayTransformModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "KeyLeft":3, "KeyRight":4, "Left":3, "Right":4, "37":3, "39":4, "LTrigger":5, "RTrigger":6, "LShoulder":7, "RShoulder":8};
-		internal const InputMapA:Array=[StartModeInputMapController, FaceHairModeInputMap, BodyModeInputMap, SculptModeInputMap, FaceHairModeInputMap, FeatureModeInputMap, FeatureCategoryModeInputMap, PresetModeInputMap, undefined, BodyAdvancedModeInputMap, BodyOverlayModeInputMap, BodyOverlaySelectModeInputMap, BodyOverlayTransformModeInputMap];
+		internal const CustomColorModeInputMap:Object={"Done":1, "Accept":1, "Cancel":2, "KeyLeft":3, "KeyRight":4, "Left":3, "Right":4, "37":3, "39":4, "LTrigger":5, "RTrigger":6, "LShoulder":7, "RShoulder":8};
+		internal const InputMapA:Array=[StartModeInputMapController, FaceHairModeInputMap, BodyModeInputMap, SculptModeInputMap, FaceHairModeInputMap, FeatureModeInputMap, FeatureCategoryModeInputMap, PresetModeInputMap, undefined, BodyAdvancedModeInputMap, BodyOverlayModeInputMap, BodyOverlaySelectModeInputMap, BodyOverlayTransformModeInputMap, BodySkinModeInputMap, CustomColorModeInputMap];
 		internal const StartModeFunctionsReleased:Array=[ConfirmCloseMenu, FaceMode, BodyMode, ExtrasMode, ChangeSex, CharacterPresetLeft, CharacterPresetRight, PresetMode, undefined, undefined, undefined, undefined, undefined];
 		internal const FaceModeFunctionsReleased:Array=[ConfirmCloseMenu, SculptMode, StartMode, TypeMode, ColorMode, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
-		internal const BodyModeFunctionsReleased:Array=[undefined, AcceptChanges, CancelChanges, BodyAdvancedMode, BodyOverlayMode, ToggleClothes, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
+		internal const BodyModeFunctionsReleased:Array=[undefined, AcceptChanges, CancelChanges, BodyAdvancedMode, BodyOverlayMode, ToggleClothes, BodySkinMode, undefined, undefined, undefined, undefined, undefined, undefined];
 		internal const SculptModeFunctionsReleased:Array=[undefined, AcceptChanges, CancelChanges, undefined, undefined, undefined, undefined, SculptModeRotateLeft, SculptModeRotateRight, SculptModeShrink, SculptModeEnlarge, SculptModeOut, SculptModeIn];
 		internal const HairModeFunctionsReleased:Array=[ConfirmCloseMenu, StyleMode, StartMode, TypeMode, ColorMode, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
-		internal const FeatureModeFunctionsReleased:Array=[undefined, undefined, CancelChanges, FeaturesApply, undefined, undefined, undefined, FeatureModeLBumper, FeatureModeRBumper, undefined, undefined, undefined, undefined];
+		internal const FeatureModeFunctionsReleased:Array=[undefined, undefined, CancelChanges, FeaturesApply, undefined, undefined, undefined, FeatureModeLBumper, FeatureModeRBumper, CustomColorMode, undefined, undefined, undefined];
 		internal const FeatureCategoryModeFunctionsReleased:Array=[undefined, undefined, StartMode, undefined, FeaturesClear, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
 		internal const PresetModeFunctionsReleased:Array=[ConfirmCloseMenu, PresetLoad, StartMode, PresetSave];
-		internal const BodyAdvancedModeFunctionsReleased:Array=[undefined, AcceptBodyAdvancedChanges, CancelBodyAdvancedChanges, DecrementBodySlider, IncrementBodySlider, BackstepBodySlider, ForwardstepBodySlider, MinBodySlider, MaxBodySlider];
+		internal const BodyAdvancedModeFunctionsReleased:Array=[undefined, AcceptBodyAdvancedChanges, CancelBodyAdvancedChanges, DecrementSlider, IncrementSlider, BackstepSlider, ForwardstepSlider, MinEntrySlider, MaxEntrySlider];
+		internal const BodySkinModeFunctionsReleased:Array=[undefined, AcceptBodySkinChanges, CancelBodySkinChanges, SelectOrRemoveSkinOverride];
 		internal const BodyOverlayModeFunctionsReleased:Array=[undefined, AcceptBodyOverlayChanges, CancelBodyOverlayChanges, MoveBodyOverlayUp, MoveBodyOverlayDown, AddBodyOverlay, EditBodyOverlay];
 		internal const BodyOverlaySelectModeFunctionsReleased:Array=[undefined, AcceptBodyOverlaySelectChanges, CancelBodyOverlaySelectChanges, SelectOrRemoveBodyOverlay, StartTransformBodyOverlay];
-		internal const BodyOverlayTransformModeFunctionsReleased:Array=[undefined, AcceptBodyOverlayTransformChanges, CancelBodyOverlayTransformChanges, DecrementBodySlider, IncrementBodySlider, BackstepBodySlider, ForwardstepBodySlider, MinBodySlider, MaxBodySlider];
-		internal const InputFunctionsA:Array=[StartModeFunctionsReleased, FaceModeFunctionsReleased, BodyModeFunctionsReleased, SculptModeFunctionsReleased, HairModeFunctionsReleased, FeatureModeFunctionsReleased, FeatureCategoryModeFunctionsReleased, PresetModeFunctionsReleased, undefined, BodyAdvancedModeFunctionsReleased, BodyOverlayModeFunctionsReleased, BodyOverlaySelectModeFunctionsReleased, BodyOverlayTransformModeFunctionsReleased];
+		internal const BodyOverlayTransformModeFunctionsReleased:Array=[undefined, AcceptBodyOverlayTransformChanges, CancelBodyOverlayTransformChanges, DecrementSlider, IncrementSlider, BackstepSlider, ForwardstepSlider, MinEntrySlider, MaxEntrySlider];
+		internal const CustomColorModeFunctionsReleased:Array=[undefined, AcceptCustomColor, CancelCustomColor, DecrementSlider, IncrementSlider, BackstepSlider, ForwardstepSlider, MinEntrySlider, MaxEntrySlider];
+		internal const InputFunctionsA:Array=[StartModeFunctionsReleased, FaceModeFunctionsReleased, BodyModeFunctionsReleased, SculptModeFunctionsReleased, HairModeFunctionsReleased, FeatureModeFunctionsReleased, FeatureCategoryModeFunctionsReleased, PresetModeFunctionsReleased, undefined, BodyAdvancedModeFunctionsReleased, BodyOverlayModeFunctionsReleased, BodyOverlaySelectModeFunctionsReleased, BodyOverlayTransformModeFunctionsReleased, BodySkinModeFunctionsReleased, CustomColorModeFunctionsReleased];
 		internal const StartModeInputMapController:Object={"Done":0, "Accept":1, "B":2, "XButton":3, "YButton":4, "KeyLeft":5, "KeyRight":6};
 		internal const FeatureIntensityStep:Number=0.01;
 		internal const FeatureIntensityRampDurationCeiling:Number=3;
@@ -91,6 +95,8 @@
 		internal const BODY_OVERLAY_MODE:uint=10;
 		internal const BODY_OVERLAY_SELECT_MODE:uint=11;
 		internal const BODY_OVERLAY_TRANSFORM_MODE:uint=12;
+		internal const BODY_SKIN_MODE:uint=13;
+		internal const FEATURE_CUSTOM_COLOR_MODE:uint=14;
 		internal const AST_HAIR:uint=0;
 		internal const AST_HAIR_COLOR:uint=1;
 		internal const AST_BEARD:uint=2;
@@ -208,8 +214,18 @@
 		protected var buttonHint_BodyOverlayTransformMode_Accept:Shared.AS3.BSButtonHintData;
 		protected var buttonHint_BodyOverlayTransformMode_Cancel:Shared.AS3.BSButtonHintData;
 		protected var buttonHint_BodyOverlayTransformMode_Value:Shared.AS3.BSButtonHintData;
-		
+			
 		protected var buttonHint_BodyMode_ToggleClothes:Shared.AS3.BSButtonHintData;
+		
+		protected var buttonHint_BodyMode_Skin:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodySkinMode_Accept:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodySkinMode_Cancel:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_BodySkinMode_Select:Shared.AS3.BSButtonHintData;
+		
+		protected var buttonHint_FeatureMode_CustomColor:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_CustomColorMode_Accept:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_CustomColorMode_Cancel:Shared.AS3.BSButtonHintData;
+		protected var buttonHint_CustomColorMode_Value:Shared.AS3.BSButtonHintData;
 		
 		internal var CurrentSelectedExtra:uint=0;		
 		public static var GlobalTintColors:Array=[1.0, 0.0, 1.0, 1.0];
@@ -227,11 +243,24 @@
 			"object": {"offsetU": 0, "offsetV": 0, "scaleU": 1, "scaleV": 1, "red":0, "green":0, "blue":0, "alpha": 0}, 
 			"temp": {"offsetU": 0, "offsetV": 0, "scaleU": 1, "scaleV": 1, "red":0, "green":0, "blue":0, "alpha": 0}
 		};
+		internal var CurrentSkinInfo: Object = {
+			"id": "",
+			"color": null,
+			"temp": {"id": "", "color": null}
+		};
+		internal var CurrentExtraInfo: Object = {
+			"color": null,
+			"temp": {"color": null}
+		};
+		internal var CurrentFeatureIndex:uint = 0;
 		internal var overlayTemplates:Array = null;
 		internal var overlayTimer:Timer;
 		internal var _overlayDirty:Boolean=false;
 		public var EquippedClothes:Array = null;
 		public var UIColor: ColorTransform;
+		
+		internal var skinTimer:Timer;
+		internal var _skinDirty:Boolean=false;
 		
 		public function LooksMenu()
 		{
@@ -266,7 +295,7 @@
 			
 			this.buttonHint_BodyAdvancedMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptBodyAdvancedChanges);
 			this.buttonHint_BodyAdvancedMode_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.CancelBodyAdvancedChanges);
-			this.buttonHint_BodyAdvancedMode_Value = new Shared.AS3.BSButtonHintData("$VALUE", "A", "PSN_L2", "Xenon_L2", 1, this.DecrementBodySlider);
+			this.buttonHint_BodyAdvancedMode_Value = new Shared.AS3.BSButtonHintData("$VALUE", "A", "PSN_L2", "Xenon_L2", 1, this.DecrementSlider);
 			this.buttonHint_BodyMode_Advanced = new Shared.AS3.BSButtonHintData("$ADVANCED", "T", "PSN_X", "Xenon_X", 1, this.BodyAdvancedMode);
 			
 			this.buttonHint_BodyOverlayMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptBodyOverlayChanges);
@@ -283,9 +312,20 @@
 			
 			this.buttonHint_BodyOverlayTransformMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptBodyOverlayTransformChanges);
 			this.buttonHint_BodyOverlayTransformMode_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.CancelBodyOverlayTransformChanges);
-			this.buttonHint_BodyOverlayTransformMode_Value = new Shared.AS3.BSButtonHintData("$VALUE", "A", "_DPad_Left", "_DPad_Left", 1, this.DecrementBodySlider);
-			
+			this.buttonHint_BodyOverlayTransformMode_Value = new Shared.AS3.BSButtonHintData("$VALUE", "A", "_DPad_Left", "_DPad_Left", 1, this.DecrementSlider);
+						
 			this.buttonHint_BodyMode_ToggleClothes = new Shared.AS3.BSButtonHintData("$CLOTHES", "C", "PSN_L2", "Xenon_L2", 1, this.ToggleClothes);
+			
+			this.buttonHint_BodyMode_Skin = new Shared.AS3.BSButtonHintData("$SKIN", "Q", "PSN_R2", "Xenon_R2", 1, this.BodySkinMode);
+			this.buttonHint_BodySkinMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptBodySkinChanges);
+			this.buttonHint_BodySkinMode_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.CancelBodySkinChanges);
+			this.buttonHint_BodySkinMode_Select = new Shared.AS3.BSButtonHintData("$SELECT", "Space", "PSN_Y", "Xenon_Y", 1, this.SelectOrRemoveSkinOverride);
+			
+			this.buttonHint_FeatureMode_CustomColor = new Shared.AS3.BSButtonHintData("$CUSTOM COLOR", "C", "PSN_Y", "Xenon_Y", 1, this.CustomColorMode);
+			
+			this.buttonHint_CustomColorMode_Accept = new Shared.AS3.BSButtonHintData("$ACCEPT", "E", "PSN_A", "Xenon_A", 1, this.AcceptCustomColor);
+			this.buttonHint_CustomColorMode_Cancel = new Shared.AS3.BSButtonHintData("$CANCEL", "Esc", "PSN_B", "Xenon_B", 1, this.CancelCustomColor);
+			this.buttonHint_CustomColorMode_Value = new Shared.AS3.BSButtonHintData("$VALUE", "A", "_DPad_Left", "_DPad_Left", 1, this.DecrementSlider);
 			
 			this.FacialBoneRegions = new Array();
 			this.ControlAxes = [this.X_AXIS, this.Y_AXIS, this.X_ROT_AXIS, this.X_SCALE_AXIS, this.Z_AXIS];
@@ -313,11 +353,13 @@
 			this.buttonHint_FeatureMode_Modifier.SetSecondaryButtons("D", "PSN_R1", "Xenon_R1");
 			this.buttonHint_FeatureMode_Modifier.secondaryButtonCallback = this.FeatureModeLBumper;
 			this.buttonHint_BodyAdvancedMode_Value.SetSecondaryButtons("D", "PSN_R2", "Xenon_R2");
-			this.buttonHint_BodyAdvancedMode_Value.secondaryButtonCallback = this.IncrementBodySlider;
+			this.buttonHint_BodyAdvancedMode_Value.secondaryButtonCallback = this.IncrementSlider;
 			this.buttonHint_BodyOverlayMode_Order.SetSecondaryButtons("D", "_DPad_Right", "_DPad_Right");
 			this.buttonHint_BodyOverlayMode_Order.secondaryButtonCallback = this.MoveBodyOverlayDown;
 			this.buttonHint_BodyOverlayTransformMode_Value.SetSecondaryButtons("D", "_DPad_Right", "_DPad_Right");
-			this.buttonHint_BodyOverlayTransformMode_Value.secondaryButtonCallback = this.IncrementBodySlider;
+			this.buttonHint_BodyOverlayTransformMode_Value.secondaryButtonCallback = this.IncrementSlider;
+			this.buttonHint_CustomColorMode_Value.SetSecondaryButtons("D", "_DPad_Right", "_DPad_Right");
+			this.buttonHint_CustomColorMode_Value.secondaryButtonCallback = this.IncrementSlider;
 			this._buttonHintDataV = new Vector.<Shared.AS3.BSButtonHintData>();
 			this._buttonHintDataV.push(this.buttonHint_StartMode_BodyPreset);
 			this._buttonHintDataV.push(this.buttonHint_StartMode_Preset);
@@ -370,8 +412,19 @@
 			this._buttonHintDataV.push(this.buttonHint_BodyOverlayTransformMode_Accept);
 			this._buttonHintDataV.push(this.buttonHint_BodyOverlayTransformMode_Cancel);
 			this._buttonHintDataV.push(this.buttonHint_BodyOverlayTransformMode_Value);
-			
+					
 			this._buttonHintDataV.push(this.buttonHint_BodyMode_ToggleClothes);
+			
+			this._buttonHintDataV.push(this.buttonHint_BodyMode_Skin);
+			this._buttonHintDataV.push(this.buttonHint_BodySkinMode_Accept);
+			this._buttonHintDataV.push(this.buttonHint_BodySkinMode_Cancel);
+			this._buttonHintDataV.push(this.buttonHint_BodySkinMode_Select);
+			
+			this._buttonHintDataV.push(this.buttonHint_FeatureMode_CustomColor);
+			
+			this._buttonHintDataV.push(this.buttonHint_CustomColorMode_Accept);
+			this._buttonHintDataV.push(this.buttonHint_CustomColorMode_Cancel);
+			this._buttonHintDataV.push(this.buttonHint_CustomColorMode_Value);
 			
 			this.ButtonHintBar_mc.SetButtonHintData(this._buttonHintDataV);
 			this.UpdateButtons();
@@ -395,6 +448,9 @@
 			overlayTimer = new Timer(100);
 			overlayTimer.addEventListener(TimerEvent.TIMER, onOverlayTimer);
 			
+			skinTimer = new Timer(100);
+			skinTimer.addEventListener(TimerEvent.TIMER, onSkinTimer);
+			
 			presetTimer = new Timer(500);
 			presetTimer.addEventListener(TimerEvent.TIMER, onPresetTimer);
 			
@@ -407,7 +463,6 @@
 		{
 			//return [r,g,b,multiplier];
 			
-
 			var rint:uint = r * 255;
 			var gint:uint = g * 255;
 			var bint:uint = b * 255;
@@ -483,21 +538,20 @@
 		
 		public function onColorChanged(event:HSVEvent)
 		{
+			for(var i = 0; i < FeaturePanel_mc.List_mc.entryList.length; i++)
+			{
+				if(FeaturePanel_mc.List_mc.entryList[i].sliderType) {
+					FeaturePanel_mc.List_mc.entryList[i].hsva = event.hsva;
+					FeaturePanel_mc.List_mc.UpdateEntry(FeaturePanel_mc.List_mc.entryList[i]);
+				}
+			}
+				
 			if(eMode == BODY_OVERLAY_TRANSFORM_MODE)
 			{
 				CurrentOverlayInfo.temp.red = event.rgba[0];
 				CurrentOverlayInfo.temp.green = event.rgba[1];
 				CurrentOverlayInfo.temp.blue = event.rgba[2];
 				CurrentOverlayInfo.temp.alpha = event.rgba[3];
-				
-				for(var i = 0; i < FeaturePanel_mc.List_mc.entryList.length; i++)
-				{
-					if(FeaturePanel_mc.List_mc.entryList[i].sliderType) {
-						FeaturePanel_mc.List_mc.entryList[i].hsva = event.hsva;
-						FeaturePanel_mc.List_mc.UpdateEntry(FeaturePanel_mc.List_mc.entryList[i]);
-					}
-				}
-				
 				try
 				{
 					root.f4se.plugins.F4EE.SetOverlayData(CurrentOverlayInfo.uid, CurrentOverlayInfo.temp);
@@ -508,6 +562,32 @@
 						
 				}
 				overlayTimer.start();
+			}
+			else if(eMode == FEATURE_CUSTOM_COLOR_MODE)
+			{
+				var target = null;
+				if(eFeature == AST_COLOR) {
+					target = CurrentSkinInfo.temp.color;		
+				} else if(eFeature == AST_EXTRAS) {
+					target = CurrentExtraInfo.temp.color;
+				}
+				
+				target.red = event.rgba[0];
+				target.green = event.rgba[1];
+				target.blue = event.rgba[2];
+				target.alpha = event.rgba[3];			
+				
+				try
+				{
+					if(eFeature == AST_COLOR)
+						root.f4se.plugins.F4EE.SetSkinColor(CurrentSkinInfo.temp.color);
+					else if(eFeature == AST_EXTRAS)
+						root.f4se.plugins.F4EE.SetExtraColor(CurrentExtraGroup, CurrentSelectedExtra, CurrentExtraInfo.temp.color);
+				}
+				catch(e:Error)
+				{
+						
+				}
 			}
 		}
 		
@@ -525,7 +605,7 @@
 			if(sliderData)
 			{
 				sliderData.value = event.value;
-				FeaturePanel_mc.SliderField.text = Number(sliderData.value).toFixed(3);
+				FeaturePanel_mc.SliderField.text = sliderData.value != undefined ? Number(sliderData.value).toFixed(3) : "";
 				
 				if(eMode == BODY_ADVANCED_MODE)
 				{
@@ -657,20 +737,35 @@
 			buttonHint_BodyOverlaySelectMode_Edit.ButtonEnabled = eMode == BODY_OVERLAY_SELECT_MODE;
 			buttonHint_BodyOverlaySelectMode_Edit.ButtonText = "$SELECT";
 			
+			buttonHint_CustomColorMode_Accept.ButtonVisible = eMode == FEATURE_CUSTOM_COLOR_MODE;
+			buttonHint_CustomColorMode_Cancel.ButtonVisible = eMode == FEATURE_CUSTOM_COLOR_MODE;
+			buttonHint_CustomColorMode_Value.ButtonVisible = eMode == FEATURE_CUSTOM_COLOR_MODE;
+
+			
 			var selectedEntry = FeaturePanel_mc.List_mc.selectedEntry;
+			buttonHint_FeatureMode_CustomColor.ButtonVisible = buttonHint_FeatureMode_CustomColor.ButtonEnabled = eMode == FEATURE_MODE && ((CurrentFeatureIntensity > 0 && CurrentExtraNumColors > 1 && selectedEntry && selectedEntry.applied) || eFeature == AST_COLOR);
 			
 			buttonHint_BodyOverlaySelectMode_Transform.ButtonVisible = eMode == BODY_OVERLAY_SELECT_MODE && selectedEntry && selectedEntry.applied;
 			buttonHint_BodyOverlaySelectMode_Transform.ButtonEnabled = selectedEntry && (selectedEntry.transformable || selectedEntry.tintable);
 			
 			var bHasSliders = eMode == BODY_ADVANCED_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE;
 			FeaturePanel_mc.SliderField.visible = bHasSliders && selectedEntry && selectedEntry.value != undefined;
-			FeaturePanel_mc.SliderField.text = bHasSliders && selectedEntry ? Number(selectedEntry.value).toFixed(3) : "";
+			FeaturePanel_mc.SliderField.text = bHasSliders && selectedEntry && selectedEntry.value != undefined ? Number(selectedEntry.value).toFixed(3) : "";
 			
 			buttonHint_BodyOverlayTransformMode_Accept.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
 			buttonHint_BodyOverlayTransformMode_Cancel.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
 			buttonHint_BodyOverlayTransformMode_Value.ButtonVisible = eMode == BODY_OVERLAY_TRANSFORM_MODE;
 			
 			buttonHint_BodyMode_ToggleClothes.ButtonVisible = eMode == BODY_MODE && bInitialized && bExtensionsInitialized;
+			
+			buttonHint_BodyMode_Skin.ButtonVisible = eMode == BODY_MODE && bInitialized && bExtensionsInitialized;
+			buttonHint_BodySkinMode_Accept.ButtonVisible = eMode == BODY_SKIN_MODE;
+			buttonHint_BodySkinMode_Accept.ButtonEnabled = eMode == BODY_SKIN_MODE;
+			buttonHint_BodySkinMode_Cancel.ButtonVisible = eMode == BODY_SKIN_MODE;
+			buttonHint_BodySkinMode_Cancel.ButtonEnabled = eMode == BODY_SKIN_MODE;
+			buttonHint_BodySkinMode_Select.ButtonVisible = eMode == BODY_SKIN_MODE;
+			buttonHint_BodySkinMode_Select.ButtonEnabled = eMode == BODY_SKIN_MODE && selectedEntry;
+			buttonHint_BodySkinMode_Select.ButtonText = "$SELECT";
 			
 			PresetInput_mc.visible = PresetInput_mc.enabled = eMode == PRESET_NAME_MODE;
 			
@@ -679,8 +774,8 @@
 			LoadingSpinner_mc.visible = _loading ? true : false;
 			FacePartLabel_tf.alpha = EditMode != EDIT_HAIRCUT && eMode != START_MODE && eMode != BODY_MODE && eMode != FEATURE_CATEGORY_MODE && (eMode != FEATURE_MODE || eFeature != AST_EXTRAS);
 			WeightTriangle_mc.alpha = eMode != BODY_MODE ? 0 : 1;
-			FeaturePanel_mc.visible = eMode == FEATURE_MODE || eMode == FEATURE_CATEGORY_MODE || eMode == PRESET_MODE || eMode == FACE_MODE || (eMode == HAIR_MODE && EditMode != EDIT_HAIRCUT) || eMode == BODY_ADVANCED_MODE || eMode == BODY_OVERLAY_MODE || eMode == BODY_OVERLAY_SELECT_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE;
-			FeaturePanel_mc.Brackets_mc.BracketExtents_mc.visible = eMode == FEATURE_MODE || eMode == FEATURE_CATEGORY_MODE || eMode == PRESET_MODE || eMode == FACE_MODE || (eMode == HAIR_MODE && EditMode != EDIT_HAIRCUT) || eMode == BODY_ADVANCED_MODE || eMode == BODY_OVERLAY_MODE || eMode == BODY_OVERLAY_SELECT_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE;
+			FeaturePanel_mc.visible = eMode == FEATURE_MODE || eMode == FEATURE_CATEGORY_MODE || eMode == PRESET_MODE || eMode == FACE_MODE || (eMode == HAIR_MODE && EditMode != EDIT_HAIRCUT) || eMode == BODY_ADVANCED_MODE || eMode == BODY_OVERLAY_MODE || eMode == BODY_OVERLAY_SELECT_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE || eMode == BODY_SKIN_MODE || eMode == FEATURE_CUSTOM_COLOR_MODE;
+			FeaturePanel_mc.Brackets_mc.BracketExtents_mc.visible = eMode == FEATURE_MODE || eMode == FEATURE_CATEGORY_MODE || eMode == PRESET_MODE || eMode == FACE_MODE || (eMode == HAIR_MODE && EditMode != EDIT_HAIRCUT) || eMode == BODY_ADVANCED_MODE || eMode == BODY_OVERLAY_MODE || eMode == BODY_OVERLAY_SELECT_MODE || eMode == BODY_OVERLAY_TRANSFORM_MODE || eMode == BODY_SKIN_MODE || eMode == FEATURE_CUSTOM_COLOR_MODE;
 			switch (eMode) 
 			{
 				case START_MODE:
@@ -771,9 +866,24 @@
 				case PRESET_MODE:
 				case BODY_OVERLAY_MODE:
 				case BODY_ADVANCED_MODE:
+				case FEATURE_CUSTOM_COLOR_MODE:
 				{
 					FacePartLabel_tf.visible = false;
 					FacePartLabel_tf.alpha = 0;
+					break;
+				}
+				case BODY_SKIN_MODE:
+				{
+					FacePartLabel_tf.visible = false;
+					FacePartLabel_tf.alpha = 0;
+					
+					if(FeaturePanel_mc.List_mc.selectedEntry) {
+						if(FeaturePanel_mc.List_mc.selectedEntry.applied) {
+							buttonHint_BodySkinMode_Select.ButtonText = "$REMOVE";
+						}
+					} else {
+						buttonHint_BodySkinMode_Select.ButtonEnabled = false;
+					}
 					break;
 				}
 				case BODY_OVERLAY_SELECT_MODE:
@@ -1010,6 +1120,7 @@
 				}
 				loc1 = this.BGSCodeObj.GetDetailIntensity(this.CurrentExtraGroup, this.CurrentSelectedExtra);
 				this.buttonHint_FeatureMode_Apply.ButtonText = loc1 > 0 ? "$REMOVE" : "$APPLY";
+				buttonHint_FeatureMode_CustomColor.ButtonVisible = buttonHint_FeatureMode_CustomColor.ButtonEnabled = eMode == FEATURE_MODE && ((CurrentFeatureIntensity > 0 && CurrentExtraNumColors > 1 && FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.applied) || eFeature == AST_COLOR);
 			}
 			else if (this.eFeature != this.AST_MORPHS) 
 			{
@@ -1038,6 +1149,77 @@
 					trace("Failed to change internal boneID");
 				}
 			}
+		}
+		
+		// Shallower version that doesn't revert or update properties
+		internal function RevertFeatureMode(a_feature:uint)
+		{
+			eMode = FEATURE_MODE;
+			eFeature = a_feature;
+			UpdateButtons();
+			var panelTitle = "$TYPE";
+			var groupIndex:uint = eFeature != AST_EXTRAS ? CurrentBoneID : CurrentExtraGroup;
+			var featureData:uint = BGSCodeObj.GetFeatureData(FeaturePanel_mc.List_mc.entryList, eFeature, groupIndex);
+			FeatureListChangeLock++;
+			FeaturePanel_mc.List_mc.InvalidateData();
+			var boneIndex = GetBoneRegionIndexFromCurrentID();
+			switch (eFeature) 
+			{
+				case AST_HAIR:
+				{
+					panelTitle = "$STYLE";
+					UpdateFeatureModifierButtonHint();
+					break;
+				}
+				case AST_HAIR_COLOR:
+				{
+					panelTitle = "$COLOR";
+					UpdateFeatureModifierButtonHint();
+					break;
+				}
+				case AST_BEARD:
+				{
+					UpdateFeatureModifierButtonHint();
+					break;
+				}
+				case AST_COLOR:
+				{
+					var region = FacialBoneRegions[CurrentActor][boneIndex].headPart;
+					Shared.GlobalFunc.SetText(FacePartLabel_tf, region != HeadPartEyes ? "$SKIN TONE" : "$EYE COLOR", false);
+					panelTitle = "$COLOR";
+					UpdateFeatureModifierButtonHint();
+					break;
+				}
+				case AST_EYES:
+				{
+					Shared.GlobalFunc.SetText(FacePartLabel_tf, "$EYE COLOR", false);
+					panelTitle = "$COLOR";
+					UpdateFeatureModifierButtonHint();
+					break;
+				}
+				case AST_EXTRAS:
+				{
+					panelTitle = BGSCodeObj.GetExtraGroupName(CurrentExtraGroup);
+					if (CurrentExtraGroup < uint.MAX_VALUE) 
+					{
+						UpdateFeatureModifierButtonHint();
+					}
+					break;
+				}
+				case AST_MORPHS:
+				{					
+					UpdateFeatureModifierButtonHint();
+					break;
+				}
+			}
+			FeaturePanel_mc.List_mc.InvalidateData();
+			FeatureListChangeLock--;
+			FeaturePanel_mc.List_mc.selectedIndex = CurrentFeatureIndex;
+			Shared.GlobalFunc.SetText(FeaturePanel_mc.Brackets_mc.Label_tf, panelTitle, false, true);
+			FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x = FeaturePanel_mc.Brackets_mc.Label_tf.x + FeaturePanel_mc.Brackets_mc.Label_tf.textWidth + 5;
+			FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
+			PreviousStageFocus = stage.focus;
+			stage.focus = FeaturePanel_mc.List_mc;
 		}
 
 		internal function FeatureMode(a_feature:uint):*
@@ -1081,6 +1263,32 @@
 					SetNoContextBoneID(); // Temporary hack, leaving the face area with the cursor causes the boneID to be lost internally
 					var region = FacialBoneRegions[CurrentActor][boneIndex].headPart;
 					Shared.GlobalFunc.SetText(FacePartLabel_tf, region != HeadPartEyes ? "$SKIN TONE" : "$EYE COLOR", false);
+					
+					var currentColorIndex = 0;
+					for(var i = 0; i < FeaturePanel_mc.List_mc.entryList.length; i++)
+					{
+						if(FeaturePanel_mc.List_mc.entryList[i].applied)
+						{
+							currentColorIndex = i;
+							break;
+						}
+					}
+										
+					try
+					{
+						CurrentSkinInfo.color = root.f4se.plugins.F4EE.GetSkinColor(currentColorIndex);
+						CurrentSkinInfo.temp.color = {
+							"red": CurrentSkinInfo.color.red,
+							"green": CurrentSkinInfo.color.green,
+							"blue": CurrentSkinInfo.color.blue,
+							"alpha": CurrentSkinInfo.color.alpha
+						};
+					}
+					catch(e:Error)
+					{
+						trace("Error setting skin color");
+					}
+					
 					BGSCodeObj.CreateUndoPoint(UNDO_COLOR, CurrentBoneID);
 					panelTitle = "$COLOR";
 					UpdateFeatureModifierButtonHint();
@@ -1113,6 +1321,21 @@
 						}
 						CurrentExtraNumColors = BGSCodeObj.GetDetailColorCount(CurrentExtraGroup, CurrentSelectedExtra);
 						CurrentExtraColor = BGSCodeObj.GetDetailColor(CurrentExtraGroup, CurrentSelectedExtra);
+						
+						try
+						{
+							CurrentExtraInfo.color = root.f4se.plugins.F4EE.GetExtraColor(CurrentExtraGroup, CurrentSelectedExtra);
+							CurrentExtraInfo.temp.color = {
+								"red": CurrentExtraInfo.color.red,
+								"green": CurrentExtraInfo.color.green,
+								"blue": CurrentExtraInfo.color.blue,
+								"alpha": CurrentExtraInfo.color.alpha
+							};
+						}
+						catch(e:Error)
+						{
+							trace("Error getting extra color");
+						}
 						UpdateFeatureModifierButtonHint();
 					}
 					break;
@@ -1218,10 +1441,30 @@
 								break;
 							}
 							case AST_EYES:
+							{
+								SetNoContextBoneID(); // Temporary hack, leaving the face area with the cursor causes the boneID to be lost internally
+								BGSCodeObj.ChangeColor(currentIndex);
+								break;
+							}
 							case AST_COLOR:
 							{
 								SetNoContextBoneID(); // Temporary hack, leaving the face area with the cursor causes the boneID to be lost internally
 								BGSCodeObj.ChangeColor(currentIndex);
+								
+								try
+								{
+									CurrentSkinInfo.color = root.f4se.plugins.F4EE.GetSkinColor(currentIndex);
+									CurrentSkinInfo.temp.color = {
+										"red": CurrentSkinInfo.color.red,
+										"green": CurrentSkinInfo.color.green,
+										"blue": CurrentSkinInfo.color.blue,
+										"alpha": CurrentSkinInfo.color.alpha
+									};
+								}
+								catch(e:Error)
+								{
+									trace("Error getting skin color");
+								}
 								break;
 							}
 							case AST_EXTRAS:
@@ -1240,6 +1483,22 @@
 								}
 								CurrentExtraNumColors = BGSCodeObj.GetDetailColorCount(CurrentExtraGroup, CurrentSelectedExtra);
 								CurrentExtraColor = BGSCodeObj.GetDetailColor(CurrentExtraGroup, CurrentSelectedExtra);
+								
+								try
+								{
+									CurrentExtraInfo.color = root.f4se.plugins.F4EE.GetExtraColor(CurrentExtraGroup, CurrentSelectedExtra);
+									CurrentExtraInfo.temp.color = {
+										"red": CurrentExtraInfo.color.red,
+										"green": CurrentExtraInfo.color.green,
+										"blue": CurrentExtraInfo.color.blue,
+										"alpha": CurrentExtraInfo.color.alpha
+									};
+								}
+								catch(e:Error)
+								{
+									trace("Error getting skin color");
+								}
+								
 								UpdateFeatureModifierButtonHint();
 								break;
 							}
@@ -1288,6 +1547,27 @@
 							eMode = currentEntry.mode;
 						}
 						
+						UpdateButtons();
+					}
+					else if(eMode == BODY_SKIN_MODE)
+					{
+						try
+						{
+							if(FeaturePanel_mc.List_mc.selectedEntry)
+							{
+								CurrentSkinInfo.temp.id = FeaturePanel_mc.List_mc.selectedEntry.id;
+								root.f4se.plugins.F4EE.SetSkinOverride(CurrentSkinInfo.temp.id);
+								
+								// Dirty the skin override
+								_skinDirty = true;
+								skinTimer.start();
+							}
+						}
+						catch(e:Error)
+						{
+							
+						}
+
 						UpdateButtons();
 					}
 					else if(eMode == BODY_OVERLAY_SELECT_MODE)
@@ -1339,7 +1619,7 @@
 						UpdateButtons();
 					}
 					
-					FeaturePanel_mc.SliderField.text = FeaturePanel_mc.List_mc.selectedEntry ? Number(FeaturePanel_mc.List_mc.selectedEntry.value).toFixed(3) : "";
+					FeaturePanel_mc.SliderField.text = FeaturePanel_mc.List_mc.selectedEntry && FeaturePanel_mc.List_mc.selectedEntry.value != undefined ? Number(FeaturePanel_mc.List_mc.selectedEntry.value).toFixed(3) : "";
 				}
 				else 
 				{
@@ -1398,7 +1678,7 @@
 							break;
 						}
 						case AST_COLOR:
-						{
+						{							
 							BGSCodeObj.CreateSavePoint(UNDO_COLOR, CurrentBoneID);
 							break;
 						}
@@ -1423,6 +1703,10 @@
 				else if(eMode == BODY_OVERLAY_SELECT_MODE)
 				{
 					SelectOrRemoveBodyOverlay();
+				}
+				else if(eMode == BODY_SKIN_MODE)
+				{
+					SelectOrRemoveSkinOverride();
 				}
 			}
 			else
@@ -1499,7 +1783,7 @@
 									loc10 = ((loc9 = this).CurrentExtraColor + 1);
 									loc9.CurrentExtraColor = loc10;
 								}
-								this.BGSCodeObj.SetDetailColor(this.CurrentExtraGroup, this.CurrentSelectedExtra, this.CurrentExtraColor);
+								this.BGSCodeObj.SetDetailColor(this.CurrentExtraGroup, this.CurrentSelectedExtra, this.CurrentExtraColor);								
 								this.UpdateFeatureModifierButtonHint();
 							}
 							this.LastColorChangeAt = this._BumperDurationHeld;
@@ -1768,7 +2052,7 @@
 			PreviousMode(false);
 		}
 		
-		internal function DecrementBodySlider()
+		internal function DecrementSlider()
 		{
 			var slider = FeaturePanel_mc.List_mc.GetCurrentSlider();
 			if(slider) {
@@ -1776,7 +2060,7 @@
 			}
 		}
 		
-		internal function IncrementBodySlider()
+		internal function IncrementSlider()
 		{
 			var slider = FeaturePanel_mc.List_mc.GetCurrentSlider();
 			if(slider) {
@@ -1784,7 +2068,7 @@
 			}
 		}
 		
-		internal function BackstepBodySlider()
+		internal function BackstepSlider()
 		{
 			var slider = FeaturePanel_mc.List_mc.GetCurrentSlider();
 			if(slider) {
@@ -1792,7 +2076,7 @@
 			}
 		}
 		
-		internal function ForwardstepBodySlider()
+		internal function ForwardstepSlider()
 		{
 			var slider = FeaturePanel_mc.List_mc.GetCurrentSlider();
 			if(slider) {
@@ -1800,7 +2084,7 @@
 			}
 		}
 		
-		internal function MinBodySlider()
+		internal function MinEntrySlider()
 		{
 			var slider = FeaturePanel_mc.List_mc.GetCurrentSlider();
 			if(slider) {
@@ -1808,7 +2092,7 @@
 			}
 		}
 		
-		internal function MaxBodySlider()
+		internal function MaxEntrySlider()
 		{
 			var slider = FeaturePanel_mc.List_mc.GetCurrentSlider();
 			if(slider) {
@@ -2158,42 +2442,7 @@
 					var hsva:Array = ColorFunctions.rgbToHsv(rgba);
 					hsva.push(Number(rgba[3] * 100.0) / 255.0);
 										
-					FeaturePanel_mc.List_mc.entryList.push(
-						{
-							"text": "$Hue", 
-							"sliderType": "Hue",
-							"type": "color",
-							"hsva": hsva,
-							"object": CurrentOverlayInfo.temp
-						}
-					);
-					FeaturePanel_mc.List_mc.entryList.push(
-						{
-							"text": "$Saturation", 
-							"sliderType": "Saturation",
-							"type": "color",
-							"hsva": hsva,
-							"object": CurrentOverlayInfo.temp
-						}
-					);
-					FeaturePanel_mc.List_mc.entryList.push(
-						{
-							"text": "$Value", 
-							"sliderType": "Value",
-							"type": "color",
-							"hsva": hsva,
-							"object": CurrentOverlayInfo.temp
-						}
-					);
-					FeaturePanel_mc.List_mc.entryList.push(
-						{
-							"text": "$Alpha", 
-							"sliderType": "Alpha",
-							"type": "color",
-							"hsva": hsva,
-							"object": CurrentOverlayInfo.temp
-						}
-					);
+					AddColorSliders(hsva, CurrentOverlayInfo.temp);
 				}
 								
 				FeatureListChangeLock++;
@@ -2209,6 +2458,46 @@
 				
 				UpdateButtons();
 			}
+		}
+		
+		internal function AddColorSliders(hsva: Array, callbackObject: Object)
+		{
+			FeaturePanel_mc.List_mc.entryList.push(
+				{
+					"text": "$Hue", 
+					"sliderType": "Hue",
+					"type": "color",
+					"hsva": hsva,
+					"object": callbackObject
+				}
+			);
+			FeaturePanel_mc.List_mc.entryList.push(
+				{
+					"text": "$Saturation", 
+					"sliderType": "Saturation",
+					"type": "color",
+					"hsva": hsva,
+					"object": callbackObject
+				}
+			);
+			FeaturePanel_mc.List_mc.entryList.push(
+				{
+					"text": "$Value", 
+					"sliderType": "Value",
+					"type": "color",
+					"hsva": hsva,
+					"object": callbackObject
+				}
+			);
+			FeaturePanel_mc.List_mc.entryList.push(
+				{
+					"text": "$Alpha", 
+					"sliderType": "Alpha",
+					"type": "color",
+					"hsva": hsva,
+					"object": callbackObject
+				}
+			);
 		}
 		
 		internal function AcceptBodyOverlayTransformChanges():*
@@ -2254,6 +2543,156 @@
 			PreviousMode(false);
 		}
 		
+		internal function AcceptBodySkinChanges():*
+		{
+			// Find the selected entry and choose that as our skin
+			var accepted = "";
+			for(var i = 0; i < FeaturePanel_mc.List_mc.entryList.length; i++)
+			{
+				if(FeaturePanel_mc.List_mc.entryList[i].applied) {
+					accepted = FeaturePanel_mc.List_mc.entryList[i].id;
+					break;
+				}
+			}
+			
+			try
+			{
+				
+				root.f4se.plugins.F4EE.SetSkinOverride(accepted);
+				if(accepted != CurrentSkinInfo.temp.id)
+				{
+					// Dirty the skin override
+					_skinDirty = true;
+					skinTimer.start();
+				}
+			}
+			catch(e:Error)
+			{
+				
+			}
+			
+			CurrentSkinInfo.id = "";
+			CurrentSkinInfo.temp.id = "";
+			PreviousMode(true);
+		}
+		
+		internal function CancelBodySkinChanges():*
+		{
+			// Revert to the stored entry we started with
+			try
+			{
+				root.f4se.plugins.F4EE.SetSkinOverride(CurrentSkinInfo.id);
+				if(CurrentSkinInfo.id != CurrentSkinInfo.temp.id)
+				{
+					// Dirty the skin override
+					_skinDirty = true;
+					skinTimer.start();
+				}
+			}
+			catch(e:Error)
+			{
+				
+			}
+			
+			CurrentSkinInfo.id = "";
+			CurrentSkinInfo.temp.id = "";
+			PreviousMode(false);
+		}
+		
+		internal function SelectOrRemoveSkinOverride()
+		{
+			// Update the applied state
+			var isRemoving = FeaturePanel_mc.List_mc.selectedEntry.applied;
+			for(var i = 0; i < FeaturePanel_mc.List_mc.entryList.length; i++)
+			{
+				FeaturePanel_mc.List_mc.entryList[i].applied = false;
+				FeaturePanel_mc.List_mc.UpdateEntry(FeaturePanel_mc.List_mc.entryList[i]);
+			}
+			
+			if(!isRemoving)
+			{
+				FeaturePanel_mc.List_mc.selectedEntry.applied = true;
+				FeaturePanel_mc.List_mc.UpdateSelectedEntry();
+				
+				CurrentSkinInfo.temp.id = FeaturePanel_mc.List_mc.selectedEntry.id;
+			}
+			else
+			{
+				CurrentSkinInfo.temp.id = "";
+			}
+			
+			try
+			{
+				root.f4se.plugins.F4EE.SetSkinOverride(CurrentSkinInfo.temp.id);
+
+				// Dirty the skin override
+				_skinDirty = true;
+				skinTimer.start();
+			}
+			catch(e:Error)
+			{
+				
+			}
+						
+			UpdateButtons();
+		}
+		
+		internal function BodySkinMode()
+		{
+			if (eMode == BODY_MODE && (EditMode == EDIT_CHARGEN || EditMode == EDIT_BODYMOD)) 
+			{
+				eMode = BODY_SKIN_MODE;
+
+				var panelTitle = "$SKIN";
+				
+				FeaturePanel_mc.List_mc.entryList = null;
+				
+				FeaturePanel_mc.List_mc.selectedIndex = -1;
+				var selectedIndex = 0;
+				
+				try
+				{
+					CurrentSkinInfo.id = root.f4se.plugins.F4EE.GetSkinOverride();
+					CurrentSkinInfo.temp.id = CurrentSkinInfo.id;
+					
+					var overrides = root.f4se.plugins.F4EE.GetSkinOverrides();
+					for(var i = 0; i < overrides.length; i++)
+					{
+						var applied = false;
+						if(CurrentSkinInfo.id == overrides[i].id) {
+							applied = true;
+							selectedIndex = i;
+						}
+						
+						FeaturePanel_mc.List_mc.entryList.push(
+							{
+								"text": overrides[i].name,
+								"id": overrides[i].id,
+								"applied": applied
+							}
+						);
+					}
+				}
+				catch(e:Error)
+				{
+					trace("Failed to get skin overrides");
+				}
+				
+				FeatureListChangeLock++;
+				FeaturePanel_mc.List_mc.InvalidateData();
+				FeatureListChangeLock--;
+				FeaturePanel_mc.List_mc.selectedIndex = selectedIndex;
+				Shared.GlobalFunc.SetText(FeaturePanel_mc.Brackets_mc.Label_tf, panelTitle, false, true);
+				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x = FeaturePanel_mc.Brackets_mc.Label_tf.x + FeaturePanel_mc.Brackets_mc.Label_tf.textWidth + 5;
+				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
+								
+				PreviousStageFocus = stage.focus;
+				stage.focus = FeaturePanel_mc.List_mc;
+				
+				UpdateButtons();
+			}
+		}
+		
 		internal function ToggleClothes()
 		{
 			// Revert to real values
@@ -2272,6 +2711,71 @@
 			{
 				
 			}
+		}
+		
+		internal function CustomColorMode():*
+		{
+			if(buttonHint_FeatureMode_CustomColor.ButtonEnabled) {
+				eMode = FEATURE_CUSTOM_COLOR_MODE;
+				
+				var panelTitle = "$CUSTOM COLOR";
+				
+				if(FeaturePanel_mc.List_mc.selectedIndex) {
+					CurrentFeatureIndex = FeaturePanel_mc.List_mc.selectedIndex;
+				}
+				
+				FeaturePanel_mc.List_mc.entryList = null;
+				
+				var colorInfo = null;
+				if(eFeature == AST_COLOR) {
+					colorInfo = CurrentSkinInfo.temp;
+				} else if(eFeature == AST_EXTRAS) {
+					colorInfo = CurrentExtraInfo.temp;
+				}
+				
+				if(colorInfo) {
+					var rgba:Array = ColorFunctions.denormalize([colorInfo.color.red, colorInfo.color.green, colorInfo.color.blue], colorInfo.color.alpha);
+					var hsva:Array = ColorFunctions.rgbToHsv(rgba);
+					hsva.push(Number(rgba[3] * 100.0) / 255.0);
+																		
+					AddColorSliders(hsva, CurrentSkinInfo.temp);
+				}
+								
+				FeatureListChangeLock++;
+				FeaturePanel_mc.List_mc.InvalidateData();
+				FeatureListChangeLock--;
+				FeaturePanel_mc.List_mc.selectedIndex = 0;
+				Shared.GlobalFunc.SetText(FeaturePanel_mc.Brackets_mc.Label_tf, panelTitle, false, true);
+				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x = FeaturePanel_mc.Brackets_mc.Label_tf.x + FeaturePanel_mc.Brackets_mc.Label_tf.textWidth + 5;
+				FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.width = FeaturePanel_mc.Brackets_mc.UpperRightCorner_mc.x - FeaturePanel_mc.Brackets_mc.UpperHorizontalLine_mc.x;
+								
+				UpdateButtons();
+			}
+		}
+		
+		internal function AcceptCustomColor():*
+		{
+			PreviousMode(true);
+		}
+		
+		internal function CancelCustomColor():*
+		{
+			if(eMode == FEATURE_CUSTOM_COLOR_MODE)
+			{
+				try
+				{
+					if(eFeature == AST_COLOR)
+						root.f4se.plugins.F4EE.SetSkinColor(CurrentSkinInfo.color);
+					else if(eFeature == AST_EXTRAS)
+						root.f4se.plugins.F4EE.SetExtraColor(CurrentExtraGroup, CurrentSelectedExtra, CurrentExtraInfo.color);
+				}
+				catch(e:Error)
+				{
+						
+				}
+			}
+			
+			PreviousMode(false);
 		}
 
 		public function SculptModeLStickMouse(x_axis:Number, y_axis:Number):*
@@ -2416,8 +2920,8 @@
 				}
 				
 				_bodyDirty = false;
-				bodyTimer.stop();
 			}
+			bodyTimer.stop();
 		}
 		
 		internal function onOverlayTimer(e:TimerEvent)
@@ -2434,8 +2938,27 @@
 				}
 				
 				_overlayDirty = false;
-				overlayTimer.stop();
 			}
+			overlayTimer.stop();
+		}
+		
+		internal function onSkinTimer(e:TimerEvent)
+		{
+			if(_skinDirty)
+			{
+				try
+				{
+					root.f4se.plugins.F4EE.UpdateSkinOverride();
+				}
+				catch(e:Error)
+				{
+					
+				}
+				
+				_skinDirty = false;
+			}
+			
+			skinTimer.stop();
 		}
 		
 		internal function onPresetTimer(e:TimerEvent)
@@ -2588,7 +3111,9 @@
 		{
 			var panelTitle = "$OVERLAY";
 			FeaturePanel_mc.List_mc.entryList = overlayTemplates;
-						
+			
+			FeaturePanel_mc.List_mc.selectedIndex = -1;
+			
 			var sel = 0;
 			for(var i = 0; i < overlayTemplates.length; i++)
 			{
@@ -2848,6 +3373,7 @@
 						// Transfers body morphs from the dummy actor to the actual player
 						if(EditMode == EDIT_CHARGEN && AllowChangeSex)
 						{
+							root.f4se.plugins.F4EE.CloneSkinOverride();
 							root.f4se.plugins.F4EE.CloneBodyMorphs();
 							root.f4se.plugins.F4EE.CloneOverlays();
 						}
@@ -2903,7 +3429,7 @@
 							BlockNextAccept = false;
 							break;
 						}
-						case this.AST_EXTRAS:
+						case AST_EXTRAS:
 						{
 							BGSCodeObj.ClearTemporaryDetail(CurrentExtraGroup);
 							FeatureCategoryMode();
@@ -2973,7 +3499,12 @@
 					stage.focus = PreviousStageFocus;
 					break;
 				}
-				
+				case BODY_SKIN_MODE:
+				{
+					menuMode = BODY_MODE;
+					stage.focus = PreviousStageFocus;
+					break;
+				}
 				case BODY_OVERLAY_MODE:
 				{
 					menuMode = BODY_MODE;
@@ -2994,6 +3525,12 @@
 					menuMode = BODY_OVERLAY_SELECT_MODE;
 					CurrentOverlayInfo.template = null;
 					PopulateBodyOverlayTemplates();
+					break;
+				}
+				
+				case FEATURE_CUSTOM_COLOR_MODE:
+				{
+					RevertFeatureMode(eFeature);
 					break;
 				}
 				

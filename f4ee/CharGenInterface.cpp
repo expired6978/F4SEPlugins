@@ -26,6 +26,7 @@
 #include "CharGenTint.h"
 #include "BodyMorphInterface.h"
 #include "OverlayInterface.h"
+#include "SkinInterface.h"
 #include "Utilities.h"
 
 extern bool g_bExportRace;
@@ -35,6 +36,7 @@ extern UInt32 g_uExportIdMax;
 
 extern BodyMorphInterface g_bodyMorphInterface;
 extern OverlayInterface g_overlayInterface;
+extern SkinInterface	g_skinInterface;
 
 extern bool g_bIgnoreTintPalettes;
 extern bool g_bIgnoreTintTextures;
@@ -188,7 +190,7 @@ DWORD CharGenInterface::SavePreset(const std::string & filePath)
 			{
 			case BGSCharacterTint::Entry::kTypePalette:
 				BGSCharacterTint::PaletteEntry * palette = static_cast<BGSCharacterTint::PaletteEntry*>(entry);
-				tintData[keyName]["Color"] = (Json::Int)palette->color;
+				tintData[keyName]["Color"] = (Json::Int)palette->color.bgra;
 				tintData[keyName]["ColorID"] = palette->colorID;
 				break;
 			}
@@ -203,8 +205,7 @@ DWORD CharGenInterface::SavePreset(const std::string & filePath)
 	auto morphMap = g_bodyMorphInterface.GetMorphMap(actor, gender == 1 ? true : false);
 	if(morphMap) {
 		for(auto & morph : *morphMap) {
-			UInt64 emptyHandle = g_bodyMorphInterface.GetHandleFromObject<BGSKeyword>(nullptr);
-			auto it = morph.second->find(emptyHandle);
+			auto it = morph.second->find(0);
 			if(it != morph.second->end()) {
 				morphData[morph.first->c_str()] = it->second;
 			}
@@ -241,6 +242,11 @@ DWORD CharGenInterface::SavePreset(const std::string & filePath)
 		overlayData.append(overlay);
 	})) {
 		root["Overlays"] = overlayData;
+	}
+
+	auto skin = g_skinInterface.GetSkinOverride(actor);
+	if(skin.length() > 0) {
+		root["Skin"] = skin.c_str();
 	}
 		
 
@@ -513,7 +519,7 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 						if(newEntry->GetType() == BGSCharacterTint::Entry::kTypePalette) {
 							BGSCharacterTint::PaletteEntry * palette = static_cast<BGSCharacterTint::PaletteEntry*>(newEntry);
 							BGSCharacterTint::Template::Palette * paletteTemplate = static_cast<BGSCharacterTint::Template::Palette*>(templateEntry);
-							palette->color = tints[key]["Color"].asInt();
+							palette->color.bgra = tints[key]["Color"].asUInt();
 							SInt16 colorID = tints[key]["ColorID"].asInt();
 							auto colorData = paletteTemplate->GetColorDataByID(colorID); // Validate the color index
 							if(colorData)
@@ -625,6 +631,12 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 			}
 		}
 	}
+
+	g_skinInterface.RemoveSkinOverride(actor);
+	if(root.isMember("Skin"))
+	{
+		g_skinInterface.AddSkinOverride(actor, root["Skin"].asString(), gender == 1 ? true : false);
+	}
 	
 
 	npc->MarkChanged(0x800); // Save FaceData
@@ -681,138 +693,152 @@ void CharGenInterface::LoadTintTemplateMods()
 bool CharGenInterface::LoadTintCategories(const std::string & filePath)
 {
 	BSResourceNiBinaryStream binaryStream(filePath.c_str());
-	if(binaryStream.IsValid())
+	if(!binaryStream.IsValid())
+		return false;
+
+	std::string strFile;
+	BSReadAll(&binaryStream, &strFile);
+
+	Json::Reader reader;
+	Json::Value root;
+
+	UInt32 loadedCategories = 0;
+
+	if(!reader.parse(strFile, root)) {
+		return false;
+	}
+
+	try
 	{
-		std::string strFile;
-		BSReadAll(&binaryStream, &strFile);
-
-		Json::Reader reader;
-		Json::Value root;
-
-		if(!reader.parse(strFile, root)) {
-			return false;
-		}
-
-		try
+		// traverse instances
+		for(auto & item : root)
 		{
-			// traverse instances
-			for(auto & item : root)
+			std::string raceName = item["Race"].asString();
+
+			TESRace * race = GetRaceByName(raceName);
+			if(race)
 			{
-				std::string raceName = item["Race"].asString();
-
-				TESRace * race = GetRaceByName(raceName);
-				if(race)
+				// First pass for category registration
+				auto entries = item["Entries"];
+				for(auto & entry : entries)
 				{
-					// First pass for category registration
-					auto entries = item["Entries"];
-					for(auto & entry : entries)
+					std::string type = entry["Type"].asString();
+					UInt8 gender = entry["Gender"].asUInt();
+					UInt32 identifier = entry["Id"].asUInt();
+					switch(gender)
 					{
-						std::string type = entry["Type"].asString();
-						UInt8 gender = entry["Gender"].asUInt();
-						UInt32 identifier = entry["Id"].asUInt();
-						switch(gender)
-						{
-						case 0:
-						case 1:
-						case 2:
-							break;
-						default:
-							throw std::exception("Invalid gender specified");
-							break;
-						}
+					case 0:
+					case 1:
+					case 2:
+						break;
+					default:
+						throw std::exception("Invalid gender specified");
+						break;
+					}
 
-						if(_strnicmp(type.c_str(), "Category", 8) == 0)
-						{
-							std::shared_ptr<CharGenTintObject> pCategory = std::make_shared<CharGenTintObject>(identifier);
-							if(pCategory->Parse(entry))
-								pCategory->Apply(race, gender);
+					if(_strnicmp(type.c_str(), "Category", 8) == 0)
+					{
+						std::shared_ptr<CharGenTintObject> pCategory = std::make_shared<CharGenTintObject>(identifier);
+						if(pCategory->Parse(entry)) {
+							pCategory->Apply(race, gender);
+							loadedCategories++;
 						}
 					}
 				}
 			}
 		}
-		catch(const std::exception& e)
-		{
-			_ERROR(e.what());
-			return false;
-		}
+	}
+	catch(const std::exception& e)
+	{
+		_ERROR(e.what());
+		return false;
 	}
 
+	_MESSAGE("%s - Info - Loaded %d tint category(s).\t[%s]", __FUNCTION__, loadedCategories, filePath.c_str());
 	return true;
 }
 
 bool CharGenInterface::LoadTintTemplates(const std::string & filePath)
 {
 	BSResourceNiBinaryStream binaryStream(filePath.c_str());
-	if(binaryStream.IsValid())
+	if(!binaryStream.IsValid())
+		return false;
+
+	std::string strFile;
+	BSReadAll(&binaryStream, &strFile);
+
+	Json::Reader reader;
+	Json::Value root;
+
+	UInt32 loadedTemplates = 0;
+
+	if(!reader.parse(strFile, root)) {
+		return false;
+	}
+
+	try
 	{
-		std::string strFile;
-		BSReadAll(&binaryStream, &strFile);
-
-		Json::Reader reader;
-		Json::Value root;
-
-		if(!reader.parse(strFile, root)) {
-			return false;
-		}
-
-		try
+		// traverse instances
+		for(auto & item : root)
 		{
-			// traverse instances
-			for(auto & item : root)
+			std::string raceName = item["Race"].asString();
+
+			TESRace * race = GetRaceByName(raceName);
+			if(race)
 			{
-				std::string raceName = item["Race"].asString();
-
-				TESRace * race = GetRaceByName(raceName);
-				if(race)
+				auto entries = item["Entries"];
+				for(auto & entry : entries)
 				{
-					auto entries = item["Entries"];
-					for(auto & entry : entries)
+					std::string type = entry["Type"].asString();
+					UInt8 gender = entry["Gender"].asUInt();
+					UInt32 identifier = entry["Id"].asUInt();
+
+					switch(gender)
 					{
-						std::string type = entry["Type"].asString();
-						UInt8 gender = entry["Gender"].asUInt();
-						UInt32 identifier = entry["Id"].asUInt();
+					case 0:
+					case 1:
+					case 2:
+						break;
+					default:
+						throw std::exception("Invalid gender specified");
+						break;
+					}
 
-						switch(gender)
-						{
-						case 0:
-						case 1:
-						case 2:
-							break;
-						default:
-							throw std::exception("Invalid gender specified");
-							break;
+					if(_strnicmp(type.c_str(), "Mask", 4) == 0)
+					{
+						std::shared_ptr<CharGenTintMask> pMask = std::make_shared<CharGenTintMask>(identifier);
+						if(pMask->Parse(entry)) {
+							pMask->Apply(race, gender);
+							loadedTemplates++;
 						}
-
-						if(_strnicmp(type.c_str(), "Mask", 4) == 0)
-						{
-							std::shared_ptr<CharGenTintMask> pMask = std::make_shared<CharGenTintMask>(identifier);
-							if(pMask->Parse(entry))
-								pMask->Apply(race, gender);
+					}
+					else if(_strnicmp(type.c_str(), "Palette", 7) == 0)
+					{
+						std::shared_ptr<CharGenTintPalette> pPalette = std::make_shared<CharGenTintPalette>(identifier);
+						if(pPalette->Parse(entry)) {
+							pPalette->Apply(race, gender);
+							loadedTemplates++;
 						}
-						else if(_strnicmp(type.c_str(), "Palette", 7) == 0)
-						{
-							std::shared_ptr<CharGenTintPalette> pPalette = std::make_shared<CharGenTintPalette>(identifier);
-							if(pPalette->Parse(entry))
-								pPalette->Apply(race, gender);
-						}
-						else if(_strnicmp(type.c_str(), "TextureSet", 10) == 0)
-						{
-							std::shared_ptr<CharGenTintTextureSet> pTextureSet = std::make_shared<CharGenTintTextureSet>(identifier);
-							if(pTextureSet->Parse(entry))
-								pTextureSet->Apply(race, gender);
+					}
+					else if(_strnicmp(type.c_str(), "TextureSet", 10) == 0)
+					{
+						std::shared_ptr<CharGenTintTextureSet> pTextureSet = std::make_shared<CharGenTintTextureSet>(identifier);
+						if(pTextureSet->Parse(entry)) {
+							pTextureSet->Apply(race, gender);
+							loadedTemplates++;
 						}
 					}
 				}
 			}
 		}
-		catch(const std::exception& e)
-		{
-			_ERROR(e.what());
-			return false;
-		}
+	}
+	catch(const std::exception& e)
+	{
+		_ERROR(e.what());
+		return false;
 	}
 
+	_MESSAGE("%s - Info - Loaded %d tint template(s).\t[%s]", __FUNCTION__, loadedTemplates, filePath.c_str());
 	return true;
 }
 
@@ -1055,7 +1081,7 @@ void CharGenInterface::UnlockHeadParts()
 	});
 	end = std::chrono::system_clock::now();
 	std::chrono::duration<double> elapsed_seconds = end-start;
-	_DMESSAGE("Completed head part unlock of %d parts in %f seconds", total, elapsed_seconds.count());
+	_MESSAGE("Completed head part unlock of %d parts in %f seconds", total, elapsed_seconds.count());
 }
 
 void CharGenInterface::UnlockTints()
@@ -1091,7 +1117,7 @@ void CharGenInterface::UnlockTints()
 	});
 	end = std::chrono::system_clock::now();
 	std::chrono::duration<double> elapsed_seconds = end-start;
-	_DMESSAGE("Completed tint unlock of %d tints in %f seconds", total, elapsed_seconds.count());
+	_MESSAGE("Completed tint unlock of %d tints in %f seconds", total, elapsed_seconds.count());
 }
 
 void CharGenInterface::ProcessHairColor(NiAVObject * node, BGSColorForm * colorForm, BSLightingShaderMaterialBase * shaderMaterial)

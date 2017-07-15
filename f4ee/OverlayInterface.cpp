@@ -22,6 +22,8 @@
 #include "ActorUpdateManager.h"
 #include "Utilities.h"
 
+#include "common/IDirectoryIterator.h"
+
 #include <stdio.h>
 #include <set>
 #include <unordered_map>
@@ -61,7 +63,7 @@ void OverlayInterface::DestroyOverlaySlot(Actor * actor, NiNode * overlayHolder,
 	}
 
 	for(auto & node : nodesToDelete)
-		overlayHolder->Remove(node);
+		overlayHolder->RemoveChild(node);
 }
 
 bool OverlayInterface::UpdateOverlays(Actor * actor, NiNode * rootNode, NiAVObject * object, UInt32 slotIndex)
@@ -79,9 +81,7 @@ bool OverlayInterface::UpdateOverlays(Actor * actor, NiNode * rootNode, NiAVObje
 		DestroyOverlaySlot(actor, overlayHolder, slotIndex);
 
 		// Check the overlay table before we add any overlays
-		UInt64 handle = PapyrusVM::GetHandleFromObject(actor, Actor::kTypeID);
-
-		auto hit = m_overlays[isFemale ? 1 : 0].find(handle);
+		auto hit = m_overlays[isFemale ? 1 : 0].find(actor->formID);
 		if(hit == m_overlays[isFemale ? 1 : 0].end()) {
 			return false;
 		}
@@ -191,17 +191,25 @@ void OverlayInterface::LoadMaterialData(TESNPC * npc, BSTriShape * shape, const 
 			newMaterial->SetOffsetUV(oU, oV);
 			newMaterial->SetScaleUV(sU, sV);
 
-			// Alter Lighting Properties
-			if(newMaterial->GetType() == BSLightingShaderMaterialBase::kType_SkinTint && newMaterial->GetFeature() == 2) {
-				BSLightingShaderMaterialSkinTint * skinTint = static_cast<BSLightingShaderMaterialSkinTint *>(newMaterial);
+			BSLightingShaderProperty * newLightingShader = ni_cast(newShader, BSLightingShaderProperty);
+			if(newLightingShader) {
+				BSLightingShaderMaterialBase * shaderMaterialBase = static_cast<BSLightingShaderMaterialBase *>(newMaterial);
 
+				// Alter Lighting Properties
+				if(newMaterial->GetType() == BSLightingShaderMaterialBase::kType_SkinTint && newMaterial->GetFeature() == 2) {
+					BSLightingShaderMaterialSkinTint * skinTint = static_cast<BSLightingShaderMaterialSkinTint *>(newMaterial);
+
+					if((overlayData->flags & OverlayInterface::OverlayData::kHasTintColor) == OverlayInterface::OverlayData::kHasTintColor) {
+						skinTint->kTintColor = overlayData->tintColor;
+					} else {
+						skinTint->kTintColor.r = (float)npc->skinColor.red / 255.0f;
+						skinTint->kTintColor.g = (float)npc->skinColor.green / 255.0f;
+						skinTint->kTintColor.b = (float)npc->skinColor.blue / 255.0f;
+						skinTint->kTintColor.a = (float)npc->skinColor.alpha / 255.0f;
+					}
+				}
 				if((overlayData->flags & OverlayInterface::OverlayData::kHasTintColor) == OverlayInterface::OverlayData::kHasTintColor) {
-					skinTint->kTintColor = overlayData->tintColor;
-				} else {
-					skinTint->kTintColor.r = (float)npc->skinColor.red / 255.0f;
-					skinTint->kTintColor.g = (float)npc->skinColor.green / 255.0f;
-					skinTint->kTintColor.b = (float)npc->skinColor.blue / 255.0f;
-					skinTint->kTintColor.a = (float)npc->skinColor.alpha / 255.0f;
+					shaderMaterialBase->fLookupScale = overlayData->remapIndex;
 				}
 			}
 
@@ -227,16 +235,14 @@ OverlayInterface::UniqueID OverlayInterface::AddOverlay(Actor * actor, bool isFe
 		return 0;
 	}
 
-	UInt64 handle = PapyrusVM::GetHandleFromObject(actor, Actor::kTypeID);
-
 	SimpleLocker locker(&m_overlayLock);
 	PriorityMapPtr priorityMap;
-	auto hit = m_overlays[isFemale ? 1 : 0].find(handle);
+	auto hit = m_overlays[isFemale ? 1 : 0].find(actor->formID);
 	if(hit != m_overlays[isFemale ? 1 : 0].end()) {
 		priorityMap = hit->second;
 	} else {
 		priorityMap = std::make_shared<PriorityMap>();
-		m_overlays[isFemale ? 1 : 0].emplace(handle, priorityMap);
+		m_overlays[isFemale ? 1 : 0].emplace(actor->formID, priorityMap);
 	}
 
 	UniqueID uid = GetNextUID();
@@ -269,10 +275,8 @@ OverlayInterface::UniqueID OverlayInterface::GetNextUID()
 
 bool OverlayInterface::ReorderOverlay(Actor * actor, bool isFemale, UniqueID uid, SInt32 newPriority)
 {
-	UInt64 handle = PapyrusVM::GetHandleFromObject(actor, Actor::kTypeID);
-
 	SimpleLocker locker(&m_overlayLock);
-	auto hit = m_overlays[isFemale ? 1 : 0].find(handle);
+	auto hit = m_overlays[isFemale ? 1 : 0].find(actor->formID);
 	if(hit == m_overlays[isFemale ? 1 : 0].end())
 		return false;
 
@@ -300,10 +304,8 @@ bool OverlayInterface::ReorderOverlay(Actor * actor, bool isFemale, UniqueID uid
 
 bool OverlayInterface::RemoveOverlay(Actor * actor, bool isFemale, UniqueID uid)
 {
-	UInt64 handle = PapyrusVM::GetHandleFromObject(actor, Actor::kTypeID);
-
 	SimpleLocker locker(&m_overlayLock);
-	auto hit = m_overlays[isFemale ? 1 : 0].find(handle);
+	auto hit = m_overlays[isFemale ? 1 : 0].find(actor->formID);
 	if(hit == m_overlays[isFemale ? 1 : 0].end())
 		return false;
 
@@ -333,26 +335,21 @@ void OverlayInterface::CloneOverlays(Actor * source, Actor * target)
 		return;
 
 	SimpleLocker locker(&m_overlayLock);
-	UInt64 handleSrc = PapyrusVM::GetHandleFromObject(source, Actor::kTypeID);
-	UInt64 handleDst = PapyrusVM::GetHandleFromObject(target, Actor::kTypeID);
-
 	bool isFemale = false;
 	TESNPC * npc = DYNAMIC_CAST(source->baseForm, TESForm, TESNPC);
 	if(npc)
 		isFemale = CALL_MEMBER_FN(npc, GetSex)() == 1 ? true : false;
 
-	auto it = m_overlays[isFemale ? 1 : 0].find(handleSrc);
+	auto it = m_overlays[isFemale ? 1 : 0].find(source->formID);
 	if(it != m_overlays[isFemale ? 1 : 0].end()) {
-		m_overlays[isFemale ? 1 : 0][handleDst] = it->second;
+		m_overlays[isFemale ? 1 : 0][target->formID] = it->second;
 	}
 }
 
 std::pair<SInt32, OverlayInterface::OverlayDataPtr> OverlayInterface::GetActorOverlayByUID(Actor * actor, bool isFemale, UniqueID uid)
 {
-	UInt64 handle = PapyrusVM::GetHandleFromObject(actor, Actor::kTypeID);
-
 	SimpleLocker locker(&m_overlayLock);
-	auto hit = m_overlays[isFemale ? 1 : 0].find(handle);
+	auto hit = m_overlays[isFemale ? 1 : 0].find(actor->formID);
 	if(hit == m_overlays[isFemale ? 1 : 0].end())
 		return std::make_pair<SInt32, OverlayDataPtr>(0, nullptr);
 
@@ -376,10 +373,8 @@ std::pair<SInt32, OverlayInterface::OverlayDataPtr> OverlayInterface::GetActorOv
 
 bool OverlayInterface::RemoveAll(Actor * actor, bool isFemale)
 {
-	UInt64 handle = PapyrusVM::GetHandleFromObject(actor, Actor::kTypeID);
-
 	SimpleLocker locker(&m_overlayLock);
-	auto hit = m_overlays[isFemale ? 1 : 0].find(handle);
+	auto hit = m_overlays[isFemale ? 1 : 0].find(actor->formID);
 	if(hit == m_overlays[isFemale ? 1 : 0].end())
 		return false;
 
@@ -404,10 +399,8 @@ bool OverlayInterface::RemoveAll(Actor * actor, bool isFemale)
 
 bool OverlayInterface::ForEachOverlay(Actor * actor, bool isFemale, std::function<void(SInt32, const OverlayDataPtr&)> functor)
 {
-	UInt64 handle = PapyrusVM::GetHandleFromObject(actor, Actor::kTypeID);
-
 	SimpleLocker locker(&m_overlayLock);
-	auto hit = m_overlays[isFemale ? 1 : 0].find(handle);
+	auto hit = m_overlays[isFemale ? 1 : 0].find(actor->formID);
 	if(hit == m_overlays[isFemale ? 1 : 0].end())
 		return false;
 
@@ -425,11 +418,9 @@ bool OverlayInterface::ForEachOverlay(Actor * actor, bool isFemale, std::functio
 }
 
 bool OverlayInterface::ForEachOverlayBySlot(Actor * actor, bool isFemale, UInt32 slotIndex, std::function<void(SInt32, const OverlayDataPtr&, const F4EEFixedString &, bool)> functor)
-{
-	UInt64 handle = PapyrusVM::GetHandleFromObject(actor, Actor::kTypeID);
-	
+{	
 	SimpleLocker locker(&m_overlayLock);
-	auto hit = m_overlays[isFemale ? 1 : 0].find(handle);
+	auto hit = m_overlays[isFemale ? 1 : 0].find(actor->formID);
 	if(hit == m_overlays[isFemale ? 1 : 0].end())
 		return false;
 
@@ -495,6 +486,10 @@ void OverlayInterface::OverlayData::Save(const F4SESerializationInterface * intf
 	{
 		Serialization::WriteData<float>(intfc, &scaleUV.x);
 		Serialization::WriteData<float>(intfc, &scaleUV.y);
+	}
+	if((flags & kHasRemapIndex) == kHasRemapIndex)
+	{
+		Serialization::WriteData<float>(intfc, &remapIndex);
 	}
 }
 
@@ -574,6 +569,15 @@ bool OverlayInterface::OverlayData::Load(const F4SESerializationInterface * intf
 		if (!Serialization::ReadData<float>(intfc, &scaleUV.y))
 		{
 			_ERROR("%s - Error loading overlay scale V", __FUNCTION__);
+			return false;
+		}
+	}
+
+	if((flags & kHasRemapIndex) == kHasRemapIndex)
+	{
+		if (!Serialization::ReadData<float>(intfc, &remapIndex))
+		{
+			_ERROR("%s - Error loading overlay remap index", __FUNCTION__);
 			return false;
 		}
 	}
@@ -666,7 +670,7 @@ void OverlayInterface::OverlayMap::Save(const F4SESerializationInterface * intfc
 	for(auto & overlay : *this)
 	{
 		// Key
-		Serialization::WriteData<UInt64>(intfc, &overlay.first);
+		Serialization::WriteData<UInt32>(intfc, &overlay.first);
 
 		// Value
 		overlay.second->Save(intfc, kVersion);
@@ -693,13 +697,27 @@ bool OverlayInterface::OverlayMap::Load(const F4SESerializationInterface * intfc
 
 				for(UInt32 i = 0; i < overlays; i++)
 				{
-					UInt64 handle;
-					// Key
-					if (!Serialization::ReadData<UInt64>(intfc, &handle))
+					UInt64 handle = 0;
+					UInt32 formId = 0;
+					if(version >= kVersion2)
 					{
-						_ERROR("%s - Error loading actor key", __FUNCTION__);
-						return false;
+						// Key
+						if (!Serialization::ReadData<UInt32>(intfc, &formId))
+						{
+							_ERROR("%s - Error loading actor formId", __FUNCTION__);
+							return false;
+						}
 					}
+					else if(version >= kVersion1)
+					{
+						// Key
+						if (!Serialization::ReadData<UInt64>(intfc, &handle))
+						{
+							_ERROR("%s - Error loading actor key", __FUNCTION__);
+							return false;
+						}
+					}
+
 
 					PriorityMapPtr priorityMap = std::make_shared<PriorityMap>();
 					if (!priorityMap->Load(intfc, isFemale, kVersion, stringTable))
@@ -709,21 +727,39 @@ bool OverlayInterface::OverlayMap::Load(const F4SESerializationInterface * intfc
 					}
 
 					UInt64 newHandle = 0;
+					UInt32 newFormId = 0;
 
 					if(!g_bEnableOverlays)
 						continue;
 
-					// Skip if handle is no longer valid.
-					if (!intfc->ResolveHandle(handle, &newHandle))
-						continue;
+					if(version >= kVersion2)
+					{
+						if(!intfc->ResolveFormId(formId, &newFormId))
+							continue;
+					}
+					else if(version >= kVersion1)
+					{
+						// Skip if handle is no longer valid.
+						if (!intfc->ResolveHandle(handle, &newHandle))
+							continue;
+					}
 
 					if(priorityMap->empty())
 						continue;
 
-					emplace(newHandle, priorityMap);
+					
+					Actor * actor = nullptr;
+					if(version >= kVersion2)
+					{
+						actor = DYNAMIC_CAST(LookupFormByID(newFormId), TESForm, Actor);
+					}
+					else if(version >= kVersion1)
+					{
+						actor = (Actor*)PapyrusVM::GetObjectFromHandle(newHandle, Actor::kTypeID);
+					}
 
-					Actor * actor = (Actor*)PapyrusVM::GetObjectFromHandle(newHandle, Actor::kTypeID);
 					if(actor) {
+						emplace(actor->formID, priorityMap);
 						g_actorUpdateManager.PushUpdate(actor);
 					}
 				}
@@ -824,8 +860,9 @@ void F4EEUpdateOverlays::Run()
 				NiNode * overlayRoot = g_overlayInterface.GetOverlayRoot(actor, rootSkeleton, false);
 				if(overlayRoot) {
 					NiNode * parent = overlayRoot->m_parent;
-					if(parent)
-						parent->Remove(overlayRoot);
+					if(parent) {
+						parent->RemoveChild(overlayRoot);
+					}
 				}
 			}
 
@@ -837,7 +874,7 @@ void F4EEUpdateOverlays::Run()
 					if(overlayRoot) {
 						NiNode * parent = overlayRoot->m_parent;
 						if(parent)
-							parent->Remove(overlayRoot);
+							parent->RemoveChild(overlayRoot);
 					}
 				}
 			}
@@ -982,12 +1019,31 @@ bool OverlayInterface::UpdateOverlay(Actor * actor, UInt32 uid)
 
 void OverlayInterface::LoadOverlayMods()
 {
+	std::string overlayPath("F4SE\\Plugins\\F4EE\\Overlays\\");
+
 	// Load templates
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
 	{
 		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
-		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\Overlays\\") + std::string(modInfo->name) + "\\overlays.json";
+		std::string templatesPath = overlayPath + std::string(modInfo->name) + "\\overlays.json";
 		LoadOverlayTemplates(templatesPath.c_str());
+	}
+
+	std::string loosePath("Data\\");
+	loosePath += overlayPath;
+	loosePath += "Loose";
+
+	std::set<std::string> templates;
+	for(IDirectoryIterator iter(loosePath.c_str(), "*.json"); !iter.Done(); iter.Next())
+	{
+		std::string	path = iter.GetFullPath();
+		std::transform(path.begin(), path.begin(), path.end(), ::tolower);
+		templates.insert(path);
+	}
+
+	for(auto & path : templates)
+	{
+		LoadOverlayTemplates(path);
 	}
 }
 
@@ -995,79 +1051,83 @@ void OverlayInterface::LoadOverlayMods()
 bool OverlayInterface::LoadOverlayTemplates(const std::string & filePath)
 {
 	BSResourceNiBinaryStream binaryStream(filePath.c_str());
-	if(binaryStream.IsValid())
+	if(!binaryStream.IsValid())
+		return false;
+
+	std::string strFile;
+	BSReadAll(&binaryStream, &strFile);
+
+	Json::Reader reader;
+	Json::Value root;
+
+	UInt32 loadedTemplates = 0;
+
+	if(!reader.parse(strFile, root)) {
+		_ERROR("%s - Failed to overlay file\t[%s]", __FUNCTION__, filePath.c_str());
+		return false;
+	}
+
+	// traverse instances
+	for(auto & item : root)
 	{
-		std::string strFile;
-		BSReadAll(&binaryStream, &strFile);
-
-		Json::Reader reader;
-		Json::Value root;
-
-		if(!reader.parse(strFile, root)) {
-			_ERROR("%s - Failed to overlay file\t[%s]", __FUNCTION__, filePath.c_str());
-			return false;
-		}
-
-		// traverse instances
-		for(auto & item : root)
+		try
 		{
-			try
+			OverlayTemplatePtr pOverlayTemplate = nullptr;
+			UInt8 gender = max(0, min(item["gender"].asUInt(), 1));
+
+			F4EEFixedString id = item["id"].asCString();
+
+			auto idIter = m_overlayTemplates[gender].find(id);
+			if(idIter != m_overlayTemplates[gender].end())
+				pOverlayTemplate = idIter->second;
+			else {
+				pOverlayTemplate = std::make_shared<OverlayTemplate>();
+				m_overlayTemplates[gender].emplace(id, pOverlayTemplate);
+				loadedTemplates++;
+			}
+
+			if(item.isMember("name"))
+				pOverlayTemplate->displayName = item["name"].asCString();
+
+			if(item.isMember("playable"))
+				pOverlayTemplate->playable = item["playable"].asBool();
+
+			if(item.isMember("sort"))
+				pOverlayTemplate->sort = item["sort"].asInt();
+
+			if(item.isMember("transformable"))
+				pOverlayTemplate->transformable = item["transformable"].asBool();
+
+			if(item.isMember("tintable"))
+				pOverlayTemplate->tintable = item["tintable"].asBool();
+
+			if(item.isMember("slots"))
 			{
-				OverlayTemplatePtr pOverlayTemplate = nullptr;
-				UInt8 gender = max(0, min(item["gender"].asUInt(), 1));
-
-				F4EEFixedString id = item["id"].asCString();
-
-				auto idIter = m_overlayTemplates[gender].find(id);
-				if(idIter != m_overlayTemplates[gender].end())
-					pOverlayTemplate = idIter->second;
-				else {
-					pOverlayTemplate = std::make_shared<OverlayTemplate>();
-					m_overlayTemplates[gender].emplace(id, pOverlayTemplate);
-				}
-
-				if(item.isMember("name"))
-					pOverlayTemplate->displayName = item["name"].asCString();
-
-				if(item.isMember("playable"))
-					pOverlayTemplate->playable = item["playable"].asBool();
-
-				if(item.isMember("sort"))
-					pOverlayTemplate->sort = item["sort"].asInt();
-
-				if(item.isMember("transformable"))
-					pOverlayTemplate->transformable = item["transformable"].asBool();
-
-				if(item.isMember("tintable"))
-					pOverlayTemplate->tintable = item["tintable"].asBool();
-
-				if(item.isMember("slots"))
+				auto slots = item["slots"];
+				for(auto & slot : slots)
 				{
-					auto slots = item["slots"];
-					for(auto & slot : slots)
-					{
-						std::string material = slot["material"].asString();
-						std::string extension;
-						if(material.find_last_of(".") != std::string::npos)
-							extension = material.substr(material.find_last_of(".")+1);
+					std::string material = slot["material"].asString();
+					std::string extension;
+					if(material.find_last_of(".") != std::string::npos)
+						extension = material.substr(material.find_last_of(".")+1);
 
-						bool isEffect = false;
-						if(_stricmp(extension.c_str(), "bgem") == 0) {
-							isEffect = true;
-						}
-
-
-						pOverlayTemplate->slotMaterial.emplace(slot["slot"].asUInt(), std::make_pair(slot["material"].asCString(), isEffect));
+					bool isEffect = false;
+					if(_stricmp(extension.c_str(), "bgem") == 0) {
+						isEffect = true;
 					}
+
+
+					pOverlayTemplate->slotMaterial.emplace(slot["slot"].asUInt(), std::make_pair(slot["material"].asCString(), isEffect));
 				}
 			}
-			catch(const std::exception& e)
-			{
-				_ERROR(e.what());
-			}
+		}
+		catch(const std::exception& e)
+		{
+			_ERROR(e.what());
 		}
 	}
 
+	_MESSAGE("%s - Info - Loaded %d overlay template(s).\t[%s]", __FUNCTION__, loadedTemplates, filePath.c_str());
 	return true;
 }
 

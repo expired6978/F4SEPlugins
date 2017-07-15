@@ -169,6 +169,7 @@
     <ClCompile Include="PapyrusBodyGen.cpp" />
     <ClCompile Include="PapyrusOverlays.cpp" />
     <ClCompile Include="ScaleformNatives.cpp" />
+    <ClCompile Include="SkinInterface.cpp" />
     <ClCompile Include="StringTable.cpp" />
     <ClCompile Include="Utilities.cpp" />
   </ItemGroup>
@@ -228,6 +229,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="ScaleformNatives.h" />
     <ClInclude Include="shape.hpp" />
+    <ClInclude Include="SkinInterface.h" />
     <ClInclude Include="StringTable.h" />
     <ClInclude Include="Utilities.h" />
   </ItemGroup>

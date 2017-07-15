@@ -15,7 +15,8 @@ class F4EEFixedString
 public:
 	F4EEFixedString() : m_internal() { m_hash = hash_lower(m_internal.c_str(), m_internal.size()); }
 	F4EEFixedString(const char * str) : m_internal(str) { m_hash = hash_lower(m_internal.c_str(), m_internal.size()); }
-	F4EEFixedString(const BSFixedString & str) : m_internal(str) { m_hash = hash_lower(m_internal.c_str(), m_internal.size()); }
+	F4EEFixedString(const std::string & str) : m_internal(str) { m_hash = hash_lower(m_internal.c_str(), m_internal.size()); }
+	F4EEFixedString(const BSFixedString & str) : m_internal(str.c_str()) { m_hash = hash_lower(m_internal.c_str(), m_internal.size()); }
 
 	bool operator==(const F4EEFixedString& x) const
 	{
@@ -27,6 +28,8 @@ public:
 
 		return false;
 	}
+
+	UInt32 length() { return m_internal.size(); }
 
 	operator BSFixedString() const { return BSFixedString(m_internal.c_str()); }
 	BSFixedString AsBSFixedString() const { return operator BSFixedString(); }

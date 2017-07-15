@@ -344,11 +344,6 @@ bool CharGenTintBase::Apply(const TESRace * race, UInt8 gender)
 
 			if(tintData)
 			{
-				if(name.empty())
-				{
-					throw std::exception("Invalid template name");
-				}
-
 				BGSCharacterTint::Template::Entry* tintTemplate = GetTemplateByID(&tintData->entry, templateId);
 				if(!tintTemplate)
 				{

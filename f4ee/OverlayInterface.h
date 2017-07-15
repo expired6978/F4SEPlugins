@@ -53,7 +53,9 @@ public:
 
 	enum
 	{
-		kSerializationVersion = 1,
+		kVersion1 = 1,
+		kVersion2 = 2,	// Version 2 now only saves UInt32 FormID instead of UInt64 Handle
+		kSerializationVersion = kVersion2,
 	};
 
 	class OverlayData
@@ -63,7 +65,8 @@ public:
 		{
 			kHasTintColor	= (1 << 0),
 			kHasOffsetUV	= (1 << 1),
-			kHasScaleUV		= (1 << 2)
+			kHasScaleUV		= (1 << 2),
+			kHasRemapIndex	= (1 << 3)
 		};
 
 		OverlayData()
@@ -78,6 +81,7 @@ public:
 			offsetUV.y = 0.0f;
 			scaleUV.x = 1.0f;
 			scaleUV.y = 1.0f;
+			remapIndex = 0.50196f;
 		}
 
 		UniqueID		uid;
@@ -86,6 +90,7 @@ public:
 		NiColorA		tintColor;
 		NiPoint2		offsetUV;
 		NiPoint2		scaleUV;
+		float			remapIndex;
 		
 		void UpdateFlags()
 		{
@@ -103,6 +108,11 @@ public:
 				flags |= OverlayInterface::OverlayData::kHasScaleUV;
 			else
 				flags &= ~OverlayInterface::OverlayData::kHasScaleUV;
+
+			if(!AreEqual(remapIndex, 0.50196f))
+				flags |= OverlayInterface::OverlayData::kHasRemapIndex;
+			else
+				flags &= ~OverlayInterface::OverlayData::kHasRemapIndex;
 		}
 
 		void Save(const F4SESerializationInterface * intfc, UInt32 kVersion);
@@ -118,7 +128,7 @@ public:
 	};
 	typedef std::shared_ptr<PriorityMap> PriorityMapPtr;
 
-	class OverlayMap : public std::unordered_map<UInt64, PriorityMapPtr>
+	class OverlayMap : public std::unordered_map<UInt32, PriorityMapPtr>
 	{
 	public:
 		void Save(const F4SESerializationInterface * intfc, UInt32 kVersion);

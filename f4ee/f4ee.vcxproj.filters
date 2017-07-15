@@ -43,6 +43,9 @@
     <Filter Include="Interfaces\Updater">
       <UniqueIdentifier>{2f5f416a-69c3-4778-a7a7-1a03d21439aa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Interfaces\Skin">
+      <UniqueIdentifier>{06551dd7-ca00-40d2-89a8-bd46c1a64b11}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />
@@ -220,6 +223,9 @@
     <ClCompile Include="ActorUpdateManager.cpp">
       <Filter>Interfaces\Updater</Filter>
     </ClCompile>
+    <ClCompile Include="SkinInterface.cpp">
+      <Filter>Interfaces\Skin</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -390,6 +396,9 @@
     </ClInclude>
     <ClInclude Include="ActorUpdateManager.h">
       <Filter>Interfaces\Updater</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinInterface.h">
+      <Filter>Interfaces\Skin</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -10,6 +10,10 @@
 #include "f4se/GameReferences.h"
 #include "f4se/GameStreams.h"
 
+#include "common/IDirectoryIterator.h"
+#include <set>
+#include <algorithm>
+
 #include "BodyMorphInterface.h"
 
 extern BodyMorphInterface g_bodyMorphInterface;
@@ -149,7 +153,7 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const std::string & filePath)
 		}
 	}
 
-	_DMESSAGE("%s - Info - Loaded %d template(s).\t[%s]", __FUNCTION__, loadedTemplates, filePath.c_str());
+	_MESSAGE("%s - Info - Loaded %d template(s).\t[%s]", __FUNCTION__, loadedTemplates, filePath.c_str());
 	return true;
 }
 
@@ -403,16 +407,16 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 		}
 
 		if(maleOverwrite)
-			_DMESSAGE("%s - Info - %d male NPC targets(s) overwritten.\tLine (%d) [%s]", __FUNCTION__, maleOverwrite, lineCount, filePath.c_str());
+			_MESSAGE("%s - Info - %d male NPC targets(s) overwritten.\tLine (%d) [%s]", __FUNCTION__, maleOverwrite, lineCount, filePath.c_str());
 		if(femaleOverwrite)
-			_DMESSAGE("%s - Info - %d female NPC targets(s) overwritten.\tLine (%d) [%s]", __FUNCTION__, femaleOverwrite, lineCount, filePath.c_str());
+			_MESSAGE("%s - Info - %d female NPC targets(s) overwritten.\tLine (%d) [%s]", __FUNCTION__, femaleOverwrite, lineCount, filePath.c_str());
 
 		maleOverwrite = 0;
 		femaleOverwrite = 0;
 	}
 
-	_DMESSAGE("%s - Info - Acquired %d male NPC target(s).\t[%s]", __FUNCTION__, maleTargets, filePath.c_str());
-	_DMESSAGE("%s - Info - Acquired %d female NPC target(s).\t[%s]", __FUNCTION__, femaleTargets, filePath.c_str());
+	_MESSAGE("%s - Info - Acquired %d male NPC target(s).\t[%s]", __FUNCTION__, maleTargets, filePath.c_str());
+	_MESSAGE("%s - Info - Acquired %d female NPC target(s).\t[%s]", __FUNCTION__, femaleTargets, filePath.c_str());
 	return true;
 }
 
@@ -508,7 +512,7 @@ UInt32 BodyGenInterface::EvaluateBodyMorphs(Actor * actor, bool isFemale)
 				g_bodyMorphInterface.SetMorph(actor, isFemale, morphName, nullptr, value);
 			});
 
-			_DMESSAGE("%s - Generated %d BodyMorphs for %s (%08X)", __FUNCTION__, ret, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
+			_VMESSAGE("%s - Generated %d BodyMorphs for %s (%08X)", __FUNCTION__, ret, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
 			return ret;
 		}
 	}
@@ -518,18 +522,50 @@ UInt32 BodyGenInterface::EvaluateBodyMorphs(Actor * actor, bool isFemale)
 
 void BodyGenInterface::LoadBodyGenMods()
 {
+	std::string bodyGenPath("F4SE\\Plugins\\F4EE\\BodyGen\\");
 	// Load templates
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
 	{
 		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
-		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\BodyGen\\") + std::string(modInfo->name) + "\\templates.ini";
-		ReadBodyMorphTemplates(templatesPath.c_str());
+		std::string templatesPath = bodyGenPath + std::string(modInfo->name) + "\\templates.ini";
+		ReadBodyMorphTemplates(templatesPath);
 	}
 
 	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
 	{
 		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
-		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\BodyGen\\") + std::string(modInfo->name) + "\\morphs.ini";
-		ReadBodyMorphs(templatesPath.c_str());
+		std::string templatesPath = bodyGenPath + std::string(modInfo->name) + "\\morphs.ini";
+		ReadBodyMorphs(templatesPath);
+	}
+
+	std::string loosePath("Data\\");
+	loosePath += bodyGenPath;
+	loosePath += "Loose";
+
+	// Gather all template and morph files sorted alphabetically
+	std::set<std::string> templates;
+	for(IDirectoryIterator iter(loosePath.c_str(), "*_templates.ini"); !iter.Done(); iter.Next())
+	{
+		std::string	path = iter.GetFullPath();
+		std::transform(path.begin(), path.begin(), path.end(), ::tolower);
+		templates.insert(path);
+		
+	}
+
+	std::set<std::string> morphs;
+	for(IDirectoryIterator iter(loosePath.c_str(), "*_morphs.ini"); !iter.Done(); iter.Next())
+	{
+		std::string	path = iter.GetFullPath();
+		std::transform(path.begin(), path.begin(), path.end(), ::tolower);
+		morphs.insert(path);
+	}
+
+	for(auto & templatePath : templates)
+	{
+		ReadBodyMorphTemplates(templatePath);
+	}
+	for(auto & morphPath : morphs)
+	{
+		ReadBodyMorphs(morphPath);
 	}
 }
