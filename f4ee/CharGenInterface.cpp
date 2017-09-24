@@ -648,33 +648,27 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 void CharGenInterface::LoadHairColorMods()
 {
 	// Load all hair color mods
-	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
+	ForEachMod([&](const ModInfo * modInfo)
 	{
-		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
-		std::string modName = modInfo->name;
-		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\LUTs\\") + modName + "\\haircolors.json";
+		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\LUTs\\") + std::string(modInfo->name) + "\\haircolors.json";
 		LoadHairColorData(templatesPath, modInfo);
-	}
+	});
 }
 
 void CharGenInterface::LoadTintTemplateMods()
 {
 	// Load all categories first
-	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
+	ForEachMod([&](const ModInfo * modInfo)
 	{
-		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
 		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\Tints\\") + std::string(modInfo->name) + "\\categories.json";
 		LoadTintCategories(templatesPath);
-	}
+	});
 
-	// Load templates
-	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
+	ForEachMod([&](const ModInfo * modInfo)
 	{
-		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
-					
 		std::string templatesPath = std::string("F4SE\\Plugins\\F4EE\\Tints\\") + std::string(modInfo->name) + "\\templates.json";
 		LoadTintTemplates(templatesPath);
-	}
+	});
 
 	if(g_bExportRace)
 	{
@@ -1225,7 +1219,7 @@ const char * CharGenInterface::ProcessEyebrowPath(TESNPC * npc)
 
 #include <unordered_set>
 
-bool CharGenInterface::LoadHairColorData(const std::string & filePath, ModInfo * modInfo)
+bool CharGenInterface::LoadHairColorData(const std::string & filePath, const ModInfo * modInfo)
 {
 	BSResourceNiBinaryStream binaryStream(filePath.c_str());
 	if(binaryStream.IsValid())

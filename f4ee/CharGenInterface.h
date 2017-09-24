@@ -36,7 +36,7 @@ public:
 	virtual bool SaveTintTemplates(const TESRace * race, const std::string & filePath);
 
 	virtual void LoadHairColorMods();
-	virtual bool LoadHairColorData(const std::string & filePath, ModInfo * modInfo);
+	virtual bool LoadHairColorData(const std::string & filePath, const ModInfo * modInfo);
 
 	virtual void UnlockHeadParts();
 	virtual void UnlockTints();

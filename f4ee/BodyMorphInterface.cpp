@@ -332,12 +332,11 @@ void BodyMorphInterface::LoadBodyGenSliderMods()
 {
 	std::string sliderPath("F4SE\\Plugins\\F4EE\\Sliders\\");
 
-	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
+	ForEachMod([&](const ModInfo * modInfo)
 	{
-		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
 		std::string templatesPath = sliderPath + std::string(modInfo->name) + "\\sliders.json";
 		LoadBodyGenSliders(templatesPath);
-	}
+	});
 
 	std::string loosePath("Data\\");
 	loosePath += sliderPath;
@@ -544,8 +543,10 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 {
 	// Don't allow dynamic shapes
 	BSDynamicTriShape * dynamicShape = morphableShape->object->GetAsBSDynamicTriShape();
-	if(dynamicShape)
+	if(dynamicShape) {
+		_WARNING("%s - Shape: %s is dynamic and could not be morphed\t[%s]", __FUNCTION__, morphableShape->shapeName.c_str(), morphableShape->morphPath.c_str());
 		return false;
+	}
 
 	BSTriShape * geometry = morphableShape->object->GetAsBSTriShape();
 	if(geometry) {
@@ -617,7 +618,7 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 
 				bool outOfBounds = morph->ApplyMorph(geometry->numVertices, (NiPoint3*)&verts.at(0), effectiveValue);
 				if(outOfBounds) {
-					_WARNING("BodyMorphInterface::ApplyMorphsToShape - Shape: %s Morph: %s contained out of bounds vertices\t[%s]", morphableShape->shapeName.c_str(), actorMorph.first->c_str(), morphableShape->morphPath.c_str());
+					_WARNING("%s - Shape: %s Morph: %s contained out of bounds vertices\t[%s]", __FUNCTION__, morphableShape->shapeName.c_str(), actorMorph.first->c_str(), morphableShape->morphPath.c_str());
 				}
 			}
 		});
@@ -711,6 +712,11 @@ void BodyMorphInterface::SetMorph(Actor * actor, bool isFemale, const BSFixedStr
 		morphMap = it->second;
 
 	morphMap->SetMorph(morph, keyword, value);
+
+	// Still no morphs, or we tried to insert zero itself, erase this key
+	if(morphMap->size() == 0) {
+		m_morphMap[isFemale ? 1 : 0].erase(actor ? actor->formID : 0);
+	}
 }
 
 void BodyMorphInterface::GetKeywords(Actor * actor, bool isFemale, const BSFixedString & morph, std::vector<BGSKeyword*> & keywords)
@@ -825,7 +831,7 @@ void UserValues::SetValue(BGSKeyword * keyword, float value)
 
 	UInt32 formId = keyword ? keyword->formID : 0;
 
-	// Erase the value if it isn't present at all
+	// Erase the value if it is present and we are putting zero in
 	if(value == 0.0f) {
 		auto it = find(formId);
 		if(it != end()) {
@@ -872,6 +878,11 @@ void MorphValueMap::SetMorph(const BSFixedString & morph, BGSKeyword * keyword, 
 		userValues = it->second;
 
 	userValues->SetValue(keyword, value);
+
+	// No entries left, erase this Morph key
+	if(userValues->size() == 0) {
+		erase(string);
+	}
 }
 
 float MorphValueMap::GetMorph(const BSFixedString & morph, BGSKeyword * keyword)

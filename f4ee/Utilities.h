@@ -16,6 +16,7 @@ class Actor;
 class TESLevCharacter;
 class TESNPC;
 class NiNode;
+struct ModInfo;
 
 #include "f4se/Serialization.h"
 
@@ -71,3 +72,5 @@ void VisitLeveledCharacter(TESLevCharacter * character, std::function<void(TESNP
 
 // Travels up a node tree to determine the right node
 NiNode * GetRootNode(Actor * actor, NiAVObject * object);
+
+void ForEachMod(std::function<void(const ModInfo*)> functor);

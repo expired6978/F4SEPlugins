@@ -233,20 +233,18 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 }
 
 typedef void (* _RegisterFloatingQuestMarkerBase)(HUDMenu * menu, const char * clipName);
-RelocAddr <_RegisterFloatingQuestMarkerBase> RegisterFloatingQuestMarkerBase(0x01265870);
+RelocAddr <_RegisterFloatingQuestMarkerBase> RegisterFloatingQuestMarkerBase(0x0127D5B0);
 _RegisterFloatingQuestMarkerBase RegisterFloatingQuestMarkerBase_Original = nullptr;
-//RelocAddr <uintptr_t> RegisterFloatingQuestMarkerBase_Start(0x0125B580 + 0x321);
 
 typedef HUDContextArray<BSFixedString> * (* _GetHUDContexts)();
-RelocAddr<_GetHUDContexts> GetHUDContexts(0x00A4D5D0);
-
+RelocAddr<_GetHUDContexts> GetHUDContexts(0x00A4F6F0);
 
 typedef void (* _HUDMenu_Update_Internal)(HUDMenu * menu);
-RelocAddr<_HUDMenu_Update_Internal> HUDMenu_Update_Internal(0x0125F260);
+RelocAddr<_HUDMenu_Update_Internal> HUDMenu_Update_Internal(0x01276FA0);
 _HUDMenu_Update_Internal HUDMenu_Update_Original = nullptr;
 
 typedef void (* _HUDMenu_Destroy_Internal)(HUDMenu * menu);
-RelocAddr<_HUDMenu_Destroy_Internal> HUDMenu_Destroy_Internal(0x0125EF50);
+RelocAddr<_HUDMenu_Destroy_Internal> HUDMenu_Destroy_Internal(0x01276C90);
 _HUDMenu_Destroy_Internal HUDMenu_Destroy_Original = nullptr;
 
 HUDExtensionBase * pHUDExtension = nullptr;

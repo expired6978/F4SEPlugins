@@ -108,7 +108,19 @@ std::string GetFormIdentifier(TESForm * form)
 	char formName[MAX_PATH];
 	UInt8 modIndex = form->formID >> 24;
 	UInt32 modForm = form->formID & 0xFFFFFF;
-	ModInfo* modInfo = (*g_dataHandler)->modList.loadedMods[modIndex];
+
+	ModInfo* modInfo = nullptr;
+	if(modIndex == 0xFE)
+	{
+		UInt16 lightIndex = (form->formID >> 12) & 0xFFF;
+		if(lightIndex < (*g_dataHandler)->modList.lightMods.count)
+			modInfo = (*g_dataHandler)->modList.lightMods[lightIndex];
+	}
+	else
+	{
+		modInfo = (*g_dataHandler)->modList.loadedMods[modIndex];
+	}
+	
 	if (modInfo) {
 		sprintf_s(formName, "%s|%06X", modInfo->name, modForm);
 	}
@@ -122,13 +134,20 @@ TESForm * GetFormFromIdentifier(const std::string & formIdentifier)
 	std::string modName = formIdentifier.substr(0, pos);
 	std::string modForm = formIdentifier.substr(pos+1);
 
-	auto mod = (*g_dataHandler)->LookupLoadedModByName(modName.c_str());
-	if(!mod) // No loaded mod by this name
-		return nullptr;
-
 	UInt32 formId = 0;
 	sscanf_s(modForm.c_str(), "%X", &formId);
-	formId |= ((UInt32)mod->modIndex) << 24;
+
+	UInt8 modIndex = (*g_dataHandler)->GetLoadedModIndex(modName.c_str());
+	if(modIndex != 0xFF) {
+		formId |= ((UInt32)modIndex) << 24;
+	}
+	else
+	{
+		UInt16 lightModIndex = (*g_dataHandler)->GetLoadedLightModIndex(modName.c_str());
+		if(lightModIndex != 0xFFFF) {
+			formId |= 0xFE000000 | (UInt32(lightModIndex) << 12);
+		}
+	}
 
 	return LookupFormByID(formId);
 }
@@ -262,3 +281,15 @@ NiNode * GetRootNode(Actor * actor, NiAVObject * object)
 	return rootNode;
 }
 
+void ForEachMod(std::function<void(const ModInfo*)> functor)
+{
+	for(int i = 0; i < (*g_dataHandler)->modList.loadedMods.count; i++)
+	{
+		functor((*g_dataHandler)->modList.loadedMods[i]);
+	}
+
+	for(int i = 0; i < (*g_dataHandler)->modList.lightMods.count; i++)
+	{
+		functor((*g_dataHandler)->modList.lightMods[i]);
+	}
+}

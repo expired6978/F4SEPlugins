@@ -157,16 +157,18 @@ bool BodyGenInterface::ReadBodyMorphTemplates(const std::string & filePath)
 	return true;
 }
 
-void BodyGenInterface::GetFilteredNPCList(std::vector<TESNPC*> activeNPCs[], SInt32 modIndex, UInt32 gender, TESRace * raceFilter)
+void BodyGenInterface::GetFilteredNPCList(std::vector<TESNPC*> activeNPCs[], UInt8 modIndex, UInt16 lightIndex, UInt32 gender, TESRace * raceFilter)
 {
 	for (UInt32 i = 0; i < (*g_dataHandler)->arrNPC_.count; i++)
 	{
 		TESNPC * npc = nullptr;
 		if ((*g_dataHandler)->arrNPC_.GetNthItem(i, npc))
 		{
-			bool matchMod = (modIndex == -1 || (npc->formID >> 24) == modIndex);
+			bool matchMod = modIndex == 0xFF || (npc->formID >> 24) == modIndex;
+			bool matchLightMod = lightIndex == 0xFFFF || (((npc->formID & 0xFF000000) == 0xFE000000) && (lightIndex == ((npc->formID >> 12) & 0xFFF)));
+
 			bool matchRace = (npc->race.race == nullptr || npc->race.race == raceFilter);
-			if (npc && npc->templateNPC == nullptr && matchMod && matchRace)
+			if (npc && npc->templateNPC == nullptr && matchMod && matchLightMod && matchRace)
 			{
 				if(gender == 0xFF)
 				{
@@ -257,12 +259,14 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 				paramIndex++;
 			}
 
-			GetFilteredNPCList(activeNPCs, -1, gender, foundRace);
+			GetFilteredNPCList(activeNPCs, 0xFF, 0xFFFF, gender, foundRace);
 		}
 		else
 		{
 			UInt8 modIndex = (*g_dataHandler)->GetLoadedModIndex(modNameText.c_str());
-			if (modIndex == -1) {
+			UInt16 lightIndex = (*g_dataHandler)->GetLoadedLightModIndex(modNameText.c_str());
+
+			if (modIndex == 0xFF && lightIndex == 0xFFFF) {
 				_WARNING("%s - Warning - Mod '%s' not a loaded mod.\tLine (%d) [%s]", __FUNCTION__, modNameText.c_str(), lineCount, filePath.c_str());
 				continue;
 			}
@@ -301,7 +305,7 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 					paramIndex++;
 				}
 
-				GetFilteredNPCList(activeNPCs, modIndex, gender, foundRace);
+				GetFilteredNPCList(activeNPCs, modIndex, lightIndex, gender, foundRace);
 			}
 			else // Fallout4.esm|XXXX[|Gender]
 			{
@@ -311,16 +315,17 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 					continue;
 				}
 
-				UInt32 formId = modIndex << 24 | formLower & 0xFFFFFF;
+				UInt32 formId = 0;
+				if(lightIndex != 0xFFFF)
+					formId = 0xFE000000 | (UInt32(lightIndex) << 12) | (formLower & 0xFFFFFF);
+				else
+					formId = UInt32(modIndex) << 24 | formLower & 0xFFFFFF;
+
 				foundForm = LookupFormByID(formId);
 				if (!foundForm) {
 					_ERROR("%s - Error - Invalid form %08X.\tLine (%d) [%s]", __FUNCTION__, formId, lineCount, filePath.c_str());
 					continue;
 				}
-
-				// Dont apply randomization to the player
-				if (formId == 7)
-					continue;
 			}
 
 
@@ -524,19 +529,17 @@ void BodyGenInterface::LoadBodyGenMods()
 {
 	std::string bodyGenPath("F4SE\\Plugins\\F4EE\\BodyGen\\");
 	// Load templates
-	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
+	ForEachMod([&](const ModInfo * modInfo)
 	{
-		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
 		std::string templatesPath = bodyGenPath + std::string(modInfo->name) + "\\templates.ini";
 		ReadBodyMorphTemplates(templatesPath);
-	}
+	});
 
-	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
+	ForEachMod([&](const ModInfo * modInfo)
 	{
-		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
 		std::string templatesPath = bodyGenPath + std::string(modInfo->name) + "\\morphs.ini";
 		ReadBodyMorphs(templatesPath);
-	}
+	});
 
 	std::string loosePath("Data\\");
 	loosePath += bodyGenPath;

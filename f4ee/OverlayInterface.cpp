@@ -1022,12 +1022,11 @@ void OverlayInterface::LoadOverlayMods()
 	std::string overlayPath("F4SE\\Plugins\\F4EE\\Overlays\\");
 
 	// Load templates
-	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
+	ForEachMod([&](const ModInfo * modInfo)
 	{
-		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
 		std::string templatesPath = overlayPath + std::string(modInfo->name) + "\\overlays.json";
 		LoadOverlayTemplates(templatesPath.c_str());
-	}
+	});
 
 	std::string loosePath("Data\\");
 	loosePath += overlayPath;

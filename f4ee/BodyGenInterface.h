@@ -72,7 +72,7 @@ public:
 		bodyGenData[1].clear();
 	}
 
-	void GetFilteredNPCList(std::vector<TESNPC*> activeNPCs[], SInt32 modIndex, UInt32 gender, TESRace * raceFilter);
+	void GetFilteredNPCList(std::vector<TESNPC*> activeNPCs[], UInt8 modIndex, UInt16 lightIndex, UInt32 gender, TESRace * raceFilter);
 
 
 protected:

@@ -432,12 +432,11 @@ void SkinInterface::LoadSkinMods()
 	std::string overlayPath("F4SE\\Plugins\\F4EE\\Skin\\");
 
 	// Load templates
-	for(int i = 0; i < (*g_dataHandler)->modList.loadedModCount; i++)
+	ForEachMod([&](const ModInfo * modInfo)
 	{
-		ModInfo * modInfo = (*g_dataHandler)->modList.loadedMods[i];
 		std::string templatesPath = overlayPath + std::string(modInfo->name) + "\\skin.json";
 		LoadSkinTemplates(templatesPath.c_str());
-	}
+	});
 
 	std::string loosePath("Data\\");
 	loosePath += overlayPath;

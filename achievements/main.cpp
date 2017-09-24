@@ -43,7 +43,11 @@ bool F4SEPlugin_Load(const F4SEInterface * f4se)
 
 	uintptr_t * isModded = nullptr;
 
-	if(f4se->runtimeVersion >= RUNTIME_VERSION_1_5_412)
+	if(f4se->runtimeVersion >= RUNTIME_VERSION_1_10_20)
+	{
+		isModded = Utility::pattern( "48 83 EC 28 C6 44 24 ? ? 84 D2").count( 1 ).get( 0 ).get<uintptr_t>();
+	}
+	else if(f4se->runtimeVersion >= RUNTIME_VERSION_1_5_412)
 	{
 		isModded = Utility::pattern( "40 57 48 83 EC 30 40 32 FF").count( 1 ).get( 0 ).get<uintptr_t>();
 	}
