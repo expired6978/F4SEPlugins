@@ -30,6 +30,7 @@ public:
 	void AddNameplate(GFxValue * parent, const std::shared_ptr<HUDNameplate> & object);
 	void UpdateNameplate(double stageWidth, double stageHeight, const std::shared_ptr<HUDNameplate> & object);
 	double GetHealthPercent(TESObjectREFR * refr);
+	void PopulateNameplateData(GFxValue * args, TESObjectREFR * refr);
 };
 
 class HUDExtension
@@ -59,7 +60,8 @@ struct HUDSettings
 		kFlag_HideTeammate	 = (1 << 1),
 		kFlag_HideNonHostile = (1 << 2),
 		kFlag_HideEnemy		 = (1 << 3),
-		kFlag_HideUserDefined = (1 << 4)
+		kFlag_HideUserDefined = (1 << 4),
+		kFlag_ShowLevel		 = (1 << 5)
 	};
 
 	UInt64 barFlags;

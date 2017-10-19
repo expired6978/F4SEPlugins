@@ -233,18 +233,18 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 }
 
 typedef void (* _RegisterFloatingQuestMarkerBase)(HUDMenu * menu, const char * clipName);
-RelocAddr <_RegisterFloatingQuestMarkerBase> RegisterFloatingQuestMarkerBase(0x0127D5B0);
+RelocAddr <_RegisterFloatingQuestMarkerBase> RegisterFloatingQuestMarkerBase(0x0127D670);
 _RegisterFloatingQuestMarkerBase RegisterFloatingQuestMarkerBase_Original = nullptr;
 
 typedef HUDContextArray<BSFixedString> * (* _GetHUDContexts)();
-RelocAddr<_GetHUDContexts> GetHUDContexts(0x00A4F6F0);
+RelocAddr<_GetHUDContexts> GetHUDContexts(0x00A4F710);
 
 typedef void (* _HUDMenu_Update_Internal)(HUDMenu * menu);
-RelocAddr<_HUDMenu_Update_Internal> HUDMenu_Update_Internal(0x01276FA0);
+RelocAddr<_HUDMenu_Update_Internal> HUDMenu_Update_Internal(0x01277060);
 _HUDMenu_Update_Internal HUDMenu_Update_Original = nullptr;
 
 typedef void (* _HUDMenu_Destroy_Internal)(HUDMenu * menu);
-RelocAddr<_HUDMenu_Destroy_Internal> HUDMenu_Destroy_Internal(0x01276C90);
+RelocAddr<_HUDMenu_Destroy_Internal> HUDMenu_Destroy_Internal(0x01276D50);
 _HUDMenu_Destroy_Internal HUDMenu_Destroy_Original = nullptr;
 
 HUDExtensionBase * pHUDExtension = nullptr;
@@ -380,9 +380,9 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 		_FATALERROR("loaded in editor, marking as incompatible");
 		return false;
 	}
-	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_9_4)
+	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_10_26)
 	{
-		UInt32 runtimeVersion = RUNTIME_VERSION_1_9_4;
+		UInt32 runtimeVersion = RUNTIME_VERSION_1_10_26;
 		char buf[512];
 		sprintf_s(buf, "HUD Extension Version Error:\nexpected game version %d.%d.%d.%d\nyour game version is %d.%d.%d.%d\nsome features may not work correctly.", 
 			GET_EXE_VERSION_MAJOR(runtimeVersion), 

@@ -124,6 +124,7 @@
     <ClCompile Include="..\f4se\GameAPI.cpp" />
     <ClCompile Include="..\f4se\GameCustomization.cpp" />
     <ClCompile Include="..\f4se\GameData.cpp" />
+    <ClCompile Include="..\f4se\GameEvents.cpp" />
     <ClCompile Include="..\f4se\GameExtraData.cpp" />
     <ClCompile Include="..\f4se\GameFormComponents.cpp" />
     <ClCompile Include="..\f4se\GameForms.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="..\f4se\GameAPI.h" />
     <ClInclude Include="..\f4se\GameCustomization.h" />
     <ClInclude Include="..\f4se\GameData.h" />
+    <ClInclude Include="..\f4se\GameEvents.h" />
     <ClInclude Include="..\f4se\GameExtraData.h" />
     <ClInclude Include="..\f4se\GameFormComponents.h" />
     <ClInclude Include="..\f4se\GameForms.h" />

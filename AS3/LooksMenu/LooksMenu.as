@@ -3438,6 +3438,8 @@
 						case AST_BEARD:
 						{
 							menuMode = EditMode != EDIT_HAIRCUT ? FACE_MODE : HAIR_MODE;
+							if(menuMode == FACE_MODE)
+								onFaceMode();
 							BlockNextAccept = false;
 							break;
 						}

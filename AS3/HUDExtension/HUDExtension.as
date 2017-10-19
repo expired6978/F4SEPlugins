@@ -99,12 +99,12 @@
 		}
 		
 		// Native code invokes this directly
-		public function AddNameplate(objectId: int, a_name: String, a_health: Number): MovieClip
+		public function AddNameplate(objectId: int, a_name: String, a_health: Number, a_level: uint, a_showLevel: Boolean): MovieClip
 		{
 			var classRef: Class = getDefinitionByName("Nameplate") as Class;
 			var swf = new classRef();
 			ObjectsMap[objectId] = swf;
-			swf.objectData = {"name": a_name, "percent": a_health};
+			swf.objectData = {"objectName": a_name, "percent": a_health, "level": a_level, "showLevel": a_showLevel};
 			Objects.addChild(swf);
 			dispatchEvent(new NameplateEvent(NameplateEvent.ADDED, true, false, objectId));
 			return swf;

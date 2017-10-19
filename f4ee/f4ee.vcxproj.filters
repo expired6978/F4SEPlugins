@@ -226,6 +226,9 @@
     <ClCompile Include="SkinInterface.cpp">
       <Filter>Interfaces\Skin</Filter>
     </ClCompile>
+    <ClCompile Include="..\f4se\GameEvents.cpp">
+      <Filter>f4se\api</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -399,6 +402,9 @@
     </ClInclude>
     <ClInclude Include="SkinInterface.h">
       <Filter>Interfaces\Skin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameEvents.h">
+      <Filter>f4se\api</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

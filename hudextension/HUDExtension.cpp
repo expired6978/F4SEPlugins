@@ -35,6 +35,21 @@ double HUDExtensionBase::GetHealthPercent(TESObjectREFR * refr)
 	return max(0.0, min((current / maximum) * 100.0, 100.0));
 }
 
+void HUDExtensionBase::PopulateNameplateData(GFxValue * args, TESObjectREFR * refr)
+{
+	args[0].SetString(CALL_MEMBER_FN(refr, GetReferenceName)());
+	args[1].SetNumber(GetHealthPercent(refr));
+
+	UInt16 level = 0;
+	if(refr->formType == Actor::kTypeID)
+		level = CALL_MEMBER_FN(&static_cast<TESNPC*>(refr->baseForm)->actorData, GetLevel)();
+
+	args[2].SetUInt(level);
+
+	bool showLevel = (g_hudSettings.barFlags & HUDSettings::kFlag_ShowLevel) == HUDSettings::kFlag_ShowLevel;
+	args[3].SetBool(showLevel);
+}
+
 void HUDExtensionBase::AddNameplate(GFxValue * parent, const std::shared_ptr<HUDNameplate> & object)
 {
 	TESObjectREFR * refr = nullptr;
@@ -43,13 +58,12 @@ void HUDExtensionBase::AddNameplate(GFxValue * parent, const std::shared_ptr<HUD
 	{
 		if(parent->IsDisplayObject())
 		{
-			GFxValue args[3];
+			GFxValue args[5];
 			args[0].SetInt(object->m_refrHandle);
-			args[1].SetString(CALL_MEMBER_FN(refr, GetReferenceName)());
-			args[2].SetNumber(GetHealthPercent(refr));
+			PopulateNameplateData(&args[1], refr);
 
 			GFxValue nameplate;
-			parent->Invoke("AddNameplate", &nameplate, args, 3);
+			parent->Invoke("AddNameplate", &nameplate, args, 5);
 			if(nameplate.IsDisplayObject()) {
 				//object->m_nameplate = new BSGFxShaderFXTarget(&nameplate);
 				object->m_nameplate = new BSGFxShaderFXTarget(&nameplate);
@@ -91,9 +105,10 @@ void HUDExtensionBase::UpdateNameplate(double stageWidth, double stageHeight, co
 		}
 
 		if(nameplate->IsObject()) {
-			nameplate->SetMember("percent", &GFxValue(GetHealthPercent(refr)));
-			nameplate->SetMember("objectName", &GFxValue(CALL_MEMBER_FN(refr, GetReferenceName)()));
-			nameplate->SetMember("zIndex", &GFxValue(posOut.z));
+			GFxValue args[5];
+			PopulateNameplateData(args, refr); // Populates 0-3
+			args[4].SetNumber(posOut.z); // Populates 4
+			nameplate->Invoke("SetData", nullptr, args, 5);
 		}
 
 		double scale = min(((100 - posOut.z * 100) * g_hudSettings.fScaleFactor), g_hudSettings.fMaxPercent);
