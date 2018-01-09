@@ -17,7 +17,7 @@ extern "C"
 bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 {
 	gLog.OpenRelative(CSIDL_MYDOCUMENTS, "\\My Games\\Fallout4\\F4SE\\tagpatch.log");
-	_DMESSAGE("achievements");
+	_DMESSAGE("Search tag patch");
 
 	// populate info structure
 	info->infoVersion =	PluginInfo::kInfoVersion;
