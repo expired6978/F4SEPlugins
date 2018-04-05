@@ -100,7 +100,7 @@ void F4EEScaleform_LoadPreset::Invoke(Args * args)
 	IMenu * menu = (*g_ui)->GetMenuByMovie(args->movie);
 	if(menu) {
 		LooksMenu * looksMenu = static_cast<LooksMenu*>(menu);
-		CALL_MEMBER_FN(looksMenu, LoadCharacterParameters)();
+		looksMenu->LoadCharacterParameters();
 	}
 }
 

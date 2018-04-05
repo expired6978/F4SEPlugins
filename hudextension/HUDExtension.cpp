@@ -2,26 +2,41 @@
 
 #include <algorithm>
 
+#include "f4se/ScaleformLoader.h"
 #include "f4se/GameReferences.h"
 #include "f4se/GameObjects.h"
 #include "f4se/GameData.h"
 
 #include "f4se/NiNodes.h"
 
-HUDExtension g_hudExtension;
 HUDSettings  g_hudSettings;
 
-HUDExtensionBase::HUDExtensionBase(GFxValue * parent, const char * componentName, HUDContextArray<BSFixedString> * contextList) : HUDComponentBase(parent, componentName, contextList)
+const char * HUDExtensionMenu::sMenuName = "HUDExtensionMenu";
+
+HUDExtensionMenu::HUDExtensionMenu() : GameMenuBase()
 {
-	
+	flags = kFlag_DoNotPreventGameSave | kFlag_DisableInteractive | kFlag_Unk800000;
+	if (CALL_MEMBER_FN((*g_scaleformManager), LoadMovie)(this, movie, "HUDExtension", "root1", 2))
+	{
+		if (g_hudSettings.applyFilter)
+			flags |= kFlag_ApplyDropDownFilter;
+		else
+			stage.SetMember("showShadowEffect", &GFxValue(true));
+		CreateBaseShaderTarget(shaderTarget, stage);
+
+		if (flags & kFlag_ApplyDropDownFilter)
+		{
+			subcomponents.Push(shaderTarget);
+		}
+	}
 }
 
-HUDExtensionBase::~HUDExtensionBase()
+HUDExtensionMenu::~HUDExtensionMenu()
 {
-	g_hudExtension.ForceClear();
+	ForceClear();
 }
 
-double HUDExtensionBase::GetHealthPercent(TESObjectREFR * refr)
+double HUDExtensionMenu::GetHealthPercent(TESObjectREFR * refr)
 {
 	float current = 0.0f;
 	float maximum = 0.0f;
@@ -35,9 +50,10 @@ double HUDExtensionBase::GetHealthPercent(TESObjectREFR * refr)
 	return max(0.0, min((current / maximum) * 100.0, 100.0));
 }
 
-void HUDExtensionBase::PopulateNameplateData(GFxValue * args, TESObjectREFR * refr)
+void HUDExtensionMenu::PopulateNameplateData(GFxValue * args, TESObjectREFR * refr)
 {
-	args[0].SetString(CALL_MEMBER_FN(refr, GetReferenceName)());
+	bool showName = (g_hudSettings.barFlags & HUDSettings::kFlag_HideName) != HUDSettings::kFlag_HideName;
+	args[0].SetString(showName ? CALL_MEMBER_FN(refr, GetReferenceName)() : "");
 	args[1].SetNumber(GetHealthPercent(refr));
 
 	UInt16 level = 0;
@@ -50,7 +66,7 @@ void HUDExtensionBase::PopulateNameplateData(GFxValue * args, TESObjectREFR * re
 	args[3].SetBool(showLevel);
 }
 
-void HUDExtensionBase::AddNameplate(GFxValue * parent, const std::shared_ptr<HUDNameplate> & object)
+void HUDExtensionMenu::AddNameplate(GFxValue * parent, const std::shared_ptr<HUDNameplate> & object)
 {
 	TESObjectREFR * refr = nullptr;
 	LookupREFRByHandle(&object->m_refrHandle, &refr);
@@ -65,17 +81,14 @@ void HUDExtensionBase::AddNameplate(GFxValue * parent, const std::shared_ptr<HUD
 			GFxValue nameplate;
 			parent->Invoke("AddNameplate", &nameplate, args, 5);
 			if(nameplate.IsDisplayObject()) {
-				//object->m_nameplate = new BSGFxShaderFXTarget(&nameplate);
 				object->m_nameplate = new BSGFxShaderFXTarget(&nameplate);
-				//*object->m_nameplate = nameplate;
-				//object->m_nameplate->AddManaged();
 			}
 		}
 		refr->handleRefObject.DecRefHandle();
 	}
 }
 
-void HUDExtensionBase::UpdateNameplate(double stageWidth, double stageHeight, const std::shared_ptr<HUDNameplate> & object)
+void HUDExtensionMenu::UpdateNameplate(double stageWidth, double stageHeight, const std::shared_ptr<HUDNameplate> & object)
 {
 	TESObjectREFR * refr = nullptr;
 	LookupREFRByHandle(&object->m_refrHandle, &refr);
@@ -167,11 +180,6 @@ void HUDExtensionBase::UpdateNameplate(double stageWidth, double stageHeight, co
 			isVisible &= hasLOS;
 			if (isVisible)
 			{
-				/*UInt8 memory[sizeof(BSGFxShaderFXTarget)+0x100];
-				memset(memory, 0xCC, sizeof(BSGFxShaderFXTarget)+0x100);
-				BSGFxShaderFXTarget* target = (BSGFxShaderFXTarget*)memory;
-				CALL_MEMBER_FN(target, Impl_ctor)(nameplate);*/
-
 				//BSGFxShaderFXTarget target(nameplate);
 				// Default color processing
 				if(clrBar == -1)
@@ -189,74 +197,70 @@ void HUDExtensionBase::UpdateNameplate(double stageWidth, double stageHeight, co
 			nameplate->SetMember("visible", &GFxValue(isVisible)); // Visibility flag doesnt seem to work from DisplayInfo...?
 		}
 
-		
-
 		refr->handleRefObject.DecRefHandle();
 	}
 }
 
-void HUDExtensionBase::UpdateComponent()
+void HUDExtensionMenu::RegisterFunctions()
 {
-	/*unkC0 = 0;
-	unkF1 = 1;
-	bool bVisible = IsVisible();
-	GFxValue::DisplayInfo dp;
-	GetDisplayInfo(&dp);
+	
+}
 
-	BSGFxDisplayObject::BSDisplayInfo bDInfo;
-	GetExtDisplayInfo(&bDInfo, this);
-	SetExtDisplayInfoAlpha(&bDInfo, 100.0);
-	SetExtDisplayInfo(&bDInfo);*/
-
-	GFxValue gfxHUDExtension;
-	Invoke("getChildAt", &gfxHUDExtension, &GFxValue((SInt32)0), 1);
-	if(!gfxHUDExtension.IsDisplayObject())
+void HUDExtensionMenu::DrawNextFrame(float unk0, void * unk1)
+{
+	if(!stage.IsDisplayObject())
 		return;
 
 	GFxValue stageWidth, stageHeight;
-	gfxHUDExtension.Invoke("GetStageWidth", &stageWidth, nullptr, 0);
-	gfxHUDExtension.Invoke("GetStageHeight", &stageHeight, nullptr, 0);
+	stage.Invoke("GetStageWidth", &stageWidth, nullptr, 0);
+	stage.Invoke("GetStageHeight", &stageHeight, nullptr, 0);
 
 	// Deal with all pending removes first
-	g_hudExtension.m_lock.Lock();
-	for(auto & removals : g_hudExtension.m_qRemove)
+	m_lock.Lock();
+	for(auto & removals : m_qRemove)
 	{
 		GFxValue success;
 		GFxValue args[1];
 		args[0].SetInt(removals.first);
-		gfxHUDExtension.Invoke("RemoveNameplate", &success, args, 1);
-		auto it = g_hudExtension.m_mapPlates.find(removals.first);
-		if(it != g_hudExtension.m_mapPlates.end())
+		stage.Invoke("RemoveNameplate", &success, args, 1);
+		auto it = m_mapPlates.find(removals.first);
+		if(it != m_mapPlates.end())
 		{
-			g_hudExtension.m_mapPlates.erase(it);
+			if(removals.second)
+			{
+				BSGFxDisplayObject * target = removals.second->m_nameplate;
+				SInt64 i = subcomponents.GetItemIndex(target);
+				if(i != -1) {
+					subcomponents.Remove(i);
+				}
+			}
+			m_mapPlates.erase(it);
 		}
 	}
-	g_hudExtension.m_qRemove.clear();
+	m_qRemove.clear();
 
-	for(auto & adds : g_hudExtension.m_qAdd)
+	for(auto & adds : m_qAdd)
 	{
-		AddNameplate(&gfxHUDExtension, adds.second);
-		g_hudExtension.m_mapPlates.emplace(adds.first, adds.second);
+		AddNameplate(&stage, adds.second);
+		m_mapPlates.emplace(adds.first, adds.second);
+		if(adds.second) {
+			subcomponents.Push(adds.second->m_nameplate);
+		}
 	}
-	g_hudExtension.m_qAdd.clear();
+	m_qAdd.clear();
 
-	for(auto & nameplate : g_hudExtension.m_mapPlates)
+	for(auto & nameplate : m_mapPlates)
 	{
-		UpdateNameplate(stageWidth.GetNumber(), stageHeight.GetNumber(), nameplate.second);
+		if(nameplate.second)
+		{
+			UpdateNameplate(stageWidth.GetNumber(), stageHeight.GetNumber(), nameplate.second);
+		}
 	}
 
-	g_hudExtension.m_lock.Release();
+	m_lock.Release();
 
-	/*GFxValue::DisplayInfo dInfo;
-	GetDisplayInfo(&dInfo);
-	dInfo.SetVisible(true);
-	SetDisplayInfo(&dInfo);*/
-	//SetMember("visible", &GFxValue(true));
-
-	gfxHUDExtension.Invoke("SortChildrenByDepth", nullptr, nullptr, 0);
-
-	//CALL_MEMBER_FN(this, Impl_UpdateComponent)();
-	//__super::UpdateComponent();
+	stage.Invoke("SortChildrenByDepth", nullptr, nullptr, 0);
+	__super::DrawNextFrame(unk0, unk1);
 }
 
 HUDNameplate::HUDNameplate(UInt32 refrHandle, GFxValue * nameplate) : m_refrHandle(refrHandle), m_nameplate(nullptr)
@@ -272,7 +276,7 @@ HUDNameplate::~HUDNameplate()
 	}
 }
 
-bool HUDExtension::AddNameplate(TESObjectREFR * refr)
+bool HUDExtensionMenu::AddNameplate(TESObjectREFR * refr)
 {
 	SimpleLocker locker(&m_lock);
 
@@ -298,7 +302,7 @@ bool HUDExtension::AddNameplate(TESObjectREFR * refr)
 	return true;
 }
 
-bool HUDExtension::RemoveNameplate(TESObjectREFR * refr)
+bool HUDExtensionMenu::RemoveNameplate(TESObjectREFR * refr)
 {
 	SimpleLocker locker(&m_lock);
 
@@ -327,7 +331,7 @@ bool HUDExtension::RemoveNameplate(TESObjectREFR * refr)
 	return false;
 }
 
-void HUDExtension::ClearNameplates()
+void HUDExtensionMenu::ClearNameplates()
 {
 	SimpleLocker locker(&m_lock);
 	m_qAdd.clear();
@@ -339,10 +343,23 @@ void HUDExtension::ClearNameplates()
 	}
 }
 
-void HUDExtension::ForceClear()
+void HUDExtensionMenu::ForceClear()
 {
 	SimpleLocker locker(&m_lock);
 	m_qAdd.clear();
 	m_qRemove.clear();
+
+	for(auto & plate : m_mapPlates)
+	{
+		if(plate.second)
+		{
+			BSGFxDisplayObject * target = plate.second->m_nameplate;
+			SInt64 i = subcomponents.GetItemIndex(target);
+			if(i != -1) {
+				subcomponents.Remove(i);
+			}
+		}
+	}
+
 	m_mapPlates.clear();
 }

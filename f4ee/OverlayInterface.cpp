@@ -112,8 +112,6 @@ bool OverlayInterface::UpdateOverlays(Actor * actor, NiNode * rootNode, NiAVObje
 
 			UInt32 layerIndex = 0;
 
-			
-
 			std::vector<std::tuple<std::string, OverlayDataPtr, F4EEFixedString, bool>> overlays;
 
 			ForEachOverlayBySlot(actor, isFemale, slotIndex, [&](SInt32, const OverlayDataPtr & overlay, const F4EEFixedString & material, bool effect)

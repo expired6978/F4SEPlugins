@@ -358,9 +358,9 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 		_FATALERROR("loaded in editor, marking as incompatible");
 		return false;
 	}
-	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_10_26)
+	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_10_82)
 	{
-		UInt32 runtimeVersion = RUNTIME_VERSION_1_10_26;
+		UInt32 runtimeVersion = RUNTIME_VERSION_1_10_82;
 		char buf[512];
 		sprintf_s(buf, "LooksMenu Version Error:\nexpected game version %d.%d.%d.%d\nyour game version is %d.%d.%d.%d\nsome features may not work correctly.", 
 			GET_EXE_VERSION_MAJOR(runtimeVersion), 
@@ -468,16 +468,16 @@ RelocAddr <_InstallArmorAddon> InstallArmorAddon_Original(0x001C4150);
 RelocAddr <uintptr_t> InstallArmorAddon_Start(0x001BECB0 + 0xC27);
 
 typedef void (* _ApplyMaterialProperties)(NiAVObject * object);
-RelocAddr <_ApplyMaterialProperties> ApplyMaterialProperties(0x02833E90); // 42D562E443C0313BACEF58FC1A4508489CED355F+33A
-RelocAddr <uintptr_t> HairColorModify_Start(0x0068BE30 + 0x24A);
+RelocAddr <_ApplyMaterialProperties> ApplyMaterialProperties(0x028450C0); // 42D562E443C0313BACEF58FC1A4508489CED355F+33A
+RelocAddr <uintptr_t> HairColorModify_Start(0x0068BE40 + 0x24A);
 
-RelocAddr <uintptr_t> GetHairTexturePath_Start(0x00689A20 + 0xDED);
+RelocAddr <uintptr_t> GetHairTexturePath_Start(0x00689A30 + 0xDED);
 
-RelocPtr<UInt32> g_faceGenTextureWidth(0x0386DEB0); // F5F0D2A6AFBE88D06472E751C88521770B465B79+148
-RelocPtr<UInt32> g_faceGenTextureHeight(0x0386DEB4);
+RelocPtr<UInt32> g_faceGenTextureWidth(0x03887F30); // F5F0D2A6AFBE88D06472E751C88521770B465B79+148
+RelocPtr<UInt32> g_faceGenTextureHeight(0x03887F34);
 
 typedef void (* _InitializeSharedTarget)(BSRenderTargetManager * targetManager, UInt32 type, BSRenderTargetManager::SharedTargetInfo * targetInfo, UInt8 unk1);
-RelocAddr <_InitializeSharedTarget> InitializeSharedTarget(0x01D2F3F0);
+RelocAddr <_InitializeSharedTarget> InitializeSharedTarget(0x01D30CD0);
 _InitializeSharedTarget InitializeSharedTarget_Original = nullptr;
 
 void ApplyMaterialProperties_Hook(NiAVObject * node, BGSColorForm * colorForm, BSLightingShaderMaterialBase * shaderMaterial)
