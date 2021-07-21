@@ -13,6 +13,7 @@
 #include "BodyMorphInterface.h"
 #include "BodyGenInterface.h"
 #include "OverlayInterface.h"
+#include "TransformInterface.h"
 #include "ActorUpdateManager.h"
 #include "SkinInterface.h"
 #include "Utilities.h"
@@ -38,6 +39,9 @@ BodyMorphInterface g_bodyMorphInterface;
 OverlayInterface g_overlayInterface;
 StringTable g_stringTable;
 SkinInterface g_skinInterface;
+#ifdef _TRANSFORMS
+NiTransformInterface g_transformInterface;
+#endif
 ActorUpdateManager g_actorUpdateManager;
 
 IDebugLog	gLog;
@@ -224,6 +228,10 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 			if(g_bEnableModelPreprocessor)
 				g_bodyMorphInterface.SetModelProcessor();
 
+#if _TRANSFORMS
+			g_transformInterface.SetModelProcessor();
+#endif
+
 			GetEventDispatcher<TESInitScriptEvent>()->AddEventSink(&g_actorUpdateManager);
 			GetEventDispatcher<TESLoadGameEvent>()->AddEventSink(&g_actorUpdateManager);
 			GetEventDispatcher<TESObjectLoadedEvent>()->AddEventSink(&g_actorUpdateManager);
@@ -233,7 +241,7 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 		{
 			s_loadLock.Enter();
 
-			bool isReady = reinterpret_cast<bool>(msg->data);
+			bool isReady = static_cast<bool>(msg->data);
 			if(isReady)
 			{
 				if(g_bEnableTintExtensions) {
@@ -260,6 +268,9 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 				if(g_bUnlockTints) {
 					g_charGenInterface.UnlockTints();
 				}
+#ifdef _TRANSFORMS
+				g_transformInterface.LoadAllSkeletons();
+#endif
 			}
 			else
 			{
@@ -358,9 +369,9 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 		_FATALERROR("loaded in editor, marking as incompatible");
 		return false;
 	}
-	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_10_82)
+	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_10_163)
 	{
-		UInt32 runtimeVersion = RUNTIME_VERSION_1_10_82;
+		UInt32 runtimeVersion = RUNTIME_VERSION_1_10_163;
 		char buf[512];
 		sprintf_s(buf, "LooksMenu Version Error:\nexpected game version %d.%d.%d.%d\nyour game version is %d.%d.%d.%d\nsome features may not work correctly.", 
 			GET_EXE_VERSION_MAJOR(runtimeVersion), 
@@ -468,16 +479,16 @@ RelocAddr <_InstallArmorAddon> InstallArmorAddon_Original(0x001C4150);
 RelocAddr <uintptr_t> InstallArmorAddon_Start(0x001BECB0 + 0xC27);
 
 typedef void (* _ApplyMaterialProperties)(NiAVObject * object);
-RelocAddr <_ApplyMaterialProperties> ApplyMaterialProperties(0x028450C0); // 42D562E443C0313BACEF58FC1A4508489CED355F+33A
-RelocAddr <uintptr_t> HairColorModify_Start(0x0068BE40 + 0x24A);
+RelocAddr <_ApplyMaterialProperties> ApplyMaterialProperties(0x028201D0); // 42D562E443C0313BACEF58FC1A4508489CED355F+33A
+RelocAddr <uintptr_t> HairColorModify_Start(0x0068BFC0 + 0x24A);
 
-RelocAddr <uintptr_t> GetHairTexturePath_Start(0x00689A30 + 0xDED);
+RelocAddr <uintptr_t> GetHairTexturePath_Start(0x00689BB0 + 0xDED);
 
-RelocPtr<UInt32> g_faceGenTextureWidth(0x03887F30); // F5F0D2A6AFBE88D06472E751C88521770B465B79+148
-RelocPtr<UInt32> g_faceGenTextureHeight(0x03887F34);
+RelocPtr<UInt32> g_faceGenTextureWidth(0x0384FF30); // F5F0D2A6AFBE88D06472E751C88521770B465B79+148
+RelocPtr<UInt32> g_faceGenTextureHeight(0x0384FF34);
 
 typedef void (* _InitializeSharedTarget)(BSRenderTargetManager * targetManager, UInt32 type, BSRenderTargetManager::SharedTargetInfo * targetInfo, UInt8 unk1);
-RelocAddr <_InitializeSharedTarget> InitializeSharedTarget(0x01D30CD0);
+RelocAddr <_InitializeSharedTarget> InitializeSharedTarget(0x01D30E90);
 _InitializeSharedTarget InitializeSharedTarget_Original = nullptr;
 
 void ApplyMaterialProperties_Hook(NiAVObject * node, BGSColorForm * colorForm, BSLightingShaderMaterialBase * shaderMaterial)
@@ -641,27 +652,9 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 				dq(InstallArmorAddon_Start.GetUIntPtr() + 5);
 			}
 		};
-		/*struct InstallArmorAddon_Code : Xbyak::CodeGenerator {
-			InstallArmorAddon_Code(void * buf, UInt64 funcAddr) : Xbyak::CodeGenerator(4096, buf)
-			{
-				Xbyak::Label funcLabel;
-				Xbyak::Label retnLabel;
-
-				mov(r9, r12);
-				call(ptr [rip + funcLabel]);
-				jmp(ptr [rip + retnLabel]);
-
-				L(funcLabel);
-				dq(funcAddr);
-
-				L(retnLabel);
-				dq(InstallArmorAddon_Start.GetUIntPtr() + 5);
-			}
-		};*/
 
 		void * codeBuf = g_localTrampoline.StartAlloc();
 		InstallArmorAddon_Code code(codeBuf, (uintptr_t)InstallArmorAddon);
-		//InstallArmorAddon_Code code(codeBuf, (uintptr_t)InstallArmorAddon_Hook);
 		g_localTrampoline.EndAlloc(code.getCurr());
 
 		g_branchTrampoline.Write5Branch(InstallArmorAddon_Start.GetUIntPtr(), uintptr_t(code.getCode()));
@@ -715,12 +708,11 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 				dq(funcAddr);
 
 				L(retnLabel);
-				/* Skip this chunk, will be done in our own code, looking up of the hair texture and returning the C-string
-				mov     rcx, [rbp+1DE0h+npc2]
-				mov     rcx, [rcx+1B8h]
-				add     rcx, 6C0h
-				call    BSFixedString__GetCString
-				*/
+				// Skip this chunk, will be done in our own code, looking up of the hair texture and returning the C-string
+				// mov     rcx, [rbp+1DE0h+npc2]
+				// mov     rcx, [rcx+1B8h]
+				// add     rcx, 6C0h
+				// call    BSFixedString__GetCString
 				dq(GetHairTexturePath_Start.GetUIntPtr() + 0x13);
 			}
 		};

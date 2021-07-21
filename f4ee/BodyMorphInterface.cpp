@@ -500,7 +500,7 @@ void F4EEBodyGenUpdate::Run()
 					{
 						if(equipData[s])
 						{
-							for(UInt32 i = 0; i < 31; ++i)
+							for(UInt32 i = 0; i < 32; ++i)
 							{
 								NiPointer<NiAVObject> slotNode(equipData[s]->slots[i].node);
 								if(slotNode && g_bodyMorphInterface.IsNodeMorphable(slotNode))
@@ -606,6 +606,8 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 		MorphApplicator morpher(geometry, newBlock, newBlock, [&](std::vector<Morpher::Vector3> & verts)
 		{
 			SimpleLocker locker(&m_morphLock);
+
+			actorMorphs->Lock();
 			for(auto & actorMorph : *actorMorphs)
 			{
 				float effectiveValue = actorMorph.second->GetEffectiveValue();
@@ -621,6 +623,7 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 					_WARNING("%s - Shape: %s Morph: %s contained out of bounds vertices\t[%s]", __FUNCTION__, morphableShape->shapeName.c_str(), actorMorph.first->c_str(), morphableShape->morphPath.c_str());
 				}
 			}
+			actorMorphs->Unlock();
 		});
 
 		if(geomData) {
@@ -742,7 +745,8 @@ void BodyMorphInterface::GetMorphs(Actor * actor, bool isFemale, std::vector<BSF
 	auto it = m_morphMap[isFemale ? 1 : 0].find(actor ? actor->formID : 0);
 	if(it != m_morphMap[isFemale ? 1 : 0].end()) {
 		for(auto & morph : *it->second) {
-			morphs.push_back(morph.first->c_str());
+			if(morph.first)
+				morphs.push_back(morph.first->c_str());
 		}
 	}
 }
@@ -816,7 +820,6 @@ float BodyMorphInterface::GetMorph(Actor * actor, bool isFemale, const BSFixedSt
 
 float UserValues::GetValue(BGSKeyword * keyword)
 {
-	SimpleLocker locker(&m_morphLock);
 	auto it = find(keyword ? keyword->formID : 0);
 	if(it != end()) {
 		return it->second;
@@ -827,8 +830,6 @@ float UserValues::GetValue(BGSKeyword * keyword)
 
 void UserValues::SetValue(BGSKeyword * keyword, float value)
 {
-	SimpleLocker locker(&m_morphLock);
-
 	UInt32 formId = keyword ? keyword->formID : 0;
 
 	// Erase the value if it is present and we are putting zero in
@@ -844,7 +845,6 @@ void UserValues::SetValue(BGSKeyword * keyword, float value)
 
 void UserValues::RemoveKeyword(BGSKeyword * keyword)
 {
-	SimpleLocker locker(&m_morphLock);
 	auto it = find(keyword ? keyword->formID : 0);
 	if(it != end()) {
 		erase(it);
@@ -853,9 +853,7 @@ void UserValues::RemoveKeyword(BGSKeyword * keyword)
 
 float UserValues::GetEffectiveValue()
 {
-	SimpleLocker locker(&m_morphLock);
-
-	auto maxIt = std::max_element(begin(), end());
+	auto maxIt = std::max_element(begin(), end(), [](const std::pair<UInt32,float>& a, const std::pair<UInt32, float>& b) { return a.second < b.second; });
 	if(maxIt != end()) {
 		return maxIt->second;
 	}

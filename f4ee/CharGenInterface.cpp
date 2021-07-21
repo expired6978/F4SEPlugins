@@ -371,8 +371,9 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 			npc->morphSetValue = new tArray<float>();
 		if(npc->morphSetValue) {
 			npc->morphSetValue->Clear();
-			npc->morphSetValue->Allocate(fValues.size());
-			for(int i = 0; i < fValues.size(); i++)
+			npc->morphSetValue->Allocate(5);
+			size_t elements = (std::min<size_t>)(5, fValues.size());
+			for(size_t i = 0; i < elements; i++)
 			{
 				(*npc->morphSetValue)[i] = fValues.at(i);
 			}
@@ -1075,7 +1076,7 @@ void CharGenInterface::UnlockHeadParts()
 	});
 	end = std::chrono::system_clock::now();
 	std::chrono::duration<double> elapsed_seconds = end-start;
-	_MESSAGE("Completed head part unlock of %d parts in %f seconds", total, elapsed_seconds.count());
+	_MESSAGE("Completed head part unlock of %d parts in %f seconds", total.load(), elapsed_seconds.count());
 }
 
 void CharGenInterface::UnlockTints()
@@ -1111,7 +1112,7 @@ void CharGenInterface::UnlockTints()
 	});
 	end = std::chrono::system_clock::now();
 	std::chrono::duration<double> elapsed_seconds = end-start;
-	_MESSAGE("Completed tint unlock of %d tints in %f seconds", total, elapsed_seconds.count());
+	_MESSAGE("Completed tint unlock of %d tints in %f seconds", total.load(), elapsed_seconds.count());
 }
 
 void CharGenInterface::ProcessHairColor(NiAVObject * node, BGSColorForm * colorForm, BSLightingShaderMaterialBase * shaderMaterial)
@@ -1252,8 +1253,8 @@ bool CharGenInterface::LoadHairColorData(const std::string & filePath, const Mod
 				{
 					UInt32 formId = 0;
 					sscanf_s(value.asCString(), "%X", &formId);
-					UInt32 modIndex = modInfo->modIndex;
-					formId |= modIndex << 24;
+
+					formId |= modInfo->GetPartialIndex() << (modInfo->IsLight() ? 16 : 24);
 
 					TESForm * form = LookupFormByID(formId);
 					if(!form) {

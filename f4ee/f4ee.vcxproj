@@ -19,13 +19,13 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -135,6 +135,7 @@
     <ClCompile Include="..\f4se\GameObjects.cpp" />
     <ClCompile Include="..\f4se\GameReferences.cpp" />
     <ClCompile Include="..\f4se\GameRTTI.cpp" />
+    <ClCompile Include="..\f4se\GameSettings.cpp" />
     <ClCompile Include="..\f4se\GameStreams.cpp" />
     <ClCompile Include="..\f4se\GameTypes.cpp" />
     <ClCompile Include="..\f4se\GameUtilities.cpp" />
@@ -174,6 +175,7 @@
     <ClCompile Include="ScaleformNatives.cpp" />
     <ClCompile Include="SkinInterface.cpp" />
     <ClCompile Include="StringTable.cpp" />
+    <ClCompile Include="TransformInterface.cpp" />
     <ClCompile Include="Utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -193,6 +195,7 @@
     <ClInclude Include="..\f4se\GameObjects.h" />
     <ClInclude Include="..\f4se\GameReferences.h" />
     <ClInclude Include="..\f4se\GameRTTI.h" />
+    <ClInclude Include="..\f4se\GameSettings.h" />
     <ClInclude Include="..\f4se\GameStreams.h" />
     <ClInclude Include="..\f4se\GameTypes.h" />
     <ClInclude Include="..\f4se\GameUtilities.h" />
@@ -235,6 +238,7 @@
     <ClInclude Include="shape.hpp" />
     <ClInclude Include="SkinInterface.h" />
     <ClInclude Include="StringTable.h" />
+    <ClInclude Include="TransformInterface.h" />
     <ClInclude Include="Utilities.h" />
   </ItemGroup>
   <ItemGroup>
@@ -245,16 +249,11 @@
     <None Include="exports.def" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\common\common_vc11.vcxproj">
-      <Project>{d4c128a1-73dc-4941-a453-ce55af239ba8}</Project>
+    <ProjectReference Include="..\..\common\common_vc14.vcxproj">
+      <Project>{472e19ab-def0-42df-819b-18722e8dc822}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\f4se_common\f4se_common.vcxproj">
-      <Project>{20c6411c-596f-4b85-be4e-8bc91f59d8a6}</Project>
-      <Private>false</Private>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
-      <LinkLibraryDependencies>true</LinkLibraryDependencies>
-      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    <ProjectReference Include="..\f4se_common\f4se_common_vc14.vcxproj">
+      <Project>{71665cee-3ed6-4d65-b123-ee4c26f5c6e3}</Project>
     </ProjectReference>
     <ProjectReference Include="..\jsoncpp\jsoncpp.vcxproj">
       <Project>{522ec01c-c40f-4de4-a83e-06c5b56620e6}</Project>

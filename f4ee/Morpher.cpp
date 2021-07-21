@@ -5,7 +5,7 @@
 #include "half.hpp"
 #include "f4se/BSGeometry.h"
 
-float round(float num)
+float round_v(float num)
 {
 	return (num > 0.0) ? floor(num + 0.5) : ceil(num - 0.5);
 }
@@ -100,19 +100,19 @@ MorphApplicator::MorphApplicator(BSTriShape * _geometry, UInt8 * srcBlock, UInt8
 
 		if(vertexDesc & BSTriShape::kFlag_Normals)
 		{
-			*(SInt8*)vBegin = (UInt8)round((((rawNormals[i].x + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
-			*(SInt8*)vBegin = (UInt8)round((((rawNormals[i].y + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
-			*(SInt8*)vBegin = (UInt8)round((((rawNormals[i].z + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
+			*(SInt8*)vBegin = (UInt8)round_v((((rawNormals[i].x + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
+			*(SInt8*)vBegin = (UInt8)round_v((((rawNormals[i].y + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
+			*(SInt8*)vBegin = (UInt8)round_v((((rawNormals[i].z + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
 
-			*(SInt8*)vBegin = (UInt8)round((((rawBitangents[i].y + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
+			*(SInt8*)vBegin = (UInt8)round_v((((rawBitangents[i].y + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
 
 			if(vertexDesc & BSTriShape::kFlag_Tangents)
 			{
-				*(SInt8*)vBegin = (UInt8)round((((rawTangents[i].x + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
-				*(SInt8*)vBegin = (UInt8)round((((rawTangents[i].y + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
-				*(SInt8*)vBegin = (UInt8)round((((rawTangents[i].z + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
+				*(SInt8*)vBegin = (UInt8)round_v((((rawTangents[i].x + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
+				*(SInt8*)vBegin = (UInt8)round_v((((rawTangents[i].y + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
+				*(SInt8*)vBegin = (UInt8)round_v((((rawTangents[i].z + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
 
-				*(SInt8*)vBegin = (UInt8)round((((rawBitangents[i].z + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
+				*(SInt8*)vBegin = (UInt8)round_v((((rawBitangents[i].z + 1.0f) / 2.0f) * 255.0f)); vBegin += 1;
 			}
 		}
 	}

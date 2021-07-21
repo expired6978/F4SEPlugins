@@ -46,6 +46,9 @@
     <Filter Include="Interfaces\Skin">
       <UniqueIdentifier>{06551dd7-ca00-40d2-89a8-bd46c1a64b11}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Interfaces\Transform">
+      <UniqueIdentifier>{4cbf0902-685a-4353-82b2-4a6f373cd655}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />
@@ -229,6 +232,12 @@
     <ClCompile Include="..\f4se\GameEvents.cpp">
       <Filter>f4se\api</Filter>
     </ClCompile>
+    <ClCompile Include="TransformInterface.cpp">
+      <Filter>Interfaces\Transform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\f4se\GameSettings.cpp">
+      <Filter>f4se\api</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -404,6 +413,12 @@
       <Filter>Interfaces\Skin</Filter>
     </ClInclude>
     <ClInclude Include="..\f4se\GameEvents.h">
+      <Filter>f4se\api</Filter>
+    </ClInclude>
+    <ClInclude Include="TransformInterface.h">
+      <Filter>Interfaces\Transform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameSettings.h">
       <Filter>f4se\api</Filter>
     </ClInclude>
   </ItemGroup>

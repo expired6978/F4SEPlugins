@@ -582,24 +582,24 @@ void F4EEScaleform_GetEquippedItems::Invoke(Args * args)
 	if(characterCreation) {
 		Actor * actor = characterCreation->actor;
 
-		static std::unordered_map<TESForm*, std::pair<SInt32, UInt8>> stackList;
+		std::unordered_map<TESForm*, std::pair<SInt32, UInt8>> stackList;
 		auto inventory = actor->inventoryList;
 		if(inventory)
 		{
-			inventory->inventoryLock.Lock();
+			inventory->inventoryLock.LockForRead();
 			for(UInt32 i = 0; i < inventory->items.count; i++)
 			{
 				SInt32 s = 0;
 				inventory->items[i].stack->Visit([&](BGSInventoryItem::Stack * stack)
 				{
 					if(stack->flags & BGSInventoryItem::Stack::kFlagEquipped) {
-						stackList.emplace(inventory->items[i].form, std::make_pair(s, stack->flags & 0xF));
+						stackList.emplace(inventory->items[i].form, std::make_pair(s, stack->flags & 0x7));
 					}
 					s++;
 					return true;
 				});
 			}
-			inventory->inventoryLock.Release();
+			inventory->inventoryLock.UnlockRead();
 		}
 		if(!stackList.empty())
 		{
@@ -627,7 +627,7 @@ void F4EEScaleform_UnequipItems::Invoke(Args * args)
 		Actor * actor = characterCreation->actor;
 
 		// Convert the GFX data to a stack mapping
-		static std::unordered_map<TESForm*, std::pair<SInt32, UInt8>> stackList;
+		std::unordered_map<TESForm*, std::pair<SInt32, UInt8>> stackList;
 		UInt32 numItems = args->args[0].GetArraySize();
 		for (UInt32 i = 0; i < numItems; i++) {
 			GFxValue element, formId, stackIndex, flags;
@@ -648,7 +648,7 @@ void F4EEScaleform_UnequipItems::Invoke(Args * args)
 		auto inventory = actor->inventoryList;
 		if(inventory)
 		{
-			inventory->inventoryLock.Lock();
+			inventory->inventoryLock.LockForWrite();
 
 			for(UInt32 i = 0; i < inventory->items.count; i++)
 			{
@@ -659,7 +659,7 @@ void F4EEScaleform_UnequipItems::Invoke(Args * args)
 					inventory->items[i].stack->Visit([&](BGSInventoryItem::Stack * stack)
 					{
 						if(it->second.first == s) {
-							stack->flags &= ~0xF;
+							stack->flags &= ~0x7;
 							return false;
 						}
 
@@ -669,7 +669,7 @@ void F4EEScaleform_UnequipItems::Invoke(Args * args)
 				}
 			}
 
-			inventory->inventoryLock.Release();
+			inventory->inventoryLock.UnlockWrite();
 		}
 
 		if(!stackList.empty()) {
@@ -685,7 +685,7 @@ void F4EEScaleform_UnequipItems::Invoke(Args * args)
 				args->result->PushBack(&equippedItem);
 			}
 
-			g_task->AddTask(new F4EEBodyGenUpdate(actor, false));			
+			g_task->AddTask(new F4EEBodyGenUpdate(actor, false));
 		}
 		else
 			args->result->SetNull();
@@ -699,7 +699,7 @@ void F4EEScaleform_EquipItems::Invoke(Args * args)
 		Actor * actor = characterCreation->actor;
 
 		// Convert the GFX data
-		static std::unordered_map<TESForm*, std::pair<SInt32, UInt8>> stackList;
+		std::unordered_map<TESForm*, std::pair<SInt32, UInt8>> stackList;
 		UInt32 numItems = args->args[0].GetArraySize();
 		for (UInt32 i = 0; i < numItems; i++) {
 			GFxValue element, formId, stackIndex, flags;
@@ -720,7 +720,7 @@ void F4EEScaleform_EquipItems::Invoke(Args * args)
 		auto inventory = actor->inventoryList;
 		if(inventory)
 		{
-			inventory->inventoryLock.Lock();
+			inventory->inventoryLock.LockForWrite();
 
 			for(UInt32 i = 0; i < inventory->items.count; i++)
 			{
@@ -731,7 +731,7 @@ void F4EEScaleform_EquipItems::Invoke(Args * args)
 					inventory->items[i].stack->Visit([&](BGSInventoryItem::Stack * stack)
 					{
 						if(it->second.first == s) {
-							stack->flags |= it->second.second & 0xF;
+							stack->flags |= it->second.second & 0x7;
 							return false;
 						}
 
@@ -741,7 +741,7 @@ void F4EEScaleform_EquipItems::Invoke(Args * args)
 				}
 			}
 
-			inventory->inventoryLock.Release();
+			inventory->inventoryLock.UnlockWrite();
 		}
 
 		if(!stackList.empty()) {

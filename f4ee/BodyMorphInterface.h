@@ -113,12 +113,8 @@ public:
 
 	void Revert()
 	{
-		SimpleLocker locker(&m_morphLock);
 		clear();
 	}
-
-protected:
-	SimpleLock	m_morphLock;
 };
 typedef std::shared_ptr<UserValues> UserValuesPtr;
 
@@ -136,6 +132,9 @@ public:
 
 	void RemoveMorphsByName(const BSFixedString & morph);
 	void RemoveMorphsByKeyword(BGSKeyword * keyword);
+
+	void Lock() { m_morphLock.Lock(); }
+	void Unlock() { m_morphLock.Release(); }
 
 	void Revert()
 	{
@@ -199,9 +198,7 @@ protected:
 	BSModelDB::BSModelProcessor	* m_oldProcessor;
 };
 
-class BodyMorphInterface :	public BSTEventSink<TESObjectLoadedEvent>,
-							public BSTEventSink<TESLoadGameEvent>,
-							public BSTEventSink<TESInitScriptEvent>
+class BodyMorphInterface
 {
 public:
 	BodyMorphInterface() : m_totalMemory(0), m_memoryLimit(0x80000000LL) { } // 2GB
