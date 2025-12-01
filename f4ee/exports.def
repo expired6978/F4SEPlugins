@@ -1,4 +1,4 @@
 LIBRARY	"f4ee"
 EXPORTS
-F4SEPlugin_Query
+F4SEPlugin_Preload
 F4SEPlugin_Load
