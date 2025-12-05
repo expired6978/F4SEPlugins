@@ -151,7 +151,7 @@ public:
 			return kEvent_Continue;
 
 		BSFixedString menuName(HUDExtensionMenu::sMenuName);
-		if((*g_ui)->IsMenuOpen(menuName))
+		if((*g_ui)->IsMenuRegistered(menuName) && (*g_ui)->IsMenuOpen(menuName))
 		{
 			HUDExtensionMenu * menu = static_cast<HUDExtensionMenu*>((*g_ui)->GetMenu(menuName));
 			if(menu)
@@ -282,7 +282,7 @@ void F4SEMessageHandler(F4SEMessagingInterface::Message* msg)
 extern "C"
 {
 
-bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
+bool F4SEPlugin_Preload(const F4SEInterface * f4se)
 {
 	SInt32	logLevel = IDebugLog::kLevel_DebugMessage;
 	if (F4HEGetConfigValue("Debug", "iLogLevel", &logLevel))
@@ -292,11 +292,6 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 
 	g_f4seVersion = f4se->f4seVersion;
 
-	// populate info structure
-	info->infoVersion =	PluginInfo::kInfoVersion;
-	info->name =		"F4HE";
-	info->version =		1;
-
 	// store plugin handle so we can identify ourselves later
 	g_pluginHandle = f4se->GetPluginHandle();
 
@@ -305,9 +300,9 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 		_FATALERROR("loaded in editor, marking as incompatible");
 		return false;
 	}
-	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_10_82)
+	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_11_169)
 	{
-		UInt32 runtimeVersion = RUNTIME_VERSION_1_10_82;
+		UInt32 runtimeVersion = RUNTIME_VERSION_1_11_169;
 		char buf[512];
 		sprintf_s(buf, "HUD Extension Version Error:\nexpected game version %d.%d.%d.%d\nyour game version is %d.%d.%d.%d\nsome features may not work correctly.", 
 			GET_EXE_VERSION_MAJOR(runtimeVersion), 
@@ -357,5 +352,20 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 
 	return true;
 }
+
+__declspec(dllexport) F4SEPluginVersionData F4SEPlugin_Version =
+{
+	F4SEPluginVersionData::kVersion,
+
+	1,
+	"Fallout 4 HUD Extension",
+	"Expired6978",
+
+	0,	// not version independent
+	0,	// not version independent (extended field)
+	{ RUNTIME_VERSION_1_11_169, 0 },	// compatible with 1.11.169
+
+	0,	// works with any version of the script extender. you probably do not need to put anything here
+};
 
 };

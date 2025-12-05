@@ -38,7 +38,7 @@ public:
 		CALL_MEMBER_FN((*g_uiMessageManager), SendUIMessage)(BSFixedString(sMenuName), kMessage_Close);
 	}
 
-	virtual void DrawNextFrame(float unk0, void * unk1) override final;
+	virtual void AdvanceMovie(float unk0, void * unk1) override final;
 	virtual void RegisterFunctions() override final;
 
 	void AddNameplate(GFxValue * parent, const std::shared_ptr<HUDNameplate> & object);
