@@ -66,6 +66,9 @@
     <ClCompile Include="..\f4se\GameData.cpp">
       <Filter>api</Filter>
     </ClCompile>
+    <ClCompile Include="..\f4se\GameHandle.cpp">
+      <Filter>api</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\f4se\ScaleformAPI.h">
@@ -130,6 +133,9 @@
     </ClInclude>
     <ClInclude Include="HUDExtension.h" />
     <ClInclude Include="..\f4se\GameData.h">
+      <Filter>api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\f4se\GameHandle.h">
       <Filter>api</Filter>
     </ClInclude>
   </ItemGroup>

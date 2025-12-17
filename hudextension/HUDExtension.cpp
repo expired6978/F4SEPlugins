@@ -82,6 +82,11 @@ void HUDExtensionMenu::AddNameplate(GFxValue * parent, const std::shared_ptr<HUD
 			parent->Invoke("AddNameplate", &nameplate, args, 5);
 			if(nameplate.IsDisplayObject()) {
 				object->m_nameplate = new BSGFxShaderFXTarget(&nameplate);
+				object->m_nameplate->backgroundColorType = kHUDColorTypes_MenuNoColorBackground;
+				if (g_hudSettings.barFlags & HUDSettings::kFlag_ShowBackground)
+					object->m_nameplate->shaderFX.enabledStates |= UIShaderColors::kBackgroundQuad;
+				else
+					object->m_nameplate->shaderFX.enabledStates &= ~UIShaderColors::kBackgroundQuad;
 			}
 		}
 	}

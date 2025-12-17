@@ -123,6 +123,7 @@
     <ClCompile Include="..\f4se\GameExtraData.cpp" />
     <ClCompile Include="..\f4se\GameFormComponents.cpp" />
     <ClCompile Include="..\f4se\GameForms.cpp" />
+    <ClCompile Include="..\f4se\GameHandle.cpp" />
     <ClCompile Include="..\f4se\GameMenus.cpp" />
     <ClCompile Include="..\f4se\GameObjects.cpp" />
     <ClCompile Include="..\f4se\GameReferences.cpp" />
@@ -148,6 +149,7 @@
     <ClInclude Include="..\f4se\GameExtraData.h" />
     <ClInclude Include="..\f4se\GameFormComponents.h" />
     <ClInclude Include="..\f4se\GameForms.h" />
+    <ClInclude Include="..\f4se\GameHandle.h" />
     <ClInclude Include="..\f4se\GameMenus.h" />
     <ClInclude Include="..\f4se\GameObjects.h" />
     <ClInclude Include="..\f4se\GameReferences.h" />

@@ -300,9 +300,9 @@ bool F4SEPlugin_Preload(const F4SEInterface * f4se)
 		_FATALERROR("loaded in editor, marking as incompatible");
 		return false;
 	}
-	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_11_169)
+	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_11_191)
 	{
-		UInt32 runtimeVersion = RUNTIME_VERSION_1_11_169;
+		UInt32 runtimeVersion = RUNTIME_VERSION_1_11_191;
 		char buf[512];
 		sprintf_s(buf, "HUD Extension Version Error:\nexpected game version %d.%d.%d.%d\nyour game version is %d.%d.%d.%d\nsome features may not work correctly.", 
 			GET_EXE_VERSION_MAJOR(runtimeVersion), 
@@ -363,7 +363,7 @@ __declspec(dllexport) F4SEPluginVersionData F4SEPlugin_Version =
 
 	0,	// not version independent
 	0,	// not version independent (extended field)
-	{ RUNTIME_VERSION_1_11_169, 0 },	// compatible with 1.11.169
+	{ RUNTIME_VERSION_1_11_191, 0 },	// compatible with 1.11.191
 
 	0,	// works with any version of the script extender. you probably do not need to put anything here
 };

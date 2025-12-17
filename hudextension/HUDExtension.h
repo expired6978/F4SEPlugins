@@ -73,7 +73,8 @@ struct HUDSettings
 		kFlag_HideEnemy		  = (1 << 3),
 		kFlag_HideUserDefined = (1 << 4),
 		kFlag_ShowLevel		  = (1 << 5),
-		kFlag_HideName        = (1 << 6)
+		kFlag_HideName        = (1 << 6),
+		kFlag_ShowBackground  = (1 << 7)
 	};
 
 	bool applyFilter;
