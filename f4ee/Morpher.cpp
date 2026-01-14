@@ -15,7 +15,7 @@ MorphApplicator::MorphApplicator(BSTriShape * _geometry, UInt8 * srcBlock, UInt8
 	UInt64 vertexDesc = geometry->vertexDesc;
 	UInt32 vertexSize = geometry->GetVertexSize();
 	UInt32 blockSize = geometry->numVertices * vertexSize;
-	BSGeometryData * geomData = geometry->geometryData;
+	BSGraphics::TriShape* geomData = static_cast<BSGraphics::TriShape*>(geometry->pRendererData);
 	UInt32 numVertices = geometry->numVertices;
 
 	// Pull the base data from the vertex block
@@ -31,7 +31,7 @@ MorphApplicator::MorphApplicator(BSTriShape * _geometry, UInt8 * srcBlock, UInt8
 		}
 	}
 
-	UInt8 * vertexBlock = srcBlock ? srcBlock : geomData->vertexData->vertexBlock;
+	UInt8* vertexBlock = srcBlock ? srcBlock : static_cast<UInt8*>(geomData->pVB->pData);
 	for(UInt32 i = 0; i < numVertices; i++)
 	{
 		UInt8 * vBegin = &vertexBlock[i * vertexSize];
@@ -63,14 +63,14 @@ MorphApplicator::MorphApplicator(BSTriShape * _geometry, UInt8 * srcBlock, UInt8
 	morphFunc(rawVertices);
 
 	Morpher::Triangle* triangles = nullptr;
-	auto triangleData = geomData->triangleData;
+	auto triangleData = geomData->pIB;
 	if(triangleData)
-		triangles = (Morpher::Triangle*)triangleData->triangles;
+		triangles = static_cast<Morpher::Triangle*>(triangleData->pData);
 
 	RecalcNormals(geometry->numTriangles, triangles);
 	CalcTangentSpace(geometry->numTriangles, triangles);
 	
-	vertexBlock = dstBlock ? dstBlock : geomData->vertexData->vertexBlock;
+	vertexBlock = dstBlock ? dstBlock : static_cast<UInt8*>(geomData->pVB->pData);
 	for(UInt32 i = 0; i < numVertices; i++)
 	{
 		UInt8 * vBegin = &vertexBlock[i * vertexSize];

@@ -83,6 +83,10 @@ public:
 	BGSTextureSet * GetBackupFace(Actor * actor, TESNPC * npc, bool isFemale, bool & exists);
 	BGSHeadPart * GetBackupHeadPart(Actor * actor, TESNPC * npc, bool isFemale, UInt32 partType);
 
+	UInt32 ApplyOverride(Actor* actor, TESNPC* npc, bool doFace);
+	void RevertOverride(Actor* actor, TESNPC* npc);
+
+
 	virtual void ForEachSkinTemplate(std::function<void(const F4EEFixedString&, const SkinTemplatePtr&)> functor);
 
 	

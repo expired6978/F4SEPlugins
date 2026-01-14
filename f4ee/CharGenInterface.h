@@ -7,8 +7,6 @@
 #include <unordered_set>
 #include <mutex>
 
-#include "json/json.h"
-
 #include "f4se/GameObjects.h"
 #include "f4se/BSModelDB.h"
 

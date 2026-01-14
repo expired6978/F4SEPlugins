@@ -53,6 +53,7 @@ F4SEMessagingInterface		* g_messaging = nullptr;
 F4SEPapyrusInterface		* g_papyrus = nullptr;
 F4SESerializationInterface	* g_serialization = nullptr;
 F4SETaskInterface			* g_task = nullptr;
+F4SETrampolineInterface		* g_trampoline = nullptr;
 ICriticalSection	s_loadLock;
 
 UInt32 g_f4seVersion;
@@ -341,10 +342,148 @@ void F4EESerialization_Load(const F4SESerializationInterface * intfc)
 	g_actorUpdateManager.Flush(); // In case the load game came first for whatever reason
 }
 
+
+bool ScaleformCallback(GFxMovieView* view, GFxValue* value)
+{
+	RegisterFunction<F4EEScaleform_LoadPreset>(value, view->movieRoot, "LoadPreset");
+	RegisterFunction<F4EEScaleform_ReadPreset>(value, view->movieRoot, "ReadPreset");
+	RegisterFunction<F4EEScaleform_SavePreset>(value, view->movieRoot, "SavePreset");
+	RegisterFunction<F4EEScaleform_SetCurrentBoneRegionID>(value, view->movieRoot, "SetCurrentBoneRegionID");
+	RegisterFunction<F4EEScaleform_AllowTextInput>(value, view->movieRoot, "AllowTextInput");
+	RegisterFunction<F4EEScaleform_GetExternalFiles>(value, view->movieRoot, "GetExternalFiles");
+	RegisterFunction<F4EEScaleform_GetBodySliders>(value, view->movieRoot, "GetBodySliders");
+	RegisterFunction<F4EEScaleform_SetBodyMorph>(value, view->movieRoot, "SetBodyMorph");
+	RegisterFunction<F4EEScaleform_UpdateBodyMorphs>(value, view->movieRoot, "UpdateBodyMorphs");
+	RegisterFunction<F4EEScaleform_CloneBodyMorphs>(value, view->movieRoot, "CloneBodyMorphs");
+
+	RegisterFunction<F4EEScaleform_GetOverlays>(value, view->movieRoot, "GetOverlays");
+	RegisterFunction<F4EEScaleform_GetOverlayTemplates>(value, view->movieRoot, "GetOverlayTemplates");
+	RegisterFunction<F4EEScaleform_CreateOverlay>(value, view->movieRoot, "CreateOverlay");
+	RegisterFunction<F4EEScaleform_DeleteOverlay>(value, view->movieRoot, "DeleteOverlay");
+	RegisterFunction<F4EEScaleform_SetOverlayData>(value, view->movieRoot, "SetOverlayData");
+	RegisterFunction<F4EEScaleform_ReorderOverlay>(value, view->movieRoot, "ReorderOverlay");
+	RegisterFunction<F4EEScaleform_UpdateOverlays>(value, view->movieRoot, "UpdateOverlays");
+	RegisterFunction<F4EEScaleform_CloneOverlays>(value, view->movieRoot, "CloneOverlays");
+
+	RegisterFunction<F4EEScaleform_GetEquippedItems>(value, view->movieRoot, "GetEquippedItems");
+	RegisterFunction<F4EEScaleform_UnequipItems>(value, view->movieRoot, "UnequipItems");
+	RegisterFunction<F4EEScaleform_EquipItems>(value, view->movieRoot, "EquipItems");
+
+	RegisterFunction<F4EEScaleform_GetSkinOverrides>(value, view->movieRoot, "GetSkinOverrides");
+	RegisterFunction<F4EEScaleform_GetSkinOverride>(value, view->movieRoot, "GetSkinOverride");
+	RegisterFunction<F4EEScaleform_SetSkinOverride>(value, view->movieRoot, "SetSkinOverride");
+	RegisterFunction<F4EEScaleform_UpdateSkinOverride>(value, view->movieRoot, "UpdateSkinOverride");
+	RegisterFunction<F4EEScaleform_CloneSkinOverride>(value, view->movieRoot, "CloneSkinOverride");
+
+	RegisterFunction<F4EEScaleform_GetSkinColor>(value, view->movieRoot, "GetSkinColor");
+	RegisterFunction<F4EEScaleform_SetSkinColor>(value, view->movieRoot, "SetSkinColor");
+	RegisterFunction<F4EEScaleform_GetExtraColor>(value, view->movieRoot, "GetExtraColor");
+	RegisterFunction<F4EEScaleform_SetExtraColor>(value, view->movieRoot, "SetExtraColor");
+
+
+	GFxValue dispatchEvent;
+	GFxValue eventArgs[3];
+	view->movieRoot->CreateString(&eventArgs[0], "F4EE::Initialized");
+	eventArgs[1] = GFxValue(true);
+	eventArgs[2] = GFxValue(false);
+	view->movieRoot->CreateObject(&dispatchEvent, "flash.events.Event", eventArgs, 3);
+	view->movieRoot->Invoke("root.dispatchEvent", nullptr, &dispatchEvent, 1);
+
+	return true;
+}
+
+using _AttachSkinnedObject = NiAVObject* (*)(BipedAnim* bipedInfo, NiNode* objectRoot, NiNode* parent, UInt32 bipedIndex, bool abFirstPerson);
+RelocAddr< _AttachSkinnedObject> AttachSkinnedObject(BipedAnim::AttachSkinnedObject_Address);
+_AttachSkinnedObject AttachSkinnedObject_Original = nullptr;
+
+RelocPtr<UInt32> g_faceGenTextureWidth(0x02CDC0D0);
+RelocPtr<UInt32> g_faceGenTextureHeight(0x02CDC0D4);
+
+namespace BSGraphics
+{
+	using _CreateRenderTarget = void (*)(RenderTargetManager* targetManager, UInt32 type, RenderTargetManager::RenderTargetProperties& properties, UInt8 persistent);
+	RelocAddr<_CreateRenderTarget> CreateRenderTarget(RenderTargetManager::CreateRenderTarget_Address);
+	_CreateRenderTarget CreateRenderTarget_Original = nullptr;
+}
+
+void HairColorModify_Hook(NiAVObject* node, BGSColorForm* colorForm, BSLightingShaderMaterialBase* shaderMaterial)
+{
+	if (shaderMaterial)
+		shaderMaterial->fLookupScale = colorForm->color.remappingIndex;
+
+	g_charGenInterface.ProcessHairColor(node, colorForm, shaderMaterial);
+
+	BSShaderutil::ClearRenderPasses(node);
+}
+
+const char* GetHairTexturePath_Hook(TESNPC* npc)
+{
+	return g_charGenInterface.ProcessEyebrowPath(npc);
+}
+
+NiAVObject* AttachSkinnedObject_Hooked(BipedAnim* bipedInfo, NiNode* objectRoot, NiNode* parentNode, UInt32 bipedIndex, bool abFirstPerson)
+{
+	NiAVObject* retVal = AttachSkinnedObject_Original(bipedInfo, objectRoot, parentNode, bipedIndex, abFirstPerson);
+
+	NiPointer<TESObjectREFR> reference;
+	BSPointerHandleManagerInterface<TESObjectREFR>::GetSmartPointer(reference, bipedInfo->actorRef);
+	if (reference)
+	{
+		Actor* actor = DYNAMIC_CAST(reference, TESForm, Actor);
+		if (actor)
+		{
+			if (retVal)
+			{
+				if (g_bEnableBodyMorphs)
+					g_bodyMorphInterface.ApplyMorphsToShapes(actor, retVal);
+
+				if (g_bEnableOverlays) {
+					if (parentNode)
+						g_overlayInterface.UpdateOverlays(actor, parentNode, retVal, bipedIndex);
+				}
+			}
+		}
+	}
+
+	return retVal;
+}
+
+void CreateRenderTarget_Hook(BSGraphics::RenderTargetManager* targetManager, UInt32 type, BSGraphics::RenderTargetManager::RenderTargetProperties& properties, UInt8 persistent)
+{
+	switch (type)
+	{
+	case 16:
+	case 17:
+	case 18:
+		properties.uiWidth = g_tintMaskWidth;
+		properties.uiHeight = g_tintMaskHeight;
+		break;
+	}
+	BSGraphics::CreateRenderTarget_Original(targetManager, type, properties, persistent);
+}
+
+bool RegisterFuncs(VirtualMachine* vm)
+{
+	papyrusBodyGen::RegisterFuncs(vm);
+	papyrusOverlays::RegisterFuncs(vm);
+	return true;
+}
+
 extern "C"
 {
+__declspec(dllexport) F4SEPluginVersionData F4SEPlugin_Version =
+{
+	F4SEPluginVersionData::kVersion,
+	2,
+	"Fallout 4 Engine Extender",
+	"Expired6978",
+	0,	// not version independent
+	0,	// not version independent (extended field)
+	{ RUNTIME_VERSION_1_10_984, 0 },	// compatible with 1.10.984
+	0,	// works with any version of the script extender. you probably do not need to put anything here
+};
 
-bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
+bool F4SEPlugin_Query(const F4SEInterface * f4se)
 {
 	SInt32	logLevel = IDebugLog::kLevel_DebugMessage;
 	if (F4EEGetConfigValue("Debug", "iLogLevel", &logLevel))
@@ -356,11 +495,6 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 
 	g_f4seVersion = f4se->f4seVersion;
 
-	// populate info structure
-	info->infoVersion =	PluginInfo::kInfoVersion;
-	info->name =		"F4EE";
-	info->version =		1;
-
 	// store plugin handle so we can identify ourselves later
 	g_pluginHandle = f4se->GetPluginHandle();
 
@@ -369,9 +503,9 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 		_FATALERROR("loaded in editor, marking as incompatible");
 		return false;
 	}
-	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_10_163)
+	else if(f4se->runtimeVersion != RUNTIME_VERSION_1_10_984)
 	{
-		UInt32 runtimeVersion = RUNTIME_VERSION_1_10_163;
+		UInt32 runtimeVersion = RUNTIME_VERSION_1_10_984;
 		char buf[512];
 		sprintf_s(buf, "LooksMenu Version Error:\nexpected game version %d.%d.%d.%d\nyour game version is %d.%d.%d.%d\nsome features may not work correctly.", 
 			GET_EXE_VERSION_MAJOR(runtimeVersion), 
@@ -421,143 +555,22 @@ bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
 		_WARNING("couldn't get task interface");
 	}
 
+	g_trampoline = (F4SETrampolineInterface*)f4se->QueryInterface(kInterface_Trampoline);
+	if (!g_trampoline) {
+		_ERROR("couldn't get trampoline interface");
+	}
+
 	// supported runtime version
 	return true;
 }
 
-bool ScaleformCallback(GFxMovieView * view, GFxValue * value)
+__declspec(dllexport) bool F4SEPlugin_Load(const F4SEInterface * f4se)
 {
-	RegisterFunction<F4EEScaleform_LoadPreset>(value, view->movieRoot, "LoadPreset");
-	RegisterFunction<F4EEScaleform_ReadPreset>(value, view->movieRoot, "ReadPreset");
-	RegisterFunction<F4EEScaleform_SavePreset>(value, view->movieRoot, "SavePreset");
-	RegisterFunction<F4EEScaleform_SetCurrentBoneRegionID>(value, view->movieRoot, "SetCurrentBoneRegionID");
-	RegisterFunction<F4EEScaleform_AllowTextInput>(value, view->movieRoot, "AllowTextInput");
-	RegisterFunction<F4EEScaleform_GetExternalFiles>(value, view->movieRoot, "GetExternalFiles");
-	RegisterFunction<F4EEScaleform_GetBodySliders>(value, view->movieRoot, "GetBodySliders");
-	RegisterFunction<F4EEScaleform_SetBodyMorph>(value, view->movieRoot, "SetBodyMorph");
-	RegisterFunction<F4EEScaleform_UpdateBodyMorphs>(value, view->movieRoot, "UpdateBodyMorphs");
-	RegisterFunction<F4EEScaleform_CloneBodyMorphs>(value, view->movieRoot, "CloneBodyMorphs");
-
-	RegisterFunction<F4EEScaleform_GetOverlays>(value, view->movieRoot, "GetOverlays");
-	RegisterFunction<F4EEScaleform_GetOverlayTemplates>(value, view->movieRoot, "GetOverlayTemplates");
-	RegisterFunction<F4EEScaleform_CreateOverlay>(value, view->movieRoot, "CreateOverlay");
-	RegisterFunction<F4EEScaleform_DeleteOverlay>(value, view->movieRoot, "DeleteOverlay");
-	RegisterFunction<F4EEScaleform_SetOverlayData>(value, view->movieRoot, "SetOverlayData");
-	RegisterFunction<F4EEScaleform_ReorderOverlay>(value, view->movieRoot, "ReorderOverlay");
-	RegisterFunction<F4EEScaleform_UpdateOverlays>(value, view->movieRoot, "UpdateOverlays");
-	RegisterFunction<F4EEScaleform_CloneOverlays>(value, view->movieRoot, "CloneOverlays");
-
-	RegisterFunction<F4EEScaleform_GetEquippedItems>(value, view->movieRoot, "GetEquippedItems");
-	RegisterFunction<F4EEScaleform_UnequipItems>(value, view->movieRoot, "UnequipItems");
-	RegisterFunction<F4EEScaleform_EquipItems>(value, view->movieRoot, "EquipItems");
-
-	RegisterFunction<F4EEScaleform_GetSkinOverrides>(value, view->movieRoot, "GetSkinOverrides");
-	RegisterFunction<F4EEScaleform_GetSkinOverride>(value, view->movieRoot, "GetSkinOverride");
-	RegisterFunction<F4EEScaleform_SetSkinOverride>(value, view->movieRoot, "SetSkinOverride");
-	RegisterFunction<F4EEScaleform_UpdateSkinOverride>(value, view->movieRoot, "UpdateSkinOverride");
-	RegisterFunction<F4EEScaleform_CloneSkinOverride>(value, view->movieRoot, "CloneSkinOverride");
-
-	RegisterFunction<F4EEScaleform_GetSkinColor>(value, view->movieRoot, "GetSkinColor");
-	RegisterFunction<F4EEScaleform_SetSkinColor>(value, view->movieRoot, "SetSkinColor");
-	RegisterFunction<F4EEScaleform_GetExtraColor>(value, view->movieRoot, "GetExtraColor");
-	RegisterFunction<F4EEScaleform_SetExtraColor>(value, view->movieRoot, "SetExtraColor");
-
-
-	GFxValue dispatchEvent;
-	GFxValue eventArgs[3];
-	view->movieRoot->CreateString(&eventArgs[0], "F4EE::Initialized");
-	eventArgs[1] = GFxValue(true);
-	eventArgs[2] = GFxValue(false);
-	view->movieRoot->CreateObject(&dispatchEvent, "flash.events.Event", eventArgs, 3);
-	view->movieRoot->Invoke("root.dispatchEvent", nullptr, &dispatchEvent, 1);
-
-	return true;
-}
-
-typedef UInt32 (* _InstallArmorAddon)(void * unk1, UInt32 unk2, TESForm * form);
-RelocAddr <_InstallArmorAddon> InstallArmorAddon_Original(0x001C4150);
-RelocAddr <uintptr_t> InstallArmorAddon_Start(0x001BECB0 + 0xC27);
-
-typedef void (* _ApplyMaterialProperties)(NiAVObject * object);
-RelocAddr <_ApplyMaterialProperties> ApplyMaterialProperties(0x028201D0); // 42D562E443C0313BACEF58FC1A4508489CED355F+33A
-RelocAddr <uintptr_t> HairColorModify_Start(0x0068BFC0 + 0x24A);
-
-RelocAddr <uintptr_t> GetHairTexturePath_Start(0x00689BB0 + 0xDED);
-
-RelocPtr<UInt32> g_faceGenTextureWidth(0x0384FF30); // F5F0D2A6AFBE88D06472E751C88521770B465B79+148
-RelocPtr<UInt32> g_faceGenTextureHeight(0x0384FF34);
-
-typedef void (* _InitializeSharedTarget)(BSRenderTargetManager * targetManager, UInt32 type, BSRenderTargetManager::SharedTargetInfo * targetInfo, UInt8 unk1);
-RelocAddr <_InitializeSharedTarget> InitializeSharedTarget(0x01D30E90);
-_InitializeSharedTarget InitializeSharedTarget_Original = nullptr;
-
-void ApplyMaterialProperties_Hook(NiAVObject * node, BGSColorForm * colorForm, BSLightingShaderMaterialBase * shaderMaterial)
-{
-	if(shaderMaterial)
-		shaderMaterial->fLookupScale = colorForm->color.remappingIndex;
-
-	g_charGenInterface.ProcessHairColor(node, colorForm, shaderMaterial);
-	
-	ApplyMaterialProperties(node);
-}
-
-const char * GetHairTexturePath_Hook(TESNPC * npc)
-{
-	return g_charGenInterface.ProcessEyebrowPath(npc);
-}
-
-void InstallArmorAddon(TESForm * form, NiAVObject * object, UInt32 slotIndex)
-{
-	Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
-	if(actor) {
-		if(g_bEnableBodyMorphs)
-			g_bodyMorphInterface.ApplyMorphsToShapes(actor, object);
-
-		if(g_bEnableOverlays) {
-			NiNode * rootNode = GetRootNode(actor, object);
-			if(rootNode)
-				g_overlayInterface.UpdateOverlays(actor, rootNode, object, slotIndex);
-		}
-	}
-}
-
-/*
-UInt32 InstallArmorAddon_Hook(void * unk1, UInt32 unk2, TESForm * form, NiAVObject * object)
-{
-	UInt32 ret = InstallArmorAddon_Original(unk1, unk2, form);
-
-	Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
-	if(actor) {
-		g_bodyMorphInterface.ApplyMorphsToShapes(actor, object);
-	}
-
-	return ret;
-}
-*/
-
-void InitializeSharedTarget_Hook(BSRenderTargetManager * targetManager, UInt32 type, BSRenderTargetManager::SharedTargetInfo * targetInfo, UInt8 unk1)
-{
-	switch(type)
+	if (!F4SEPlugin_Query(f4se))
 	{
-	case 16:
-	case 17:
-	case 18:
-		targetInfo->width = g_tintMaskWidth;
-		targetInfo->height = g_tintMaskHeight;
-		break;
+		return false;
 	}
-	InitializeSharedTarget_Original(targetManager, type, targetInfo, unk1);	
-}
 
-bool RegisterFuncs(VirtualMachine * vm)
-{	
-	papyrusBodyGen::RegisterFuncs(vm);
-	papyrusOverlays::RegisterFuncs(vm);
-	return true;
-}
-
-bool F4SEPlugin_Load(const F4SEInterface * skse)
-{
 	F4EEGetConfigValue("Debug", "bExportRace", &g_bExportRace);
 	std::string strExportRace = F4EEGetConfigOption("Debug", "strExportRace");
 	if(!strExportRace.empty())
@@ -611,67 +624,73 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 		g_serialization->SetFormDeleteCallback(g_pluginHandle, nullptr);
 	}
 
-	if(!g_branchTrampoline.Create(1024 * 64))
-	{
-		_ERROR("couldn't create branch trampoline. this is fatal. skipping remainder of init process.");
-		return false;
+	if (g_trampoline) {
+		void* branch = g_trampoline->AllocateFromBranchPool(g_pluginHandle, 512);
+		if (!branch) {
+			_ERROR("couldn't create branch trampoline. this is fatal. skipping remainder of init process.");
+			return false;
+		}
+
+		g_branchTrampoline.SetBase(512, branch);
+
+		void* local = g_trampoline->AllocateFromLocalPool(g_pluginHandle, 512);
+		if (!local) {
+			_ERROR("couldn't create codegen buffer. this is fatal. skipping remainder of init process.");
+			return false;
+		}
+
+		g_localTrampoline.SetBase(512, local);
+	}
+	else {
+		if (!g_branchTrampoline.Create(512)) {
+			_ERROR("couldn't create branch trampoline. this is fatal. skipping remainder of init process.");
+			return false;
+		}
+		if (!g_localTrampoline.Create(512, nullptr))
+		{
+			_ERROR("couldn't create codegen buffer. this is fatal. skipping remainder of init process.");
+			return false;
+		}
 	}
 
-	if(!g_localTrampoline.Create(1024 * 64, nullptr))
-	{
-		_ERROR("couldn't create codegen buffer. this is fatal. skipping remainder of init process.");
-		return false;
-	}
+
 	
 	// hook Armor Attachment
 	if(g_bEnableBodyMorphs || g_bEnableOverlays)
 	{
-		struct InstallArmorAddon_Code : Xbyak::CodeGenerator {
-			InstallArmorAddon_Code(void * buf, UInt64 funcAddr) : Xbyak::CodeGenerator(4096, buf)
+		struct AttachSkinnedObjectHook_Entry_Code : Xbyak::CodeGenerator {
+			AttachSkinnedObjectHook_Entry_Code(void * buf, uintptr_t address) : Xbyak::CodeGenerator(4096, buf)
 			{
 				Xbyak::Label funcLabel;
 				Xbyak::Label retnLabel;
-				Xbyak::Label originLabel;
 
-				call(ptr [rip + originLabel]);
-
-				mov(r8d, ptr[rbp+0x1C0-0x208]); // Stack var to current index of equip item loop
-				mov(rdx, r12);					// ObjectNode
-				mov(rcx, ptr[rsp+0x2A8-0x268]); // Actor - rbx - ptr[rsp+0x2A8-0x268]
-				call(ptr [rip + funcLabel]);
-
-				jmp(ptr [rip + retnLabel]);
-
-				L(funcLabel);
-				dq(funcAddr);
-
-				L(originLabel);
-				dq(InstallArmorAddon_Original.GetUIntPtr());
+				mov(ptr[rsp + 0x20], r9d);
+				jmp(ptr[rip + retnLabel]);
 
 				L(retnLabel);
-				dq(InstallArmorAddon_Start.GetUIntPtr() + 5);
+				dq(address + 5);
 			}
 		};
 
 		void * codeBuf = g_localTrampoline.StartAlloc();
-		InstallArmorAddon_Code code(codeBuf, (uintptr_t)InstallArmorAddon);
+		AttachSkinnedObjectHook_Entry_Code code(codeBuf, (uintptr_t)AttachSkinnedObject.GetUIntPtr());
 		g_localTrampoline.EndAlloc(code.getCurr());
-
-		g_branchTrampoline.Write5Branch(InstallArmorAddon_Start.GetUIntPtr(), uintptr_t(code.getCode()));
+		AttachSkinnedObject_Original = (_AttachSkinnedObject)codeBuf;
+		g_branchTrampoline.Write5Branch(AttachSkinnedObject.GetUIntPtr(), uintptr_t(AttachSkinnedObject_Hooked));
 	}
 
 	// SetHairColor Palette Index
 	if(g_bExtendedLUTs)
 	{
 		struct SetHairColorPalette_Code : Xbyak::CodeGenerator {
-			SetHairColorPalette_Code(void * buf, UInt64 funcAddr) : Xbyak::CodeGenerator(4096, buf)
+			SetHairColorPalette_Code(void * buf, uintptr_t funcAddr, uintptr_t hookTarget) : Xbyak::CodeGenerator(4096, buf)
 			{
 				Xbyak::Label funcLabel;
 				Xbyak::Label retnLabel;
 
-				mov(r8, r13);
+				mov(r8, r12);
 				mov(rdx, rax);
-				mov(rcx, r12);
+				mov(rcx, r15);
 				call(ptr [rip + funcLabel]);
 				jmp(ptr [rip + retnLabel]);
 
@@ -679,28 +698,28 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 				dq(funcAddr);
 
 				L(retnLabel);
-				dq(HairColorModify_Start.GetUIntPtr() + 0x14);
+				dq(hookTarget + 0x15);
 			}
 		};
 
+		uintptr_t targetPoint = BSFaceGenUtils::PrepareHeadPartForShaders.GetUIntPtr() + 0x262;
 		void * codeBuf = g_localTrampoline.StartAlloc();
-		SetHairColorPalette_Code code(codeBuf, (uintptr_t)ApplyMaterialProperties_Hook);
+		SetHairColorPalette_Code code(codeBuf, uintptr_t(HairColorModify_Hook), targetPoint);
 		g_localTrampoline.EndAlloc(code.getCurr());
-
-		g_branchTrampoline.Write6Branch(HairColorModify_Start.GetUIntPtr(), uintptr_t(code.getCode()));
+		g_branchTrampoline.Write6Branch(targetPoint, uintptr_t(code.getCode()));
 	}
 
 	// SetEyebrowLUTPath
 	if(g_bExtendedLUTs)
 	{
 		struct GetHairTexturePath_Code : Xbyak::CodeGenerator {
-			GetHairTexturePath_Code(void * buf, UInt64 funcAddr) : Xbyak::CodeGenerator(4096, buf)
+			GetHairTexturePath_Code(void * buf, uintptr_t funcAddr, uintptr_t targetAddr) : Xbyak::CodeGenerator(4096, buf)
 			{
 				Xbyak::Label funcLabel;
 				Xbyak::Label retnLabel;
 
 				// NPC pointer is already in rcx
-				// mov     rcx, [rbp+1DE0h+npc2]
+				// mov     rcx, [rbp+1DD0h+arg_0]
 				call(ptr [rip + funcLabel]);
 				jmp(ptr [rip + retnLabel]);
 
@@ -709,46 +728,46 @@ bool F4SEPlugin_Load(const F4SEInterface * skse)
 
 				L(retnLabel);
 				// Skip this chunk, will be done in our own code, looking up of the hair texture and returning the C-string
-				// mov     rcx, [rbp+1DE0h+npc2]
 				// mov     rcx, [rcx+1B8h]
 				// add     rcx, 6C0h
 				// call    BSFixedString__GetCString
-				dq(GetHairTexturePath_Start.GetUIntPtr() + 0x13);
+				dq(targetAddr + 0x13);
 			}
 		};
 
+		uintptr_t targetAddr = BSFaceGenUtils::StartFaceCustomizationGenerationForNPC.GetUIntPtr() + 0x10D4;
 		void * codeBuf = g_localTrampoline.StartAlloc();
-		GetHairTexturePath_Code code(codeBuf, (uintptr_t)GetHairTexturePath_Hook);
+		GetHairTexturePath_Code code(codeBuf, (uintptr_t)GetHairTexturePath_Hook, targetAddr);
 		g_localTrampoline.EndAlloc(code.getCurr());
-
-		g_branchTrampoline.Write6Branch(GetHairTexturePath_Start.GetUIntPtr(), uintptr_t(code.getCode()));
+		g_branchTrampoline.Write6Branch(targetAddr, uintptr_t(code.getCode()));
 	}
 
 	// Resizes tint mask target
 	{
-		struct InitializeSharedTarget_Code : Xbyak::CodeGenerator {
-			InitializeSharedTarget_Code(void * buf) : Xbyak::CodeGenerator(4096, buf)
+		struct CreateRenderTargetHook_Code : Xbyak::CodeGenerator {
+			CreateRenderTargetHook_Code(void * buf, uintptr_t targetAddr) : Xbyak::CodeGenerator(4096, buf)
 			{
 				Xbyak::Label retnLabel;
 
-				push(rsi);
 				push(rdi);
 				push(r14);
+				push(r15);
 
 				jmp(ptr [rip + retnLabel]);
 
 				L(retnLabel);
-				dq(InitializeSharedTarget.GetUIntPtr() + 5);
+				dq(targetAddr + 6);
 			}
 		};
 
+		uintptr_t targetAddr = BSGraphics::CreateRenderTarget.GetUIntPtr();
 		void * codeBuf = g_localTrampoline.StartAlloc();
-		InitializeSharedTarget_Code code(codeBuf);
+		CreateRenderTargetHook_Code code(codeBuf, targetAddr);
 		g_localTrampoline.EndAlloc(code.getCurr());
 
-		InitializeSharedTarget_Original = (_InitializeSharedTarget)codeBuf;
+		BSGraphics::CreateRenderTarget_Original = (BSGraphics::_CreateRenderTarget)codeBuf;
 
-		g_branchTrampoline.Write5Branch(InitializeSharedTarget.GetUIntPtr(), (uintptr_t)InitializeSharedTarget_Hook);
+		g_branchTrampoline.Write6Branch(targetAddr, (uintptr_t)CreateRenderTarget_Hook);
 	}
 	
 	return true;

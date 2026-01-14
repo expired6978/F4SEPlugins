@@ -157,9 +157,9 @@ DWORD CharGenInterface::SavePreset(const std::string & filePath)
 		root["Morphs"]["Regions"] = morphRegionData;
 	}
 
-	CharacterCreation::MorphIntensity * intensity = g_morphIntensityMap->Find(&npc);
-	if(intensity) {
-		root["Morphs"]["Intensity"] = intensity->morphIntensity;
+	float intensity = npc->GetFacialBoneMorphIntensity();
+	if(intensity != 1.0f) {
+		root["Morphs"]["Intensity"] = intensity;
 	}
 
 	Json::Value tintData;
@@ -219,7 +219,7 @@ DWORD CharGenInterface::SavePreset(const std::string & filePath)
 	{
 		Json::Value overlay;
 		overlay["template"] = pOverlay->templateName ? pOverlay->templateName->c_str() : "";
-		overlay["priority"] = priority;
+		overlay["priority"] = (Json::Int)priority;
 
 		if((pOverlay->flags & OverlayInterface::OverlayData::kHasTintColor) == OverlayInterface::OverlayData::kHasTintColor)
 		{
@@ -455,21 +455,7 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 		{
 			bool hasIntensity = root["Morphs"].isMember("Intensity");
 			float intensity = hasIntensity ? root["Morphs"]["Intensity"].asFloat() : 1.0f;
-
-			if(CharacterCreation::MorphIntensity * found = g_morphIntensityMap->Find(&npc))
-			{
-				if(hasIntensity)
-					found->morphIntensity = root["Morphs"]["Intensity"].asFloat();
-				else
-					g_morphIntensityMap->Remove(&npc);
-			}
-			else if(hasIntensity)
-			{
-				CharacterCreation::MorphIntensity mi;
-				mi.npc = npc;
-				mi.morphIntensity = intensity;
-				g_morphIntensityMap->Add(&mi);
-			}
+			npc->SetFacialBoneMorphIntensity(intensity);
 		}
 		catch(const std::exception& e)
 		{
@@ -633,10 +619,12 @@ DWORD CharGenInterface::LoadPreset(const std::string & filePath)
 		}
 	}
 
+	g_skinInterface.RevertOverride(actor, npc);
 	g_skinInterface.RemoveSkinOverride(actor);
 	if(root.isMember("Skin"))
 	{
 		g_skinInterface.AddSkinOverride(actor, root["Skin"].asString(), gender == 1 ? true : false);
+		g_skinInterface.ApplyOverride(actor, npc, true);
 	}
 	
 
@@ -952,7 +940,7 @@ bool CharGenInterface::SaveTintTemplates(const TESRace * race, const std::string
 					}
 					
 
-					std::string texture = mask->texture;
+					std::string texture = mask->texture.c_str();
 					if(!texture.empty())
 						jentry["Texture"] = texture;
 
@@ -1014,9 +1002,9 @@ bool CharGenInterface::SaveTintTemplates(const TESRace * race, const std::string
 						jentry["Category"] = (Json::UInt)category->type;
 					}
 
-					std::string diffuse = textureSet->diffuse;
-					std::string normal = textureSet->normal;
-					std::string specular = textureSet->specular;
+					std::string diffuse = textureSet->diffuse.c_str();
+					std::string normal = textureSet->normal.c_str();
+					std::string specular = textureSet->specular.c_str();
 
 					if(!diffuse.empty())
 						jentry["Diffuse"] = diffuse;

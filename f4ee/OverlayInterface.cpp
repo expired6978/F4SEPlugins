@@ -75,16 +75,23 @@ bool OverlayInterface::UpdateOverlays(Actor * actor, NiNode * rootNode, NiAVObje
 	UInt64 gender = CALL_MEMBER_FN(npc, GetSex)();
 	bool isFemale = gender == 1 ? true : false;
 
-	NiNode * overlayHolder = GetOverlayRoot(actor, rootNode);
+	auto hit = m_overlays[isFemale ? 1 : 0].find(actor->formID);
+	bool hasOverlays = hit != m_overlays[isFemale ? 1 : 0].end();
+
+	NiNode* overlayHolder = GetOverlayRoot(actor, rootNode, false);
+	if (overlayHolder && !hasOverlays)
+	{
+		overlayHolder->m_parent->RemoveChild(overlayHolder);
+		overlayHolder = nullptr;
+	}
+	else if(hasOverlays)
+	{
+		overlayHolder = GetOverlayRoot(actor, rootNode, true);
+	}
+
 	if(overlayHolder)
 	{
 		DestroyOverlaySlot(actor, overlayHolder, slotIndex);
-
-		// Check the overlay table before we add any overlays
-		auto hit = m_overlays[isFemale ? 1 : 0].find(actor->formID);
-		if(hit == m_overlays[isFemale ? 1 : 0].end()) {
-			return false;
-		}
 
 		std::unordered_multimap<UInt32, BSTriShape*> candidates;
 		VisitObjects(object, [&](NiAVObject * node)
@@ -125,7 +132,7 @@ bool OverlayInterface::UpdateOverlays(Actor * actor, NiNode * rootNode, NiAVObje
 			{
 				NiCloningProcess cp;
 				memset(&cp, 0, sizeof(NiCloningProcess));
-				cp.unk60 = 1;
+				cp.m_eCopyType = NiCloningProcess::COPY_EXACT;
 
 				BSTriShape * cloned = (BSTriShape*)item.second->CreateClone(&cp);
 
@@ -197,7 +204,7 @@ void OverlayInterface::LoadMaterialData(TESNPC * npc, BSTriShape * shape, const 
 				if(newMaterial->GetType() == BSLightingShaderMaterialBase::kType_SkinTint && newMaterial->GetFeature() == 2) {
 					BSLightingShaderMaterialSkinTint * skinTint = static_cast<BSLightingShaderMaterialSkinTint *>(newMaterial);
 
-					if((overlayData->flags & OverlayInterface::OverlayData::kHasTintColor) == OverlayInterface::OverlayData::kHasTintColor) {
+					if(overlayData->flags & OverlayInterface::OverlayData::kHasTintColor) {
 						skinTint->kTintColor = overlayData->tintColor;
 					} else {
 						skinTint->kTintColor.r = (float)npc->skinColor.red / 255.0f;
@@ -206,7 +213,7 @@ void OverlayInterface::LoadMaterialData(TESNPC * npc, BSTriShape * shape, const 
 						skinTint->kTintColor.a = (float)npc->skinColor.alpha / 255.0f;
 					}
 				}
-				if((overlayData->flags & OverlayInterface::OverlayData::kHasTintColor) == OverlayInterface::OverlayData::kHasTintColor) {
+				if(overlayData->flags & OverlayInterface::OverlayData::kHasTintColor) {
 					shaderMaterialBase->fLookupScale = overlayData->remapIndex;
 				}
 			}
@@ -216,7 +223,7 @@ void OverlayInterface::LoadMaterialData(TESNPC * npc, BSTriShape * shape, const 
 			if(newEffectShader) {
 				if(newMaterial->GetType() == 0 && newMaterial->GetFeature() == 1) {
 					BSEffectShaderMaterial * effectMaterial = static_cast<BSEffectShaderMaterial *>(newMaterial);
-					if((overlayData->flags & OverlayInterface::OverlayData::kHasTintColor) == OverlayInterface::OverlayData::kHasTintColor) {
+					if(overlayData->flags & OverlayInterface::OverlayData::kHasTintColor) {
 						effectMaterial->kBaseColor = overlayData->tintColor;
 					}
 				}
@@ -878,9 +885,9 @@ void F4EEUpdateOverlays::Run()
 			}
 
 			// Rebuild overlays
-			ActorEquipData * equipData[2];
-			equipData[0] = actor->equipData;
-			equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData : nullptr;
+			BipedAnim* equipData[2];
+			equipData[0] = actor->biped.get();
+			equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData.get() : nullptr;
 
 			for(UInt32 s = 0; s < (actor == (*g_player) ? 2 : 1); s++)
 			{
@@ -889,7 +896,7 @@ void F4EEUpdateOverlays::Run()
 
 				for(UInt32 i = 0; i < 31; ++i)
 				{
-					NiPointer<NiAVObject> slotNode(equipData[s]->slots[i].node);
+					NiPointer<NiAVObject> slotNode(equipData[s]->object[i].partClone);
 					if(!slotNode)
 						continue;
 
@@ -935,9 +942,9 @@ void F4EEOverlayUpdate::Run()
 
 	// Detaching the node will cause the game to regenerate when UpdateEquipment is called
 	// We only need to detach armor, and armor that's even eligible for morphing
-	ActorEquipData * equipData[2];
-	equipData[0] = actor->equipData;
-	equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData : nullptr;
+	BipedAnim* equipData[2];
+	equipData[0] = actor->biped.get();
+	equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData.get() : nullptr;
 
 	for(UInt32 s = 0; s < (actor == (*g_player) ? 2 : 1); s++)
 	{
@@ -946,7 +953,7 @@ void F4EEOverlayUpdate::Run()
 
 		for(UInt32 slot = 0; slot < 31; slot++)
 		{
-			NiPointer<NiAVObject> slotNode(equipData[s]->slots[slot].node);
+			NiPointer<NiAVObject> slotNode(equipData[s]->object[slot].partClone);
 			if(!slotNode)
 				continue;
 

@@ -132,7 +132,7 @@ TriShapeMapPtr BodyMorphInterface::GetTrishapeMap(const char * relativePath)
 		return nullptr;
 
 	m_morphCacheLock.Lock();
-	auto & it = m_morphCache.find(filePath);
+	auto it = m_morphCache.find(filePath);
 	if (it != m_morphCache.end()) {
 		it->second->accessed = std::time(nullptr);
 		m_morphCacheLock.Release();
@@ -308,7 +308,7 @@ void BodyMorphInterface::ShrinkMorphCache()
 	m_morphCacheLock.Lock();
 	while (m_totalMemory > m_memoryLimit && m_morphCache.size() > 0)
 	{
-		auto & it = std::min_element(m_morphCache.begin(), m_morphCache.end(), [](std::pair<F4EEFixedString, TriShapeMapPtr> a, std::pair<F4EEFixedString, TriShapeMapPtr> b)
+		auto it = std::min_element(m_morphCache.begin(), m_morphCache.end(), [](std::pair<F4EEFixedString, TriShapeMapPtr> a, std::pair<F4EEFixedString, TriShapeMapPtr> b)
 		{
 			return (a.second->accessed < b.second->accessed);
 		});
@@ -452,7 +452,7 @@ bool BodyMorphInterface::IsNodeMorphable(NiAVObject * rootNode)
 	});
 }
 
-void BodyMorphInterface::GetMorphableShapes(NiAVObject * rootNode, std::vector<MorphableShapePtr> & shapes)
+void BodyMorphInterface::GetMorphableShapes(NiAVObject * rootNode, std::vector<MorphableShape> & shapes)
 {
 	VisitObjects(rootNode, [&](NiAVObject * node)
 	{
@@ -467,7 +467,7 @@ void BodyMorphInterface::GetMorphableShapes(NiAVObject * rootNode, std::vector<M
 			if(!morphPath)
 				return false;
 
-			shapes.push_back(std::make_shared<MorphableShape>(trishape, morphPath->m_string, bodyMorph->m_string));
+			shapes.push_back({ trishape, morphPath->m_string, bodyMorph->m_string });
 		}
 		return false;
 	});
@@ -479,12 +479,36 @@ F4EEBodyGenUpdate::F4EEBodyGenUpdate(TESForm * form, bool doDetach)
 	m_doDetach = doDetach;
 }
 
+//#define USE_RESOURCE_UPDATE
+
+#ifdef USE_RESOURCE_UPDATE
+#include <d3d11.h>
+#endif
+
 void F4EEBodyGenUpdate::Run()
 {
 	TESForm * form = LookupFormByID(m_formId);
 	if(form) {
 		Actor * actor = DYNAMIC_CAST(form, TESForm, Actor);
 		if(actor) {
+#ifdef USE_RESOURCE_UPDATE
+			BipedAnim* biped[] = {
+				actor->biped.get(),
+				actor == (*g_player) ? (*g_player)->playerEquipData.get() : nullptr
+			};
+
+			UInt32 perspectives = actor == (*g_player) ? 2 : 1;
+			for (UInt32 s = 0; s < perspectives; s++)
+			{
+				if (biped[s])
+				{
+					for (UInt32 i = 0; i < BIPOBJECT::BIPED_OBJECT::kEditorCount; ++i)
+					{
+						g_bodyMorphInterface.ApplyMorphsToShapes(actor, biped[s]->object[i].partClone);
+					}
+				}
+			}
+#else
 #ifdef _DEBUG_MOPRHING
 				_MESSAGE("%s - Activating Update for %s (%08X)", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
 #endif
@@ -492,9 +516,9 @@ void F4EEBodyGenUpdate::Run()
 				// We only need to detach armor, and armor that's even eligible for morphing
 				if(m_doDetach)
 				{
-					ActorEquipData * equipData[2];
-					equipData[0] = actor->equipData;
-					equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData : nullptr;
+					BipedAnim* equipData[2];
+					equipData[0] = actor->biped.get();
+					equipData[1] = actor == (*g_player) ? (*g_player)->playerEquipData.get() : nullptr;
 
 					for(UInt32 s = 0; s < (actor == (*g_player) ? 2 : 1); s++)
 					{
@@ -502,7 +526,7 @@ void F4EEBodyGenUpdate::Run()
 						{
 							for(UInt32 i = 0; i < 32; ++i)
 							{
-								NiPointer<NiAVObject> slotNode(equipData[s]->slots[i].node);
+								NiPointer<NiAVObject> slotNode(equipData[s]->object[i].partClone);
 								if(slotNode && g_bodyMorphInterface.IsNodeMorphable(slotNode))
 								{
 									NiPointer<NiNode> parent(slotNode->m_parent);
@@ -526,11 +550,14 @@ void F4EEBodyGenUpdate::Run()
 				}
 
 				auto middleProcess = actor->middleProcess;
-				if(middleProcess) 
-					CALL_MEMBER_FN(middleProcess, UpdateEquipment)(actor, 0x11);
+				if (middleProcess) {
+					middleProcess->Set3DUpdateFlag(Actor::AIProcess::RESET_MODEL | Actor::AIProcess::RESET_KEEP_HEAD | Actor::AIProcess::RESET_SCALE);
+					middleProcess->Update3DModel(actor, true);
+				}
 #ifdef _DEBUG_MOPRHING
 				else
 					_MESSAGE("%s - Skipping Update for %s (%08X) no middle process", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID);
+#endif
 #endif
 		}
 	}
@@ -539,20 +566,21 @@ void F4EEBodyGenUpdate::Run()
 #include "f4se/BSGraphics.h"
 #include "Morpher.h"
 
-bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morphableShape)
+#ifdef USE_RESOURCE_UPDATE
+bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShape& morphableShape)
 {
 	// Don't allow dynamic shapes
-	BSDynamicTriShape * dynamicShape = morphableShape->object->GetAsBSDynamicTriShape();
+	BSDynamicTriShape * dynamicShape = morphableShape.object->GetAsBSDynamicTriShape();
 	if(dynamicShape) {
-		_WARNING("%s - Shape: %s is dynamic and could not be morphed\t[%s]", __FUNCTION__, morphableShape->shapeName.c_str(), morphableShape->morphPath.c_str());
+		_WARNING("%s - Shape: %s is dynamic and could not be morphed\t[%s]", __FUNCTION__, morphableShape.shapeName.c_str(), morphableShape.morphPath.c_str());
 		return false;
 	}
 
-	BSTriShape * geometry = morphableShape->object->GetAsBSTriShape();
+	BSTriShape * geometry = morphableShape.object->GetAsBSTriShape();
 	if(geometry) {
 
 		// Lookup the TRI file from the parsed path
-		auto triMap = GetTrishapeMap(morphableShape->morphPath);
+		auto triMap = GetTrishapeMap(morphableShape.morphPath);
 		if(!triMap) {
 			return false;
 		}
@@ -560,7 +588,7 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 		ShrinkMorphCache();
 
 		// Lookup the particular morph set for this shape
-		auto morphMap = triMap->GetMorphData(morphableShape->shapeName);
+		auto morphMap = triMap->GetMorphData(morphableShape.shapeName);
 		if(!morphMap) {
 			return false;
 		}
@@ -578,12 +606,12 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 		UInt32 vertexSize = geometry->GetVertexSize();
 		UInt32 blockSize = geometry->numVertices * vertexSize;
 
-		BSGeometryData * baseData = geometry->geometryData;
-		BSGeometryData * geomData = nullptr;
-		if(!baseData)
+		BSGraphics::TriShape* currentGeometry = static_cast<BSGraphics::TriShape*>(geometry->pRendererData);
+		BSGraphics::TriShape* activeGeometry = nullptr;
+		if(!currentGeometry)
 			return false;
 
-		auto vertexData = baseData->vertexData;
+		auto vertexData = currentGeometry->pVB;
 		if(!vertexData)
 			return false;
 
@@ -591,18 +619,31 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 			return false;
 
 #ifdef _DEBUG_MOPRHING
-		_DMESSAGE("%s - Morphing %s (%08X) (%s -> %s) through hook", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID, morphableShape->shapeName.c_str(), geometry->m_name.c_str());
+		_DMESSAGE("%s - Morphing %s (%08X) (%s -> %s) through hook", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID, morphableShape.shapeName.c_str(), geometry->m_name.c_str());
 #endif
 
-		UInt8 * newBlock = nullptr;
+		bool cloned = false;
+		NiPointer<NiBinaryExtraData> morphData(DYNAMIC_CAST(geometry->GetExtraData("MORPH_DATA"), NiExtraData, NiBinaryExtraData));
+		if (!morphData)
+		{
+			UInt32 localSize = blockSize;
+			activeGeometry = g_renderManager->CreateTriShape(&localSize, vertexData->pData, geometry->vertexDesc, currentGeometry->pIB);
+			auto newData = NiBinaryExtraData::Create("MORPH_DATA", blockSize);
+			memcpy_s(newData->binaryData, newData->size, activeGeometry->pVB->pData, blockSize); // Copy the current block into this one
+			geometry->AddExtraData(newData);
+			cloned = true;
+		}
+		else
+		{
+			// Copy the original geometry back onto this block before executing
+			activeGeometry = currentGeometry;
+			memcpy_s(activeGeometry->pVB->pData, blockSize, morphData->binaryData, morphData->size);
+		}
 
-		// Create the cloned copy
-		geomData = CALL_MEMBER_FN(g_renderManager, CreateBSGeometryData)(&blockSize, vertexData->vertexBlock, geometry->vertexDesc, baseData->triangleData);
-		if(!geomData)
+		if (!activeGeometry)
 			return false;
 
-		newBlock = geomData->vertexData->vertexBlock;
-
+		UInt8* newBlock = static_cast<UInt8*>(activeGeometry->pVB->pData);
 		MorphApplicator morpher(geometry, newBlock, newBlock, [&](std::vector<Morpher::Vector3> & verts)
 		{
 			SimpleLocker locker(&m_morphLock);
@@ -620,35 +661,141 @@ bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShapeP
 
 				bool outOfBounds = morph->ApplyMorph(geometry->numVertices, (NiPoint3*)&verts.at(0), effectiveValue);
 				if(outOfBounds) {
-					_WARNING("%s - Shape: %s Morph: %s contained out of bounds vertices\t[%s]", __FUNCTION__, morphableShape->shapeName.c_str(), actorMorph.first->c_str(), morphableShape->morphPath.c_str());
+					_WARNING("%s - Shape: %s Morph: %s contained out of bounds vertices\t[%s]", __FUNCTION__, morphableShape.shapeName.c_str(), actorMorph.first->c_str(), morphableShape.morphPath.c_str());
+				}
+			}
+			actorMorphs->Unlock();
+		});
+
+		D3D11_BUFFER_DESC desc;
+		activeGeometry->pVB->pBuffer->GetDesc(&desc);
+
+		EnterCriticalSection(&g_renderManager->m_renderLock);
+		g_D3D11DeviceContext->UpdateSubresource(activeGeometry->pVB->pBuffer, 0, nullptr, activeGeometry->pVB->pData, blockSize, 0);
+		LeaveCriticalSection(&g_renderManager->m_renderLock);
+		// We cloned the geometry, move the renderer data
+		if(cloned && activeGeometry) {
+			geometry->pRendererData = activeGeometry;
+
+			// We don't want to delete the original copy, but we'll release because we are forking (Don't know what the other ref is for?)
+			if(currentGeometry->uiRefCount > 2)
+				InterlockedDecrement(&currentGeometry->uiRefCount);
+		}
+
+		return true;
+	}
+
+	return false;
+}
+#else
+bool BodyMorphInterface::ApplyMorphsToShape(Actor * actor, const MorphableShape& morphableShape)
+{
+	// Don't allow dynamic shapes
+	BSDynamicTriShape * dynamicShape = morphableShape.object->GetAsBSDynamicTriShape();
+	if(dynamicShape) {
+		_WARNING("%s - Shape: %s is dynamic and could not be morphed\t[%s]", __FUNCTION__, morphableShape.shapeName.c_str(), morphableShape.morphPath.c_str());
+		return false;
+	}
+
+	BSTriShape * geometry = morphableShape.object->GetAsBSTriShape();
+	if(geometry) {
+
+		// Lookup the TRI file from the parsed path
+		auto triMap = GetTrishapeMap(morphableShape.morphPath);
+		if(!triMap) {
+			return false;
+		}
+
+		ShrinkMorphCache();
+
+		// Lookup the particular morph set for this shape
+		auto morphMap = triMap->GetMorphData(morphableShape.shapeName);
+		if(!morphMap) {
+			return false;
+		}
+
+		bool isFemale = false;
+		TESNPC * npc = DYNAMIC_CAST(actor->baseForm, TESForm, TESNPC);
+		if(npc)
+			isFemale = CALL_MEMBER_FN(npc, GetSex)() == 1 ? true : false;
+
+		auto actorMorphs = GetMorphMap(actor, isFemale); // Get the actor's list of morphs
+		if(!actorMorphs) // There's nothing to morph, lets just use the base mesh
+			return false;
+
+		UInt64 vertexDesc = geometry->vertexDesc;
+		UInt32 vertexSize = geometry->GetVertexSize();
+		UInt32 blockSize = geometry->numVertices * vertexSize;
+
+		BSGraphics::TriShape* shapeData = static_cast<BSGraphics::TriShape*>(geometry->pRendererData);
+		BSGraphics::TriShape* geomData = nullptr;
+		if(!shapeData)
+			return false;
+
+		auto vertexData = shapeData->pVB;
+		if(!vertexData)
+			return false;
+
+		if(!(vertexDesc & BSGeometry::kFlag_Vertex)) // What kind of dumbass mesh doesn't have verts
+			return false;
+
+#ifdef _DEBUG_MOPRHING
+		_DMESSAGE("%s - Morphing %s (%08X) (%s -> %s) through hook", __FUNCTION__, CALL_MEMBER_FN(actor, GetReferenceName)(), actor->formID, morphableShape.shapeName.c_str(), geometry->m_name.c_str());
+#endif
+		UInt32 localBlockSize = blockSize;
+		geomData = g_renderManager->CreateTriShape(&localBlockSize, vertexData->pData, geometry->vertexDesc, shapeData->pIB);
+		if(!geomData)
+			return false;
+
+		UInt8* newBlock = static_cast<UInt8*>(geomData->pVB->pData);
+		MorphApplicator morpher(geometry, newBlock, newBlock, [&](std::vector<Morpher::Vector3> & verts)
+		{
+			SimpleLocker locker(&m_morphLock);
+
+			actorMorphs->Lock();
+			for(auto & actorMorph : *actorMorphs)
+			{
+				float effectiveValue = actorMorph.second->GetEffectiveValue();
+				if(effectiveValue == 0.0f)
+					continue;
+
+				auto morph = morphMap->GetVertexData(*actorMorph.first);
+				if(!morph)
+					continue;
+
+				bool outOfBounds = morph->ApplyMorph(geometry->numVertices, (NiPoint3*)&verts.at(0), effectiveValue);
+				if(outOfBounds) {
+					_WARNING("%s - Shape: %s Morph: %s contained out of bounds vertices\t[%s]", __FUNCTION__, morphableShape.shapeName.c_str(), actorMorph.first->c_str(), morphableShape.morphPath.c_str());
 				}
 			}
 			actorMorphs->Unlock();
 		});
 
 		if(geomData) {
-			geometry->geometryData = geomData;
+			geometry->pRendererData = geomData;
 
 			// We don't want to delete the original copy, but we'll release because we are forking (Don't know what the other ref is for?)
-			if(baseData->refCount > 2)
-				InterlockedDecrement(&baseData->refCount);
+			if(shapeData->uiRefCount > 2)
+				InterlockedDecrement(&shapeData->uiRefCount);
 		}
+		return true;
 	}
 
 	return false;
 }
+#endif
 
 bool BodyMorphInterface::ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNode)
 {
 	if(!actor || !slotNode)
 		return false;
 
-	std::vector<MorphableShapePtr> shapes;
+	std::vector<MorphableShape> shapes;
 	GetMorphableShapes(slotNode, shapes);
 
 	if(g_bParallelShapes)
 	{
-		concurrency::parallel_for_each(begin(shapes), end(shapes), [&](const MorphableShapePtr & shape)
+		concurrency::parallel_for_each(begin(shapes), end(shapes), [&](const MorphableShape& shape)
 		{
 			ApplyMorphsToShape(actor, shape);
 		}, concurrency::static_partitioner());

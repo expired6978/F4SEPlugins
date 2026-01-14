@@ -13,6 +13,8 @@
 #include <cctype>
 #include <unordered_set>
 #include <queue>
+#include <algorithm>
+#include <functional>
 
 template <>
 bool Serialization::WriteData<F4EEFixedString>(const F4SESerializationInterface * intfc, const F4EEFixedString * str)
@@ -182,20 +184,22 @@ TESRace * GetRaceByName(const std::string & raceName)
 	return nullptr;
 }
 
-std::string &std::ltrim(std::string &s) {
-	s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+namespace std {
+std::string& ltrim(std::string& s) {
+	s.erase(s.begin(), std::find_if_not(s.begin(), s.end(), isspace));
 	return s;
 }
 
 // trim from end
-std::string &std::rtrim(std::string &s) {
-	s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+std::string& rtrim(std::string& s) {
+	s.erase((std::find_if_not(s.rbegin(), s.rend(), isspace)).base(), s.end());
 	return s;
 }
 
 // trim from both ends
 std::string &std::trim(std::string &s) {
 	return std::ltrim(std::rtrim(s));
+}
 }
 
 std::vector<std::string> std::explode(const std::string& str, const char& ch) {

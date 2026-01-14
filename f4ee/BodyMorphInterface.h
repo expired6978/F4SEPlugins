@@ -171,7 +171,6 @@ public:
 	F4EEFixedString			morphPath;
 	F4EEFixedString			shapeName;
 };
-typedef std::shared_ptr<MorphableShape> MorphableShapePtr;
 
 class F4EEBodyGenUpdate : public ITaskDelegate
 {
@@ -236,9 +235,9 @@ public:
 	// Not a deep copy, will be a shallow copy, editing on the target edits on the source
 	virtual void CloneMorphs(Actor * source, Actor * target);
 
-	virtual void GetMorphableShapes(NiAVObject * node, std::vector<MorphableShapePtr> & shapes);
+	virtual void GetMorphableShapes(NiAVObject * node, std::vector<MorphableShape> & shapes);
 	virtual bool ApplyMorphsToShapes(Actor * actor, NiAVObject * slotNode);
-	virtual bool ApplyMorphsToShape(Actor * actor, const MorphableShapePtr & morphableShape);
+	virtual bool ApplyMorphsToShape(Actor * actor, const MorphableShape& morphableShape);
 	virtual bool UpdateMorphs(Actor * actor);
 
 	bool IsNodeMorphable(NiAVObject * rootNode);

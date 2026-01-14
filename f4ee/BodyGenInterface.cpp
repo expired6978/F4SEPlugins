@@ -371,7 +371,7 @@ bool BodyGenInterface::ReadBodyMorphs(const std::string & filePath)
 			for (UInt32 k = 0; k < selectors.size(); k++) {
 				selectors[k] = std::trim(selectors[k]);
 				F4EEFixedString templateName(selectors[k].c_str());
-				auto & temp = bodyGenTemplates.find(templateName);
+				auto temp = bodyGenTemplates.find(templateName);
 				if (temp != bodyGenTemplates.end())
 					templateList.push_back(temp->second);
 				else

@@ -60,7 +60,7 @@ bool ActorData::ClearTransform(bool isFemale, bool isFirstPerson)
 
 void TransformMap::SetTransformData(bool isFemale, bool isFirstPerson, BGSKeyword * keyword, const TransformData & data)
 {
-	auto & actorIt = find(keyword ? keyword->formID : 0);
+	auto actorIt = find(keyword ? keyword->formID : 0);
 	if (actorIt != end())
 	{
 		actorIt->second.SetTransformData(isFemale, isFirstPerson, data);
@@ -78,7 +78,7 @@ void TransformMap::SetTransformData(bool isFemale, bool isFirstPerson, BGSKeywor
 
 void TransformMap::GetTransformData(bool isFemale, bool isFirstPerson, BGSKeyword * keyword, TransformDataPtr & data)
 {
-	auto & actorIt = find(keyword ? keyword->formID : 0);
+	auto actorIt = find(keyword ? keyword->formID : 0);
 	if (actorIt != end())
 	{
 		actorIt->second.GetTransformData(isFemale, isFirstPerson, data);
@@ -102,7 +102,7 @@ void TransformMap::ForEachTransform(bool isFemale, bool isFirstPerson, std::func
 
 bool TransformMap::ClearTransform(bool isFemale, bool isFirstPerson, BGSKeyword * keyword)
 {
-	auto & dataIt = find(keyword ? keyword->formID : 0);
+	auto dataIt = find(keyword ? keyword->formID : 0);
 	if (dataIt != end())
 	{
 		bool res = dataIt->second.ClearTransform(isFemale, isFirstPerson);
@@ -150,7 +150,7 @@ void TransformMap::CalculateMergedTransform(bool isFemale, bool isFirstPerson)
 
 void TransformNodeMap::SetNodeTransform(bool isFemale, bool isFirstPerson, const F4EEFixedString & node, BGSKeyword * keyword, const TransformData & data)
 {
-	auto & nodeIt = find(g_stringTable.GetString(node));
+	auto nodeIt = find(g_stringTable.GetString(node));
 	if (nodeIt != end())
 	{
 		nodeIt->second.SetTransformData(isFemale, isFirstPerson, keyword, data);
@@ -167,7 +167,7 @@ void TransformNodeMap::SetNodeTransform(bool isFemale, bool isFirstPerson, const
 
 void TransformNodeMap::GetNodeTransform(bool isFemale, bool isFirstPerson, const F4EEFixedString & node, BGSKeyword * keyword, TransformDataPtr & data)
 {
-	auto & nodeIt = find(g_stringTable.GetString(node));
+	auto nodeIt = find(g_stringTable.GetString(node));
 	if (nodeIt != end())
 	{
 		nodeIt->second.GetTransformData(isFemale, isFirstPerson, keyword, data);
@@ -176,7 +176,7 @@ void TransformNodeMap::GetNodeTransform(bool isFemale, bool isFirstPerson, const
 
 void TransformNodeMap::ForEachTransform(bool isFemale, bool isFirstPerson, const F4EEFixedString & node, std::function<void(BGSKeyword*, TransformDataPtr&)> functor)
 {
-	auto & nodeIt = find(g_stringTable.GetString(node));
+	auto nodeIt = find(g_stringTable.GetString(node));
 	if (nodeIt != end())
 	{
 		nodeIt->second.ForEachTransform(isFemale, isFirstPerson, functor);
@@ -207,7 +207,7 @@ void TransformNodeMap::ForEachNodeResult(bool isFemale, bool isFirstPerson, std:
 
 bool TransformNodeMap::ClearTransform(bool isFemale, bool isFirstPerson, const F4EEFixedString & node, BGSKeyword * keyword)
 {
-	auto & nodeIt = find(g_stringTable.GetString(node));
+	auto nodeIt = find(g_stringTable.GetString(node));
 	if (nodeIt != end())
 	{
 		bool res = nodeIt->second.ClearTransform(isFemale, isFirstPerson, keyword);
@@ -224,7 +224,7 @@ bool TransformNodeMap::ClearTransform(bool isFemale, bool isFirstPerson, const F
 
 void TransformNodeMap::ClearNodeTransforms(bool isFemale, bool isFirstPerson, const F4EEFixedString & node)
 {
-	auto & nodeIt = find(g_stringTable.GetString(node));
+	auto nodeIt = find(g_stringTable.GetString(node));
 	if (nodeIt != end())
 	{
 		nodeIt->second.ClearTransforms(isFemale, isFirstPerson);
@@ -250,7 +250,7 @@ void TransformNodeMap::ClearTransforms(bool isFemale, bool isFirstPerson)
 void NiTransformInterface::SetTransform(Actor * actor, bool isFemale, bool isFirstPerson, const F4EEFixedString & node, BGSKeyword * keyword, const TransformData & data)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		actorIt->second.SetNodeTransform(isFemale, isFirstPerson, node, keyword, data);
@@ -268,7 +268,7 @@ void NiTransformInterface::SetTransform(Actor * actor, bool isFemale, bool isFir
 void NiTransformInterface::GetTransform(Actor * actor, bool isFemale, bool isFirstPerson, const F4EEFixedString & node, BGSKeyword * keyword, TransformDataPtr & data)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		actorIt->second.GetNodeTransform(isFemale, isFirstPerson, node, keyword, data);
@@ -278,7 +278,7 @@ void NiTransformInterface::GetTransform(Actor * actor, bool isFemale, bool isFir
 void NiTransformInterface::GetActorNodeTransforms(Actor * actor, bool isFemale, bool isFirstPerson, const F4EEFixedString & node, std::vector<TransformIdentifier>& result)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		actorIt->second.ForEachTransform(isFemale, isFirstPerson, node, [&](BGSKeyword* keyword, TransformDataPtr& data)
@@ -291,7 +291,7 @@ void NiTransformInterface::GetActorNodeTransforms(Actor * actor, bool isFemale, 
 void NiTransformInterface::GetActorGenderAndPerspectiveTransforms(Actor * actor, bool isFemale, bool isFirstPerson, std::vector<TransformIdentifier>& result)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		actorIt->second.ForEachNode(isFemale, isFirstPerson, [&](const F4EEFixedString& node, BGSKeyword* keyword, TransformDataPtr& data)
@@ -304,7 +304,7 @@ void NiTransformInterface::GetActorGenderAndPerspectiveTransforms(Actor * actor,
 void NiTransformInterface::GetActorGenderTransforms(Actor * actor, bool isFemale, std::vector<TransformIdentifier>& result)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		for (int i = 0; i <= 1; ++i)
@@ -320,7 +320,7 @@ void NiTransformInterface::GetActorGenderTransforms(Actor * actor, bool isFemale
 void NiTransformInterface::GetActorTransforms(Actor * actor, std::vector<TransformIdentifier>& result)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		for (int i = 0; i <= 1; ++i)
@@ -339,7 +339,7 @@ void NiTransformInterface::GetActorTransforms(Actor * actor, std::vector<Transfo
 bool NiTransformInterface::ClearTransform(Actor * actor, bool isFemale, bool isFirstPerson, const F4EEFixedString & node, BGSKeyword * keyword)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		bool res = actorIt->second.ClearTransform(isFemale, isFirstPerson, node, keyword);
@@ -355,7 +355,7 @@ bool NiTransformInterface::ClearTransform(Actor * actor, bool isFemale, bool isF
 void NiTransformInterface::ClearActorNodeTransforms(Actor * actor, bool isFemale, bool isFirstPerson, const F4EEFixedString & node)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		actorIt->second.ClearNodeTransforms(isFemale, isFirstPerson, node);
@@ -369,7 +369,7 @@ void NiTransformInterface::ClearActorNodeTransforms(Actor * actor, bool isFemale
 void NiTransformInterface::ClearActorGenderAndPerspectiveTransforms(Actor * actor, bool isFemale, bool isFirstPerson)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		actorIt->second.ClearTransforms(isFemale, isFirstPerson);
@@ -383,7 +383,7 @@ void NiTransformInterface::ClearActorGenderAndPerspectiveTransforms(Actor * acto
 void NiTransformInterface::ClearActorGenderTransforms(Actor * actor, bool isFemale)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		for (int i = 0; i <= 1; ++i)
@@ -400,7 +400,7 @@ void NiTransformInterface::ClearActorGenderTransforms(Actor * actor, bool isFema
 void NiTransformInterface::ClearActorTransforms(Actor * actor)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		erase(actorIt);
@@ -419,7 +419,7 @@ void NiTransformInterface::UpdateActorTransforms(Actor * actor)
 void NiTransformInterface::ForEachActorNodeTransform(Actor * actor, bool isFemale, bool isFirstPerson, std::function<void(const F4EEFixedString&, TransformDataPtr&)> functor)
 {
 	std::lock_guard<std::mutex> locker(mMutex);
-	auto & actorIt = find(actor->formID);
+	auto actorIt = find(actor->formID);
 	if (actorIt != end())
 	{
 		actorIt->second.ForEachNodeResult(isFemale, isFirstPerson, functor);
@@ -512,7 +512,8 @@ void NiTransformInterface::RevertSkeleton(Actor * actor, NiAVObject * rootNode, 
 	{
 		for (auto & node : it->second)
 		{
-			auto targetNode = rootNode->GetObjectByName(&BSFixedString(node.first.c_str()));
+			auto objectName = BSFixedString(node.first.c_str());
+			auto targetNode = rootNode->GetObjectByName(&objectName);
 			if (targetNode) {
 				targetNode->m_localTransform = node.second;
 			}
