@@ -132,7 +132,7 @@ bool OverlayInterface::UpdateOverlays(Actor * actor, NiNode * rootNode, NiAVObje
 			{
 				NiCloningProcess cp;
 				memset(&cp, 0, sizeof(NiCloningProcess));
-				cp.m_eCopyType = NiCloningProcess::COPY_EXACT;
+				cp.unk60 = 1; // cp.m_eCopyType = NiCloningProcess::COPY_EXACT;
 
 				BSTriShape * cloned = (BSTriShape*)item.second->CreateClone(&cp);
 

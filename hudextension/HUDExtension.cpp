@@ -15,18 +15,18 @@ const char * HUDExtensionMenu::sMenuName = "HUDExtensionMenu";
 
 HUDExtensionMenu::HUDExtensionMenu() : GameMenuBase()
 {
-	flags = kFlag_DoNotPreventGameSave | kFlag_DisableInteractive | kFlag_Unk800000;
+	flags = kFlag_AllowSaving | kFlag_DontHideCursorWhenTopmost | kFlag_CompanionAppAllowed;
 	if (CALL_MEMBER_FN((*g_scaleformManager), LoadMovie)(this, movie, "HUDExtension", "root1", 2))
 	{
 		if (g_hudSettings.applyFilter)
-			flags |= kFlag_ApplyDropDownFilter;
+			flags |= kFlag_CustomRendering;
 		else
 			stage.SetMember("showShadowEffect", &GFxValue(true));
-		CreateBaseShaderTarget(shaderTarget, stage);
+		CreateBaseShaderTarget(filterHolder, stage);
 
-		if (flags & kFlag_ApplyDropDownFilter)
+		if (flags & kFlag_CustomRendering)
 		{
-			subcomponents.Push(shaderTarget);
+			shaderFXObjects.Push(filterHolder);
 		}
 	}
 }
@@ -68,8 +68,8 @@ void HUDExtensionMenu::PopulateNameplateData(GFxValue * args, TESObjectREFR * re
 
 void HUDExtensionMenu::AddNameplate(GFxValue * parent, const std::shared_ptr<HUDNameplate> & object)
 {
-	TESObjectREFR * refr = nullptr;
-	LookupREFRByHandle(&object->m_refrHandle, &refr);
+	NiPointer<TESObjectREFR> refr = nullptr;
+	LookupREFRByHandle(object->m_refrHandle, refr);
 	if(refr)
 	{
 		if(parent->IsDisplayObject())
@@ -82,16 +82,20 @@ void HUDExtensionMenu::AddNameplate(GFxValue * parent, const std::shared_ptr<HUD
 			parent->Invoke("AddNameplate", &nameplate, args, 5);
 			if(nameplate.IsDisplayObject()) {
 				object->m_nameplate = new BSGFxShaderFXTarget(&nameplate);
+				object->m_nameplate->backgroundColorType = kHUDColorTypes_MenuNoColorBackground;
+				if (g_hudSettings.barFlags & HUDSettings::kFlag_ShowBackground)
+					object->m_nameplate->shaderFX.enabledStates |= UIShaderColors::kBackgroundQuad;
+				else
+					object->m_nameplate->shaderFX.enabledStates &= ~UIShaderColors::kBackgroundQuad;
 			}
 		}
-		refr->handleRefObject.DecRefHandle();
 	}
 }
 
 void HUDExtensionMenu::UpdateNameplate(double stageWidth, double stageHeight, const std::shared_ptr<HUDNameplate> & object)
 {
-	TESObjectREFR * refr = nullptr;
-	LookupREFRByHandle(&object->m_refrHandle, &refr);
+	NiPointer<TESObjectREFR> refr = nullptr;
+	LookupREFRByHandle(object->m_refrHandle, refr);
 	if(refr)
 	{
 		NiPoint3 markerPos;
@@ -143,7 +147,7 @@ void HUDExtensionMenu::UpdateNameplate(double stageWidth, double stageHeight, co
 
 			if (refr->formType == Actor::kTypeID) // Type check is faster than RTTI cast
 			{
-				Actor * actor = (Actor*)refr;
+				Actor * actor = (Actor*)refr.get();
 				isHostile = CALL_MEMBER_FN((*g_player), IsHostileToActor)(actor);
 
 				if(g_hudSettings.avInvisibility && actor->actorValueOwner.GetValue(g_hudSettings.avInvisibility) > 0.0f) {
@@ -186,18 +190,16 @@ void HUDExtensionMenu::UpdateNameplate(double stageWidth, double stageHeight, co
 					nameplate->SetFilterColor(isHostile);
 				else
 				{
-					FilterColor color; // RRGGBB
+					NiColor color; // RRGGBB
 					color.r = float((clrBar >> 16) & 0xFF) / 255.0f;
 					color.g = float((clrBar >> 8) & 0xFF) / 255.0f;
 					color.b = float(clrBar & 0xFF) / 255.0f;
-					ApplyColorFilter(nameplate, &color, 1.0f);
+					nameplate->EnableColorMultipliers(& color, 1.0f);
 				}
 			}
 
 			nameplate->SetMember("visible", &GFxValue(isVisible)); // Visibility flag doesnt seem to work from DisplayInfo...?
 		}
-
-		refr->handleRefObject.DecRefHandle();
 	}
 }
 
@@ -206,7 +208,7 @@ void HUDExtensionMenu::RegisterFunctions()
 	
 }
 
-void HUDExtensionMenu::DrawNextFrame(float unk0, void * unk1)
+void HUDExtensionMenu::AdvanceMovie(float unk0, void * unk1)
 {
 	if(!stage.IsDisplayObject())
 		return;
@@ -217,6 +219,7 @@ void HUDExtensionMenu::DrawNextFrame(float unk0, void * unk1)
 
 	// Deal with all pending removes first
 	m_lock.Lock();
+
 	for(auto & removals : m_qRemove)
 	{
 		GFxValue success;
@@ -228,10 +231,10 @@ void HUDExtensionMenu::DrawNextFrame(float unk0, void * unk1)
 		{
 			if(removals.second)
 			{
-				BSGFxDisplayObject * target = removals.second->m_nameplate;
-				SInt64 i = subcomponents.GetItemIndex(target);
+				BSGFxShaderFXTarget * target = removals.second->m_nameplate;
+				SInt64 i = shaderFXObjects.GetItemIndex(target);
 				if(i != -1) {
-					subcomponents.Remove(i);
+					shaderFXObjects.Remove(i);
 				}
 			}
 			m_mapPlates.erase(it);
@@ -244,7 +247,7 @@ void HUDExtensionMenu::DrawNextFrame(float unk0, void * unk1)
 		AddNameplate(&stage, adds.second);
 		m_mapPlates.emplace(adds.first, adds.second);
 		if(adds.second) {
-			subcomponents.Push(adds.second->m_nameplate);
+			shaderFXObjects.Push(adds.second->m_nameplate);
 		}
 	}
 	m_qAdd.clear();
@@ -260,7 +263,7 @@ void HUDExtensionMenu::DrawNextFrame(float unk0, void * unk1)
 	m_lock.Release();
 
 	stage.Invoke("SortChildrenByDepth", nullptr, nullptr, 0);
-	__super::DrawNextFrame(unk0, unk1);
+	__super::AdvanceMovie(unk0, unk1);
 }
 
 HUDNameplate::HUDNameplate(UInt32 refrHandle, GFxValue * nameplate) : m_refrHandle(refrHandle), m_nameplate(nullptr)
@@ -280,7 +283,8 @@ bool HUDExtensionMenu::AddNameplate(TESObjectREFR * refr)
 {
 	SimpleLocker locker(&m_lock);
 
-	UInt32 refrHandle = refr->CreateRefHandle();
+	UInt32 refrHandle = *g_invalidRefHandle;
+	CreateHandleByREFR(refrHandle, refr);
 	if(refrHandle == (*g_invalidRefHandle)) {
 		_MESSAGE("Invalid handle on add");
 		return false;
@@ -306,7 +310,8 @@ bool HUDExtensionMenu::RemoveNameplate(TESObjectREFR * refr)
 {
 	SimpleLocker locker(&m_lock);
 
-	UInt32 refrHandle = refr->CreateRefHandle();
+	UInt32 refrHandle = *g_invalidRefHandle;
+	CreateHandleByREFR(refrHandle, refr);
 	if(refrHandle == (*g_invalidRefHandle)) {
 		_MESSAGE("Invalid handle on remove");
 		return false;
@@ -353,10 +358,10 @@ void HUDExtensionMenu::ForceClear()
 	{
 		if(plate.second)
 		{
-			BSGFxDisplayObject * target = plate.second->m_nameplate;
-			SInt64 i = subcomponents.GetItemIndex(target);
+			BSGFxShaderFXTarget * target = plate.second->m_nameplate;
+			SInt64 i = shaderFXObjects.GetItemIndex(target);
 			if(i != -1) {
-				subcomponents.Remove(i);
+				shaderFXObjects.Remove(i);
 			}
 		}
 	}
