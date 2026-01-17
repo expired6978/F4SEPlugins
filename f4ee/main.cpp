@@ -483,7 +483,7 @@ __declspec(dllexport) F4SEPluginVersionData F4SEPlugin_Version =
 	0,	// works with any version of the script extender. you probably do not need to put anything here
 };
 
-bool F4SEPlugin_Preload(const F4SEInterface * f4se)
+__declspec(dllexport) bool F4SEPlugin_Preload(const F4SEInterface * f4se)
 {
 	SInt32	logLevel = IDebugLog::kLevel_DebugMessage;
 	if (F4EEGetConfigValue("Debug", "iLogLevel", &logLevel))
