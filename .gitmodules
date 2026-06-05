@@ -1,6 +1,6 @@
 [submodule "f4ee/f4se"]
 	path = f4se
-	url = https://github.com/ZenoArrows/f4se.git
+	url = https://github.com/ianpatt/f4se.git
 [submodule "common"]
 	path = common
 	url = https://github.com/ianpatt/common.git
