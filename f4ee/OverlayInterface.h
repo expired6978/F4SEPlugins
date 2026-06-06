@@ -55,7 +55,8 @@ public:
 	{
 		kVersion1 = 1,
 		kVersion2 = 2,	// Version 2 now only saves UInt32 FormID instead of UInt64 Handle
-		kSerializationVersion = kVersion2,
+		kVersion3 = 3,	// Version 3 now saves tint colors as floats instead of integers
+		kSerializationVersion = kVersion3,
 	};
 
 	class OverlayData
