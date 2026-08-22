@@ -46,6 +46,16 @@ extern const std::string & GetRuntimeDirectory(void);
 
 static const char * HairGradientPalette = "actors\\character\\hair\\haircolor_lgrad_d.dds";
 
+inline bool operator==(const TESNPC::MorphSetData& lhs, const TESNPC::MorphSetData& rhs)
+{
+	return lhs.key == rhs.key;
+}
+inline bool operator==(const TESNPC::FaceMorphRegion& lhs, const TESNPC::FaceMorphRegion& rhs)
+{
+	return lhs.index == rhs.index;
+}
+
+
 DWORD CharGenInterface::SavePreset(const std::string & filePath)
 {
 	DataHandler * dataHandler = (*g_dataHandler);
